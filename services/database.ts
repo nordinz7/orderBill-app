@@ -214,3 +214,60 @@ export async function getAllDataForBackup(db: SQLite.SQLiteDatabase) {
   const orders    = await db.getAllAsync<Order>(`SELECT * FROM orders`);
   return { customers, orders };
 }
+
+// ─── Restore ──────────────────────────────────────────────────────────────────
+
+export interface BackupPayload {
+  exportedAt: string;
+  version: number;
+  customers: Customer[];
+  orders: Order[];
+}
+
+/**
+ * Validates that the parsed JSON matches the expected backup schema.
+ */
+export function isValidBackup(data: unknown): data is BackupPayload {
+  if (!data || typeof data !== 'object') return false;
+  const obj = data as Record<string, unknown>;
+  return (
+    typeof obj.version === 'number' &&
+    Array.isArray(obj.customers) &&
+    Array.isArray(obj.orders)
+  );
+}
+
+/**
+ * Replaces all existing data with the contents of a backup file.
+ * Runs inside a transaction so it's all-or-nothing.
+ */
+export async function restoreFromBackupData(
+  db: SQLite.SQLiteDatabase,
+  payload: BackupPayload,
+): Promise<{ customers: number; orders: number }> {
+  await db.withTransactionAsync(async () => {
+    // Clear existing data (orders first due to FK)
+    await db.execAsync(`DELETE FROM orders`);
+    await db.execAsync(`DELETE FROM customers`);
+
+    // Re-insert customers
+    for (const c of payload.customers) {
+      await db.runAsync(
+        `INSERT INTO customers (id, name, place, phone_number, created_date, updated_at, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [c.id, c.name, c.place, c.phone_number, c.created_date, c.updated_at, c.status],
+      );
+    }
+
+    // Re-insert orders
+    for (const o of payload.orders) {
+      await db.runAsync(
+        `INSERT INTO orders (id, customer_id, amount, description, date, updated_at, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [o.id, o.customer_id, o.amount, o.description, o.date, o.updated_at, o.status],
+      );
+    }
+  });
+
+  return { customers: payload.customers.length, orders: payload.orders.length };
+}

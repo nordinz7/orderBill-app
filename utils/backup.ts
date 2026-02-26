@@ -1,9 +1,10 @@
+import { getAllDataForBackup, isValidBackup, restoreFromBackupData } from '@/services/database';
+import { format } from 'date-fns';
+import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import { Alert } from 'react-native';
-import { format } from 'date-fns';
 import type { SQLiteDatabase } from 'expo-sqlite';
-import { getAllDataForBackup } from '@/services/database';
+import { Alert } from 'react-native';
 
 /**
  * Creates a JSON backup of all customers and orders, then triggers
@@ -46,4 +47,33 @@ export async function createAndShareBackup(db: SQLiteDatabase): Promise<void> {
     console.error('Backup error:', error);
     Alert.alert('Backup Failed', 'An error occurred while creating the backup.');
   }
+}
+
+/**
+ * Opens a document picker, reads the selected JSON backup file,
+ * validates it, and restores the data into the database.
+ * Returns { customers, orders } counts on success, or null on cancel/failure.
+ */
+export async function pickAndRestoreBackup(
+  db: SQLiteDatabase,
+): Promise<{ customers: number; orders: number } | null> {
+  const result = await DocumentPicker.getDocumentAsync({
+    type: 'application/json',
+    copyToCacheDirectory: true,
+  });
+
+  if (result.canceled || !result.assets?.length) {
+    return null;
+  }
+
+  const asset = result.assets[0];
+  const file = new File(asset.uri);
+  const contents = file.text();
+  const parsed = JSON.parse(contents);
+
+  if (!isValidBackup(parsed)) {
+    return null;
+  }
+
+  return restoreFromBackupData(db, parsed);
 }
