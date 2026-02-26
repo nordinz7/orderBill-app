@@ -2,8 +2,10 @@ import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
     getAllOrdersWithCustomer,
-    getRecentOrdersWithCustomer,
+    getThisMonthOrdersWithCustomer,
+    getThisWeekOrdersWithCustomer,
     getTodayOrdersWithCustomer,
+    getYesterdayOrdersWithCustomer,
     OrderWithCustomer,
     softDeleteOrder,
 } from '@/services/database';
@@ -17,6 +19,7 @@ import {
     Alert,
     FlatList,
     RefreshControl,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -24,7 +27,7 @@ import {
     View,
 } from 'react-native';
 
-type FilterMode = 'today' | 'recent' | 'all';
+type FilterMode = 'today' | 'yesterday' | 'week' | 'month' | 'all';
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
@@ -121,8 +124,10 @@ export default function OrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (mode: FilterMode = filter) => {
-    if (mode === 'today')  return setOrders(await getTodayOrdersWithCustomer(db));
-    if (mode === 'recent') return setOrders(await getRecentOrdersWithCustomer(db));
+    if (mode === 'today')     return setOrders(await getTodayOrdersWithCustomer(db));
+    if (mode === 'yesterday') return setOrders(await getYesterdayOrdersWithCustomer(db));
+    if (mode === 'week')      return setOrders(await getThisWeekOrdersWithCustomer(db));
+    if (mode === 'month')     return setOrders(await getThisMonthOrdersWithCustomer(db));
     setOrders(await getAllOrdersWithCustomer(db));
   }, [db, filter]);
 
@@ -155,9 +160,11 @@ export default function OrdersScreen() {
   const totalAmount = displayed.reduce((s, o) => s + o.amount, 0);
 
   const filters: { key: FilterMode; label: string }[] = [
-    { key: 'today',  label: tr.today },
-    { key: 'recent', label: tr.past6Days },
-    { key: 'all',    label: tr.allOrders },
+    { key: 'today',     label: tr.today },
+    { key: 'yesterday', label: tr.yesterday },
+    { key: 'week',      label: tr.thisWeek },
+    { key: 'month',     label: tr.thisMonth },
+    { key: 'all',       label: tr.allOrders },
   ];
 
   const renderItem = ({ item }: { item: OrderWithCustomer }) => (
@@ -185,7 +192,7 @@ export default function OrdersScreen() {
   return (
     <View style={S.container}>
       <View style={S.topBar}>
-        <View style={S.filterRow}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={S.filterRow}>
           {filters.map(({ key, label }) => (
             <TouchableOpacity
               key={key}
@@ -195,7 +202,7 @@ export default function OrdersScreen() {
               <Text style={[S.chipText, filter === key && S.chipTextActive]}>{label}</Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
         <TextInput
           style={S.searchInput}
           value={search}

@@ -158,6 +158,30 @@ export async function getTodayOrdersWithCustomer(
   );
 }
 
+export async function getYesterdayOrdersWithCustomer(
+  db: SQLite.SQLiteDatabase,
+): Promise<OrderWithCustomer[]> {
+  return db.getAllAsync<OrderWithCustomer>(
+    `${ORDER_SELECT} AND date(o.date) = date('now','localtime','-1 day') ORDER BY o.date DESC`
+  );
+}
+
+export async function getThisWeekOrdersWithCustomer(
+  db: SQLite.SQLiteDatabase,
+): Promise<OrderWithCustomer[]> {
+  return db.getAllAsync<OrderWithCustomer>(
+    `${ORDER_SELECT} AND o.date >= date('now','localtime','weekday 0','-7 days') ORDER BY o.date DESC`
+  );
+}
+
+export async function getThisMonthOrdersWithCustomer(
+  db: SQLite.SQLiteDatabase,
+): Promise<OrderWithCustomer[]> {
+  return db.getAllAsync<OrderWithCustomer>(
+    `${ORDER_SELECT} AND strftime('%Y-%m', o.date) = strftime('%Y-%m', 'now','localtime') ORDER BY o.date DESC`
+  );
+}
+
 export async function addOrder(
   db: SQLite.SQLiteDatabase,
   customer_id: number,
