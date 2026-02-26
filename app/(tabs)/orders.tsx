@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import {
   getAllOrdersWithCustomer,
   getRecentOrdersWithCustomer,
+  getTodayOrdersWithCustomer,
   softDeleteOrder,
   OrderWithCustomer,
 } from '@/services/database';
@@ -17,78 +18,81 @@ import { sendWhatsAppInvoice } from '@/utils/whatsapp';
 import { useSettings } from '@/contexts/SettingsContext';
 import { AppColors, FontSizes, Spacing, Radius } from '@/constants/theme';
 
-type FilterMode = 'all' | 'recent';
+type FilterMode = 'today' | 'recent' | 'all';
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
-    container:      { flex: 1, backgroundColor: c.background },
+    container:    { flex: 1, backgroundColor: c.background },
     topBar: {
       backgroundColor: c.card,
+      paddingHorizontal: Spacing.md,
+      paddingTop: Spacing.sm,
+      paddingBottom: Spacing.sm,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
-      paddingBottom: Spacing.sm,
+      gap: Spacing.sm,
     },
-    filterRow:      { flexDirection: 'row', padding: Spacing.md, gap: Spacing.sm },
-    filterBtn: {
-      flex: 1, paddingVertical: Spacing.sm,
-      borderRadius: Radius.md, alignItems: 'center',
+    filterRow:    { flexDirection: 'row', gap: Spacing.sm },
+    chip: {
+      paddingHorizontal: Spacing.lg,
+      paddingVertical: 6,
+      borderRadius: 20,
       backgroundColor: c.filterInactive,
     },
-    filterBtnActive:   { backgroundColor: c.primary },
-    filterText:        { fontSize: FontSizes.md, fontWeight: '600', color: c.textSecondary },
-    filterTextActive:  { color: '#FFFFFF' },
-    searchRow:         { paddingHorizontal: Spacing.md, paddingBottom: Spacing.xs },
+    chipActive:     { backgroundColor: c.primary },
+    chipText:       { fontSize: FontSizes.sm, fontWeight: '700', color: c.textSecondary },
+    chipTextActive: { color: '#FFFFFF' },
     searchInput: {
       backgroundColor: c.inputBg,
-      borderWidth: 1.5,
+      borderWidth: 1,
       borderColor: c.border,
       borderRadius: Radius.md,
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: 8,
       fontSize: FontSizes.md,
       color: c.text,
     },
     summary: {
       flexDirection: 'row', justifyContent: 'space-between',
-      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.lg, paddingVertical: 6,
       backgroundColor: c.primaryLight,
     },
-    summaryText:    { fontSize: FontSizes.md, color: c.primary, fontWeight: '600' },
-    summaryAmount:  { fontSize: FontSizes.md, color: c.primary, fontWeight: '700' },
-    listContent:    { padding: Spacing.lg, gap: Spacing.md, paddingBottom: 100 },
-    emptyOuter:     { flexGrow: 1 },
+    summaryText:   { fontSize: FontSizes.sm, color: c.primary, fontWeight: '600' },
+    summaryAmount: { fontSize: FontSizes.sm, color: c.primary, fontWeight: '800' },
+    listContent:   { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
+    emptyOuter:    { flexGrow: 1 },
     card: {
       backgroundColor: c.card,
-      borderRadius: Radius.lg,
-      padding: Spacing.lg,
-      elevation: 2,
+      borderRadius: Radius.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
+      elevation: 1,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
+      shadowOpacity: 0.06,
+      shadowRadius: 2,
     },
-    cardHeader:     { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-    customerName:   { fontSize: FontSizes.xl, fontWeight: '700', color: c.text, flex: 1 },
-    amount:         { fontSize: FontSizes.xl, fontWeight: '800', color: c.success },
-    place:          { fontSize: FontSizes.sm, color: c.textSecondary, marginBottom: 4 },
-    description:    { fontSize: FontSizes.md, color: c.text, marginVertical: 4 },
-    date:           { fontSize: FontSizes.sm, color: c.textMuted, marginBottom: Spacing.md },
-    updatedDate:    { fontSize: FontSizes.xs, color: c.textMuted, fontStyle: 'italic' },
-    actions:        { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.sm },
-    whatsappBtn: {
-      flex: 1, flexDirection: 'row', alignItems: 'center',
-      justifyContent: 'center', gap: Spacing.sm,
+    row1:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1, marginRight: Spacing.sm },
+    amount:       { fontSize: FontSizes.lg, fontWeight: '800', color: c.success },
+    row2:         { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+    row2Text:     { fontSize: FontSizes.sm, color: c.textSecondary, flex: 1 },
+    dateText:     { fontSize: FontSizes.xs, color: c.textMuted },
+    actionRow:    { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: Spacing.sm },
+    waBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
       backgroundColor: c.whatsapp,
-      paddingVertical: Spacing.md, borderRadius: Radius.md,
+      paddingVertical: 5, paddingHorizontal: Spacing.md,
+      borderRadius: Radius.sm, flex: 1, justifyContent: 'center',
     },
-    whatsappBtnText:  { color: '#FFFFFF', fontSize: FontSizes.md, fontWeight: '700' },
-    deleteBtn:        { padding: Spacing.sm },
-    emptyWrap:        { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
-    emptyText:        { fontSize: FontSizes.xl, fontWeight: '600', color: c.textSecondary, marginTop: Spacing.lg },
-    emptySubText:     { fontSize: FontSizes.md, color: c.textMuted, marginTop: Spacing.sm },
+    waBtnText:    { color: '#FFFFFF', fontSize: FontSizes.sm, fontWeight: '700' },
+    deleteBtn:    { padding: 6 },
+    emptyWrap:    { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
+    emptyText:    { fontSize: FontSizes.xl, fontWeight: '600', color: c.textSecondary, marginTop: Spacing.lg },
+    emptySubText: { fontSize: FontSizes.md, color: c.textMuted, marginTop: Spacing.sm },
     fab: {
       position: 'absolute', bottom: 24, right: 24,
-      width: 64, height: 64, borderRadius: 32,
+      width: 60, height: 60, borderRadius: 30,
       backgroundColor: c.primary,
       justifyContent: 'center', alignItems: 'center',
       elevation: 6,
@@ -106,15 +110,14 @@ export default function OrdersScreen() {
   const S = makeStyles(colors);
 
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
-  const [filter, setFilter] = useState<FilterMode>('all');
+  const [filter, setFilter] = useState<FilterMode>('today');
   const [search, setSearch] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (mode: FilterMode = filter) => {
-    const data = mode === 'recent'
-      ? await getRecentOrdersWithCustomer(db)
-      : await getAllOrdersWithCustomer(db);
-    setOrders(data);
+    if (mode === 'today')  return setOrders(await getTodayOrdersWithCustomer(db));
+    if (mode === 'recent') return setOrders(await getRecentOrdersWithCustomer(db));
+    setOrders(await getAllOrdersWithCustomer(db));
   }, [db, filter]);
 
   useFocusEffect(useCallback(() => { load(filter); }, [filter, load]));
@@ -137,32 +140,37 @@ export default function OrdersScreen() {
   const displayed = useMemo(() => {
     if (!search.trim()) return orders;
     const q = search.trim().toLowerCase();
-    return orders.filter(o => o.customer_name.toLowerCase().includes(q));
+    return orders.filter(o =>
+      o.customer_name.toLowerCase().includes(q) ||
+      o.description.toLowerCase().includes(q)
+    );
   }, [orders, search]);
 
   const totalAmount = displayed.reduce((s, o) => s + o.amount, 0);
 
+  const filters: { key: FilterMode; label: string }[] = [
+    { key: 'today',  label: tr.today },
+    { key: 'recent', label: tr.past6Days },
+    { key: 'all',    label: tr.allOrders },
+  ];
+
   const renderItem = ({ item }: { item: OrderWithCustomer }) => (
     <View style={S.card}>
-      <View style={S.cardHeader}>
-        <Text style={S.customerName}>{item.customer_name}</Text>
+      <View style={S.row1}>
+        <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
         <Text style={S.amount}>&#8377;{item.amount.toFixed(2)}</Text>
       </View>
-      <Text style={S.place}>{item.customer_place}</Text>
-      <Text style={S.description}>{item.description}</Text>
-      <Text style={S.date}>{format(new Date(item.date), 'dd MMM yyyy, hh:mm a')}</Text>
-      {item.updated_at && item.updated_at !== item.date && (
-        <Text style={S.updatedDate}>
-          {tr.lastUpdated}: {format(new Date(item.updated_at), 'dd MMM yyyy, hh:mm a')}
-        </Text>
-      )}
-      <View style={S.actions}>
-        <TouchableOpacity style={S.whatsappBtn} onPress={() => sendWhatsAppInvoice(item, lang)}>
-          <MaterialCommunityIcons name="whatsapp" size={20} color="#FFFFFF" />
-          <Text style={S.whatsappBtnText}>{tr.sendInvoice}</Text>
+      <View style={S.row2}>
+        <Text style={S.row2Text} numberOfLines={1}>{item.customer_place}  ·  {item.description}</Text>
+        <Text style={S.dateText}>{format(new Date(item.date), 'dd MMM')}</Text>
+      </View>
+      <View style={S.actionRow}>
+        <TouchableOpacity style={S.waBtn} onPress={() => sendWhatsAppInvoice(item, lang)}>
+          <MaterialCommunityIcons name="whatsapp" size={16} color="#FFFFFF" />
+          <Text style={S.waBtnText}>{tr.sendInvoice}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleDelete(item)} style={S.deleteBtn}>
-          <MaterialIcons name="delete-outline" size={24} color={colors.danger} />
+          <MaterialIcons name="delete-outline" size={22} color={colors.danger} />
         </TouchableOpacity>
       </View>
     </View>
@@ -172,29 +180,24 @@ export default function OrdersScreen() {
     <View style={S.container}>
       <View style={S.topBar}>
         <View style={S.filterRow}>
-          <TouchableOpacity
-            style={[S.filterBtn, filter === 'all' && S.filterBtnActive]}
-            onPress={() => handleFilter('all')}
-          >
-            <Text style={[S.filterText, filter === 'all' && S.filterTextActive]}>{tr.allOrders}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[S.filterBtn, filter === 'recent' && S.filterBtnActive]}
-            onPress={() => handleFilter('recent')}
-          >
-            <Text style={[S.filterText, filter === 'recent' && S.filterTextActive]}>{tr.past6Days}</Text>
-          </TouchableOpacity>
+          {filters.map(({ key, label }) => (
+            <TouchableOpacity
+              key={key}
+              style={[S.chip, filter === key && S.chipActive]}
+              onPress={() => handleFilter(key)}
+            >
+              <Text style={[S.chipText, filter === key && S.chipTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-        <View style={S.searchRow}>
-          <TextInput
-            style={S.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder={tr.searchCustomers}
-            placeholderTextColor={colors.textMuted}
-            clearButtonMode="while-editing"
-          />
-        </View>
+        <TextInput
+          style={S.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder={tr.searchCustomers}
+          placeholderTextColor={colors.textMuted}
+          clearButtonMode="while-editing"
+        />
       </View>
 
       {displayed.length > 0 && (

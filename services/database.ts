@@ -150,6 +150,14 @@ export async function getRecentOrdersWithCustomer(
   );
 }
 
+export async function getTodayOrdersWithCustomer(
+  db: SQLite.SQLiteDatabase,
+): Promise<OrderWithCustomer[]> {
+  return db.getAllAsync<OrderWithCustomer>(
+    `${ORDER_SELECT} AND date(o.date) = date('now','localtime') ORDER BY o.date DESC`
+  );
+}
+
 export async function addOrder(
   db: SQLite.SQLiteDatabase,
   customer_id: number,

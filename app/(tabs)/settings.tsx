@@ -1,8 +1,12 @@
-import { View, Text, TouchableOpacity, StyleSheet, Switch } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Switch, ActivityIndicator, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSQLiteContext } from 'expo-sqlite';
+import { format } from 'date-fns';
 import { useSettings } from '@/contexts/SettingsContext';
 import { AppColors, FontSizes, Spacing, Radius } from '@/constants/theme';
 import { Lang } from '@/constants/translations';
+import { createAndShareBackup } from '@/utils/backup';
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
@@ -27,6 +31,9 @@ function makeStyles(c: AppColors) {
     langBtnActive: { backgroundColor: c.primary },
     langBtnText:   { fontSize: FontSizes.md, color: c.textSecondary, fontWeight: '600' },
     langBtnTextActive: { color: '#FFFFFF' },
+    backupRow:  { flexDirection: 'row', alignItems: 'center', flex: 1, gap: Spacing.sm },
+    backupText: { flex: 1, fontSize: FontSizes.lg, color: c.primary, fontWeight: '700' },
+    backupSub:  { fontSize: FontSizes.sm, color: c.textMuted },
     appInfoCard: {
       margin: Spacing.lg, backgroundColor: c.card,
       borderRadius: Radius.lg, padding: Spacing.xl, alignItems: 'center',
@@ -37,8 +44,23 @@ function makeStyles(c: AppColors) {
 }
 
 export default function SettingsScreen() {
+  const db = useSQLiteContext();
   const { colors, tr, isDark, toggleTheme, lang, setLang } = useSettings();
   const S = makeStyles(colors);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [lastBackup, setLastBackup] = useState<Date | null>(null);
+
+  const handleBackup = async () => {
+    setBackupLoading(true);
+    try {
+      await createAndShareBackup(db);
+      setLastBackup(new Date());
+    } catch {
+      Alert.alert(tr.backupFailed, tr.backupFailedMsg);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
 
   return (
     <View style={S.container}>
@@ -80,6 +102,28 @@ export default function SettingsScreen() {
               ))}
             </View>
           </View>
+        </View>
+      </View>
+
+      {/* Backup */}
+      <View style={S.section}>
+        <Text style={S.sectionTitle}>{tr.backup}</Text>
+        <View style={S.card}>
+          <TouchableOpacity style={[S.row, S.rowLast]} onPress={handleBackup} disabled={backupLoading}>
+            <MaterialIcons name="cloud-upload" size={24} color={colors.primary} style={S.rowIcon} />
+            <View style={S.backupRow}>
+              {backupLoading
+                ? <ActivityIndicator color={colors.primary} size="small" />
+                : (
+                  <>
+                    <Text style={S.backupText}>{tr.createBackup}</Text>
+                    {lastBackup && <Text style={S.backupSub}>{format(lastBackup, 'dd MMM, hh:mm a')}</Text>}
+                  </>
+                )
+              }
+            </View>
+            <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
       </View>
 

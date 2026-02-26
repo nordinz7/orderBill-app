@@ -37,13 +37,6 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: tr.customers,
-          tabBarIcon: ({ color }) => <TabIcon name="people" color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="orders"
         options={{
           title: tr.orders,
@@ -51,10 +44,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="backup"
+        name="index"
         options={{
-          title: tr.backup,
-          tabBarIcon: ({ color }) => <TabIcon name="cloud-upload" color={color} />,
+          title: tr.customers,
+          tabBarIcon: ({ color }) => <TabIcon name="people" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -64,6 +57,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
         }}
       />
+      <Tabs.Screen name="backup" options={{ href: null }} />
     </Tabs>
   );
 }
