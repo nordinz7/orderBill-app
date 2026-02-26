@@ -1,33 +1,67 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSettings } from '@/contexts/SettingsContext';
+import { FontSizes } from '@/constants/theme';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+type IconName = React.ComponentProps<typeof MaterialIcons>['name'];
+
+function TabIcon({ name, color }: { name: IconName; color: string }) {
+  return <MaterialIcons name={name} size={26} color={color} />;
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { colors, tr } = useSettings();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
+          // Fix: add system navigation bar height so tabs don't overlap
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom + 4,
+          paddingTop: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: FontSizes.xs,
+          fontWeight: '600',
+        },
+        headerStyle: { backgroundColor: colors.headerBg },
+        headerTintColor: colors.headerText,
+        headerTitleStyle: { fontSize: 20, fontWeight: '700' },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: tr.customers,
+          tabBarIcon: ({ color }) => <TabIcon name="people" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="orders"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: tr.orders,
+          tabBarIcon: ({ color }) => <TabIcon name="receipt-long" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="backup"
+        options={{
+          title: tr.backup,
+          tabBarIcon: ({ color }) => <TabIcon name="cloud-upload" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: tr.settings,
+          tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
         }}
       />
     </Tabs>

@@ -1,53 +1,57 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
-
-import { Platform } from 'react-native';
-
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
-
-export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
+export const LightColors = {
+  background: '#F0F4F8',
+  card: '#FFFFFF',
+  primary: '#1565C0',
+  primaryLight: '#E3F2FD',
+  danger: '#C62828',
+  dangerLight: '#FFEBEE',
+  success: '#2E7D32',
+  successLight: '#E8F5E9',
+  whatsapp: '#25D366',
+  text: '#1A1A1A',
+  textSecondary: '#555555',
+  textMuted: '#888888',
+  border: '#D0D7DE',
+  separator: '#E8ECF0',
+  statusBar: 'dark' as 'dark' | 'light',
+  headerBg: '#1565C0',
+  headerText: '#FFFFFF',
+  inputBg: '#FFFFFF',
+  filterInactive: '#E8ECF0',
 };
 
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+export const DarkColors = {
+  background: '#0D1117',
+  card: '#161B22',
+  primary: '#4A90E2',
+  primaryLight: '#1C2A3A',
+  danger: '#F47171',
+  dangerLight: '#2D1F1F',
+  success: '#56C97B',
+  successLight: '#1A2D1F',
+  whatsapp: '#25D366',
+  text: '#E6EDF3',
+  textSecondary: '#8B949E',
+  textMuted: '#6E7681',
+  border: '#30363D',
+  separator: '#21262D',
+  statusBar: 'light' as 'dark' | 'light',
+  headerBg: '#161B22',
+  headerText: '#E6EDF3',
+  inputBg: '#0D1117',
+  filterInactive: '#21262D',
+};
+
+export type AppColors = typeof LightColors;
+
+export const FontSizes = {
+  xs: 13, sm: 15, md: 17, lg: 19, xl: 22, xxl: 26, xxxl: 30,
+};
+
+export const Spacing = {
+  xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28,
+};
+
+export const Radius = {
+  sm: 6, md: 10, lg: 14, xl: 20,
+};
