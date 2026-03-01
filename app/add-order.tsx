@@ -2,20 +2,21 @@ import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import { addOrder, Customer, getActiveCustomers } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { addDays, format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text, TextInput, TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View,
 } from 'react-native';
 
 function makeStyles(c: AppColors) {
@@ -55,16 +56,19 @@ function makeStyles(c: AppColors) {
     customerOptionSub:  { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 2 },
     noCustomers:        { padding: Spacing.xxl, alignItems: 'center' },
     noCustomersText:    { fontSize: FontSizes.lg, color: c.textSecondary, textAlign: 'center' },
-    dateRow:            { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
-    dateChip: {
-      paddingHorizontal: Spacing.lg,
-      paddingVertical: 8,
-      borderRadius: 20,
-      backgroundColor: c.filterInactive,
+    searchInput: {
+      backgroundColor: c.inputBg, borderWidth: 1.5,
+      borderColor: c.border, borderRadius: Radius.md,
+      padding: Spacing.md, fontSize: FontSizes.lg, color: c.text,
+      marginHorizontal: Spacing.xl, marginTop: Spacing.md, marginBottom: Spacing.xs,
     },
-    dateChipActive:     { backgroundColor: c.primary },
-    dateChipText:       { fontSize: FontSizes.md, fontWeight: '700', color: c.textSecondary },
-    dateChipTextActive: { color: '#FFFFFF' },
+    dateButton: {
+      backgroundColor: c.inputBg, borderWidth: 1.5,
+      borderColor: c.border, borderRadius: Radius.md,
+      padding: Spacing.lg, flexDirection: 'row',
+      alignItems: 'center', justifyContent: 'space-between',
+    },
+    dateButtonText:     { fontSize: FontSizes.lg, color: c.text },
   });
 }
 
@@ -77,19 +81,18 @@ export default function AddOrderScreen() {
   const [customers, setCustomers]           = useState<Customer[]>([]);
   const [selectedCustomer, setSelected]     = useState<Customer | null>(null);
   const [showPicker, setShowPicker]         = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
   const [amount, setAmount]                 = useState('');
   const [quantity, setQuantity]             = useState('');
   const [description, setDescription]       = useState('');
   const [saving, setSaving]                 = useState(false);
 
-  type DateOption = 'tomorrow' | 'today' | 'yesterday';
-  const [selectedDateOption, setSelectedDateOption] = useState<DateOption>('tomorrow');
+  const [orderDate, setOrderDate]           = useState<Date>(addDays(new Date(), 1));
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const getDateForOption = (option: DateOption): string => {
-    const now = new Date();
-    if (option === 'tomorrow')  return addDays(now, 1).toISOString();
-    if (option === 'yesterday') return addDays(now, -1).toISOString();
-    return now.toISOString();
+  const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) setOrderDate(date);
   };
 
   useEffect(() => { getActiveCustomers(db).then(setCustomers); }, [db]);
@@ -102,7 +105,7 @@ export default function AddOrderScreen() {
     setSaving(true);
     try {
       const qty = parseInt(quantity, 10) || 0;
-      await addOrder(db, selectedCustomer.id, num, description, qty, getDateForOption(selectedDateOption));
+      await addOrder(db, selectedCustomer.id, num, description, qty, orderDate.toISOString());
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);
@@ -123,19 +126,19 @@ export default function AddOrderScreen() {
         </View>
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="event" size={16} color={colors.text} /> {tr.orderDate}</Text>
-          <View style={S.dateRow}>
-            {(['tomorrow', 'today', 'yesterday'] as DateOption[]).map(opt => (
-              <TouchableOpacity
-                key={opt}
-                style={[S.dateChip, selectedDateOption === opt && S.dateChipActive]}
-                onPress={() => setSelectedDateOption(opt)}
-              >
-                <Text style={[S.dateChipText, selectedDateOption === opt && S.dateChipTextActive]}>
-                  {tr[opt]} ({format(addDays(new Date(), opt === 'tomorrow' ? 1 : opt === 'yesterday' ? -1 : 0), 'dd/MM')})
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <TouchableOpacity style={S.dateButton} onPress={() => setShowDatePicker(true)}>
+            <Text style={S.dateButtonText}>{format(orderDate, 'dd MMM yyyy, EEEE')}</Text>
+            <MaterialIcons name="calendar-today" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={orderDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={onDateChange}
+              themeVariant={colors.background === '#000000' || colors.background === '#121212' ? 'dark' : 'light'}
+            />
+          )}
         </View>
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="currency-rupee" size={16} color={colors.text} /> {tr.amount} *</Text>
@@ -155,27 +158,40 @@ export default function AddOrderScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <Modal visible={showPicker} animationType="slide" transparent>
+      <Modal visible={showPicker} animationType="slide" transparent onRequestClose={() => { setShowPicker(false); setCustomerSearch(''); }}>
         <View style={S.modalOverlay}>
           <View style={S.modalContent}>
             <View style={S.modalHeader}>
               <Text style={S.modalTitle}>{tr.customers}</Text>
-              <TouchableOpacity onPress={() => setShowPicker(false)}>
+              <TouchableOpacity onPress={() => { setShowPicker(false); setCustomerSearch(''); }}>
                 <MaterialIcons name="close" size={28} color={colors.text} />
               </TouchableOpacity>
             </View>
+            <TextInput
+              style={S.searchInput}
+              value={customerSearch}
+              onChangeText={setCustomerSearch}
+              placeholder={tr.searchCustomers}
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+            />
             {customers.length === 0 ? (
               <View style={S.noCustomers}>
                 <Text style={S.noCustomersText}>{tr.noCustomersYet}</Text>
               </View>
             ) : (
               <FlatList
-                data={customers}
+                data={customers.filter(c => {
+                  if (!customerSearch.trim()) return true;
+                  const q = customerSearch.toLowerCase();
+                  return c.name.toLowerCase().includes(q) || c.place.toLowerCase().includes(q) || c.phone_number.includes(q);
+                })}
                 keyExtractor={item => String(item.id)}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={[S.customerOption, selectedCustomer?.id === item.id && S.customerOptionSel]}
-                    onPress={() => { setSelected(item); setShowPicker(false); }}
+                    onPress={() => { setSelected(item); setShowPicker(false); setCustomerSearch(''); }}
                   >
                     <View>
                       <Text style={S.customerOptionName}>{item.name}</Text>

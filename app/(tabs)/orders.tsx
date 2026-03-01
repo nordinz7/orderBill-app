@@ -5,8 +5,8 @@ import {
   getCustomersWithOrders,
   getDistinctOrderDates,
   getOrdersByDateRange,
-  getTomorrowOrdersWithCustomer,
   getTodayOrdersWithCustomer,
+  getTomorrowOrdersWithCustomer,
   getYesterdayOrdersWithCustomer,
   OrderWithCustomer,
 } from '@/services/database';
@@ -24,6 +24,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -155,6 +156,12 @@ function makeStyles(c: AppColors) {
       color: c.primary,
       fontWeight: '700',
     },
+    searchInput: {
+      backgroundColor: c.inputBg, borderWidth: 1.5,
+      borderColor: c.border, borderRadius: Radius.md,
+      padding: Spacing.md, fontSize: FontSizes.md, color: c.text,
+      marginHorizontal: Spacing.lg, marginTop: Spacing.md, marginBottom: Spacing.xs,
+    },
   });
 }
 
@@ -175,6 +182,7 @@ export default function OrdersScreen() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [showDateModal, setShowDateModal] = useState(false);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
 
   const loadDropdownData = useCallback(async () => {
     const [dates, customers] = await Promise.all([
@@ -452,15 +460,48 @@ export default function OrdersScreen() {
         handleDateSelect,
       )}
 
-      {/* Customer picker modal */}
-      {renderDropdownModal(
-        showCustomerModal,
-        () => setShowCustomerModal(false),
-        tr.filterByCustomer,
-        customerOptions,
-        selectedCustomerId,
-        handleCustomerSelect,
-      )}
+      {/* Customer picker modal with search */}
+      <Modal visible={showCustomerModal} transparent animationType="slide" onRequestClose={() => { setShowCustomerModal(false); setCustomerSearch(''); }}>
+        <Pressable style={S.modalOverlay} onPress={() => { setShowCustomerModal(false); setCustomerSearch(''); }}>
+          <Pressable style={S.modalContent} onPress={() => {}}>
+            <View style={S.modalHeader}>
+              <Text style={S.modalTitle}>{tr.filterByCustomer}</Text>
+              <TouchableOpacity onPress={() => { setShowCustomerModal(false); setCustomerSearch(''); }}>
+                <Text style={S.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={S.searchInput}
+              value={customerSearch}
+              onChangeText={setCustomerSearch}
+              placeholder={tr.searchCustomers}
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+            />
+            <FlatList
+              data={customerOptions.filter(c => {
+                if (!customerSearch.trim()) return true;
+                return c.label.toLowerCase().includes(customerSearch.toLowerCase());
+              })}
+              keyExtractor={i => i.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[S.modalItem, item.id === selectedCustomerId && S.modalItemActive]}
+                  onPress={() => { handleCustomerSelect(item.id); setCustomerSearch(''); }}
+                >
+                  <Text style={[
+                    S.modalItemText,
+                    item.id === selectedCustomerId && S.modalItemTextActive,
+                  ]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

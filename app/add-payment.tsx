@@ -6,15 +6,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text, TextInput, TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text, TextInput, TouchableOpacity,
+    View,
 } from 'react-native';
 
 const PAYMENT_METHODS = [
@@ -62,6 +62,12 @@ function makeStyles(c: AppColors) {
     customerOptionSub:  { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 2 },
     noCustomers:        { padding: Spacing.xxl, alignItems: 'center' },
     noCustomersText:    { fontSize: FontSizes.lg, color: c.textSecondary, textAlign: 'center' },
+    searchInput: {
+      backgroundColor: c.inputBg, borderWidth: 1.5,
+      borderColor: c.border, borderRadius: Radius.md,
+      padding: Spacing.md, fontSize: FontSizes.lg, color: c.text,
+      marginHorizontal: Spacing.xl, marginTop: Spacing.md, marginBottom: Spacing.xs,
+    },
     // Payment method chips
     methodRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
     methodChip: {
@@ -86,6 +92,7 @@ export default function AddPaymentScreen() {
   const [customers, setCustomers]           = useState<Customer[]>([]);
   const [selectedCustomer, setSelected]     = useState<Customer | null>(null);
   const [showPicker, setShowPicker]         = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
   const [amount, setAmount]                 = useState('');
   const [description, setDescription]       = useState('Cash');
   const [selectedMethod, setSelectedMethod] = useState<string | null>('cash');
@@ -173,27 +180,40 @@ export default function AddPaymentScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <Modal visible={showPicker} animationType="slide" transparent>
+      <Modal visible={showPicker} animationType="slide" transparent onRequestClose={() => { setShowPicker(false); setCustomerSearch(''); }}>
         <View style={S.modalOverlay}>
           <View style={S.modalContent}>
             <View style={S.modalHeader}>
               <Text style={S.modalTitle}>{tr.customers}</Text>
-              <TouchableOpacity onPress={() => setShowPicker(false)}>
+              <TouchableOpacity onPress={() => { setShowPicker(false); setCustomerSearch(''); }}>
                 <MaterialIcons name="close" size={28} color={colors.text} />
               </TouchableOpacity>
             </View>
+            <TextInput
+              style={S.searchInput}
+              value={customerSearch}
+              onChangeText={setCustomerSearch}
+              placeholder={tr.searchCustomers}
+              placeholderTextColor={colors.textMuted}
+              autoFocus
+            />
             {customers.length === 0 ? (
               <View style={S.noCustomers}>
                 <Text style={S.noCustomersText}>{tr.noCustomersYet}</Text>
               </View>
             ) : (
               <FlatList
-                data={customers}
+                data={customers.filter(c => {
+                  if (!customerSearch.trim()) return true;
+                  const q = customerSearch.toLowerCase();
+                  return c.name.toLowerCase().includes(q) || c.place.toLowerCase().includes(q) || c.phone_number.includes(q);
+                })}
                 keyExtractor={item => String(item.id)}
+                keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={[S.customerOption, selectedCustomer?.id === item.id && S.customerOptionSel]}
-                    onPress={() => { setSelected(item); setShowPicker(false); }}
+                    onPress={() => { setSelected(item); setShowPicker(false); setCustomerSearch(''); }}
                   >
                     <View>
                       <Text style={S.customerOptionName}>{item.name}</Text>
