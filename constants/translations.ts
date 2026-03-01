@@ -167,8 +167,8 @@ const en = {
   disableDeveloperMode: 'Disable Developer Mode',
   // Quantity
   orderDate: 'Order Date',
-  quantity: 'Quantity (kg)',
-  quantityPlaceholder: 'e.g. 2.5',
+  quantity: 'Quantity (packets)',
+  quantityPlaceholder: 'e.g. 10',
   // Company
   companyDetails: 'Company Details',
   companyName: 'Company Name',
@@ -354,8 +354,8 @@ const ta: typeof en = {
   disableDeveloperMode: 'டெவலப்பர் பயன்முறையை முடக்கு',
   // Quantity
   orderDate: 'ஆர்டர் தேதி',
-  quantity: 'அளவு (கிலோ)',
-  quantityPlaceholder: 'எ.கா. 2.5',
+  quantity: 'அளவு (பாக்கெட்)',
+  quantityPlaceholder: 'எ.கா. 10',
   // Company
   companyDetails: 'நிறுவன விவரங்கள்',
   companyName: 'நிறுவனத்தின் பெயர்',

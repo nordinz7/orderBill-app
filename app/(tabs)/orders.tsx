@@ -10,8 +10,7 @@ import {
   getYesterdayOrdersWithCustomer,
   OrderWithCustomer,
 } from '@/services/database';
-import { sendWhatsAppInvoice } from '@/utils/whatsapp';
-import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import { format, parseISO } from 'date-fns';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -72,30 +71,29 @@ function makeStyles(c: AppColors) {
     card: {
       backgroundColor: c.card,
       borderRadius: Radius.md,
+      padding: Spacing.sm,
       paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.sm,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.md,
       elevation: 1,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.06,
       shadowRadius: 2,
     },
-    row1:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    qtyBadge: {
+      width: 48, height: 48, borderRadius: 24,
+      backgroundColor: c.primaryLight,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    qtyNum:       { fontSize: FontSizes.xl, fontWeight: '800', color: c.primary, lineHeight: FontSizes.xl + 2 },
+    qtyUnit:      { fontSize: 10, fontWeight: '600', color: c.primary, marginTop: -2 },
+    cardContent:  { flex: 1 },
+    cardRow1:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1, marginRight: Spacing.sm },
     amount:       { fontSize: FontSizes.lg, fontWeight: '800', color: c.success },
-    row2:         { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-    row2Text:     { fontSize: FontSizes.sm, color: c.textSecondary, flex: 1 },
-    dateText:     { fontSize: FontSizes.xs, color: c.textMuted },
-    actionRow:    { flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: Spacing.sm },
-    waBtn: {
-      flexDirection: 'row', alignItems: 'center', gap: 4,
-      backgroundColor: c.whatsapp,
-      paddingVertical: 5, paddingHorizontal: Spacing.md,
-      borderRadius: Radius.sm, flex: 1, justifyContent: 'center',
-    },
-    waBtnText:    { color: '#FFFFFF', fontSize: FontSizes.sm, fontWeight: '700' },
-    editBtn:      { padding: 6 },
-    deleteBtn:    { padding: 6 },
+    cardSub:      { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 2 },
     emptyWrap:    { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
     emptyText:    { fontSize: FontSizes.xl, fontWeight: '600', color: c.textSecondary, marginTop: Spacing.lg },
     emptySubText: { fontSize: FontSizes.md, color: c.textMuted, marginTop: Spacing.sm },
@@ -170,7 +168,7 @@ function makeStyles(c: AppColors) {
 export default function OrdersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr, lang } = useSettings();
+  const { colors, tr } = useSettings();
   const S = makeStyles(colors);
 
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
@@ -287,31 +285,26 @@ export default function OrdersScreen() {
     : null;
 
   const renderItem = ({ item }: { item: OrderWithCustomer }) => (
-    <View style={S.card}>
-      <View style={S.row1}>
-        <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
-        <Text style={S.amount}>&#8377;{item.amount}</Text>
+    <TouchableOpacity
+      style={S.card}
+      activeOpacity={0.7}
+      onPress={() => router.push({ pathname: '/customer-detail', params: { id: String(item.customer_id) } })}
+      onLongPress={() => handleDelete(item)}
+    >
+      <View style={S.qtyBadge}>
+        <Text style={S.qtyNum}>{item.quantity || 0}</Text>
+        <Text style={S.qtyUnit}>pkt</Text>
       </View>
-      <View style={S.row2}>
-        <Text style={S.row2Text} numberOfLines={1}>
-          {item.customer_place}  ·  {item.description}
-          {item.quantity > 0 ? `  ·  ${item.quantity} kg` : ''}
+      <View style={S.cardContent}>
+        <View style={S.cardRow1}>
+          <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
+          <Text style={S.amount}>&#8377;{item.amount}</Text>
+        </View>
+        <Text style={S.cardSub} numberOfLines={1}>
+          {item.customer_place} · {format(new Date(item.date), 'dd MMM')}{item.description !== 'Kuboos' ? `  ·  ${item.description}` : ''}
         </Text>
-        <Text style={S.dateText}>{format(new Date(item.date), 'dd MMM')}</Text>
       </View>
-      <View style={S.actionRow}>
-        <TouchableOpacity style={S.waBtn} onPress={() => sendWhatsAppInvoice(item, lang)}>
-          <MaterialCommunityIcons name="whatsapp" size={16} color="#FFFFFF" />
-          <Text style={S.waBtnText}>{tr.sendInvoice}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push({ pathname: '/edit-order', params: { orderId: item.id, customerName: `${item.customer_name} — ${item.customer_place}`, amount: String(item.amount), description: item.description, quantity: String(item.quantity), date: item.date } })} style={S.editBtn}>
-          <MaterialIcons name="edit" size={22} color={colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => handleDelete(item)} style={S.deleteBtn}>
-          <MaterialIcons name="delete-outline" size={22} color={colors.danger} />
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderDropdownModal = (

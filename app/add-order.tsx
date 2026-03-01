@@ -84,7 +84,7 @@ export default function AddOrderScreen() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [amount, setAmount]                 = useState('');
   const [quantity, setQuantity]             = useState('');
-  const [description, setDescription]       = useState('');
+  const [description, setDescription]       = useState('Kuboos');
   const [saving, setSaving]                 = useState(false);
 
   const [orderDate, setOrderDate]           = useState<Date>(addDays(new Date(), 1));

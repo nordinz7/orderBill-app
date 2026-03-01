@@ -9,7 +9,7 @@ export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en'): stri
   const tr = translations[lang];
   const dateStr    = format(new Date(order.date), 'dd MMM yyyy');
   const amountStr  = `\u20B9${order.amount.toFixed(2)}`;
-  const qtyLine    = order.quantity > 0 ? `\n*${tr.quantity}:* ${order.quantity} kg` : '';
+  const qtyLine    = order.quantity > 0 ? `\n*${tr.quantity}:* ${order.quantity} pkt` : '';
 
   return (
     `*${tr.invoiceTitle}*\n` +
