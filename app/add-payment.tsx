@@ -1,21 +1,30 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Customer, getActiveCustomers, insertPayment } from '@/services/database';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text, TextInput, TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View,
 } from 'react-native';
+
+const PAYMENT_METHODS = [
+  { key: 'cash', label: 'Cash', icon: 'cash' as const, iconType: 'mci' as const },
+  { key: 'gpay', label: 'GPay', icon: 'google' as const, iconType: 'mci' as const },
+  { key: 'phonepe', label: 'PhonePe', icon: 'cellphone' as const, iconType: 'mci' as const },
+  { key: 'paytm', label: 'Paytm', icon: 'wallet' as const, iconType: 'mci' as const },
+  { key: 'upi', label: 'UPI', icon: 'bank-transfer' as const, iconType: 'mci' as const },
+  { key: 'bank', label: 'Bank', icon: 'bank' as const, iconType: 'mci' as const },
+];
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
@@ -53,6 +62,17 @@ function makeStyles(c: AppColors) {
     customerOptionSub:  { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 2 },
     noCustomers:        { padding: Spacing.xxl, alignItems: 'center' },
     noCustomersText:    { fontSize: FontSizes.lg, color: c.textSecondary, textAlign: 'center' },
+    // Payment method chips
+    methodRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+    methodChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: Spacing.md, paddingVertical: 8,
+      borderRadius: 20, borderWidth: 1.5,
+      borderColor: c.border, backgroundColor: c.inputBg,
+    },
+    methodChipActive:   { borderColor: c.primary, backgroundColor: c.primaryLight },
+    methodChipText:     { fontSize: FontSizes.sm, fontWeight: '600', color: c.textSecondary },
+    methodChipTextActive: { color: c.primary, fontWeight: '700' },
   });
 }
 
@@ -67,7 +87,8 @@ export default function AddPaymentScreen() {
   const [selectedCustomer, setSelected]     = useState<Customer | null>(null);
   const [showPicker, setShowPicker]         = useState(false);
   const [amount, setAmount]                 = useState('');
-  const [description, setDescription]       = useState('');
+  const [description, setDescription]       = useState('Cash');
+  const [selectedMethod, setSelectedMethod] = useState<string | null>('cash');
   const [saving, setSaving]                 = useState(false);
 
   useEffect(() => {
@@ -79,6 +100,16 @@ export default function AddPaymentScreen() {
       }
     });
   }, [db]);
+
+  const handleMethodSelect = (method: typeof PAYMENT_METHODS[number]) => {
+    if (selectedMethod === method.key) {
+      setSelectedMethod(null);
+      setDescription('');
+    } else {
+      setSelectedMethod(method.key);
+      setDescription(method.label);
+    }
+  };
 
   const handleSave = async () => {
     if (!selectedCustomer) { Alert.alert(tr.required, tr.pleaseSelectCustomer); return; }
@@ -110,8 +141,31 @@ export default function AddPaymentScreen() {
           <TextInput style={S.input} value={amount} onChangeText={setAmount} placeholder={tr.amountPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" returnKeyType="next" />
         </View>
         <View style={S.field}>
+          <Text style={S.label}><MaterialIcons name="payments" size={16} color={colors.text} /> {tr.payment}</Text>
+          <View style={S.methodRow}>
+            {PAYMENT_METHODS.map(m => {
+              const active = selectedMethod === m.key;
+              return (
+                <TouchableOpacity
+                  key={m.key}
+                  style={[S.methodChip, active && S.methodChipActive]}
+                  onPress={() => handleMethodSelect(m)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons
+                    name={m.icon}
+                    size={18}
+                    color={active ? colors.primary : colors.textSecondary}
+                  />
+                  <Text style={[S.methodChipText, active && S.methodChipTextActive]}>{m.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+        <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description}</Text>
-          <TextInput style={S.input} value={description} onChangeText={setDescription} placeholder={tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
+          <TextInput style={S.input} value={description} onChangeText={(text) => { setDescription(text); if (selectedMethod && text !== PAYMENT_METHODS.find(m => m.key === selectedMethod)?.label) setSelectedMethod(null); }} placeholder={tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
         </View>
         <TouchableOpacity style={[S.saveButton, saving && S.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
           <MaterialIcons name="payments" size={24} color="#FFFFFF" />
