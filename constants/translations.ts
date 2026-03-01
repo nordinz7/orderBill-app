@@ -116,6 +116,30 @@ const en = {
   invoiceItem: 'Item / Description',
   invoiceTotalAmount: 'Total Amount',
   invoiceThanks: 'Thank you for your order! 🙏',
+  // Transactions & Payments
+  payment: 'Payment',
+  recordPayment: 'Record Payment',
+  addPayment: 'Add Payment',
+  paymentReceived: 'Payment received',
+  paymentPlaceholder: 'e.g. Cash payment',
+  noTransactions: 'No transactions yet.',
+  // Customer Detail
+  customerDetail: 'Customer Details',
+  transactionHistory: 'Transaction History',
+  balanceDue: 'Balance Due',
+  paidInFull: 'Paid in Full',
+  due: 'due',
+  // Statement
+  sendStatement: 'Send Statement',
+  statementTitle: 'MFC — Statement',
+  totalOrders: 'Total Orders',
+  totalPaid: 'Total Paid',
+  statementBalance: 'Balance Due',
+  statementThanks: 'Thank you! 🙏',
+  noBalanceDue: 'No balance due for this customer.',
+  // Quantity
+  quantity: 'Quantity (kg)',
+  quantityPlaceholder: 'e.g. 2.5',
 };
 
 const ta: typeof en = {
@@ -222,6 +246,30 @@ const ta: typeof en = {
   invoiceItem: 'பொருள் / விவரம்',
   invoiceTotalAmount: 'மொத்த தொகை',
   invoiceThanks: 'உங்கள் ஆர்டருக்கு நன்றி! 🙏',
+  // Transactions & Payments
+  payment: 'பணம்',
+  recordPayment: 'பணம் பதிவு செய்',
+  addPayment: 'பணம் சேர்',
+  paymentReceived: 'பணம் பெறப்பட்டது',
+  paymentPlaceholder: 'எ.கா. ரொக்கம்',
+  noTransactions: 'பரிவர்த்தனைகள் இல்லை.',
+  // Customer Detail
+  customerDetail: 'வாடிக்கையாளர் விவரங்கள்',
+  transactionHistory: 'பரிவர்த்தனை வரலாறு',
+  balanceDue: 'நிலுவை தொகை',
+  paidInFull: 'முழுமையாக செலுத்தப்பட்டது',
+  due: 'நிலுவை',
+  // Statement
+  sendStatement: 'அறிக்கை அனுப்பு',
+  statementTitle: 'MFC — அறிக்கை',
+  totalOrders: 'மொத்த ஆர்டர்கள்',
+  totalPaid: 'மொத்தம் செலுத்தியது',
+  statementBalance: 'நிலுவை தொகை',
+  statementThanks: 'நன்றி! 🙏',
+  noBalanceDue: 'இந்த வாடிக்கையாளருக்கு நிலுவை இல்லை.',
+  // Quantity
+  quantity: 'அளவு (கிலோ)',
+  quantityPlaceholder: 'எ.கா. 2.5',
 };
 
 export const translations = { en, ta };

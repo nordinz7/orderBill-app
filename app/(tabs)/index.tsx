@@ -1,20 +1,20 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { Customer, getActiveCustomers, getAllCustomers, softDeleteCustomer } from '@/services/database';
+import { CustomerWithBalance, getActiveCustomersWithBalance, getAllCustomersWithBalance, softDeleteCustomer } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Linking,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    Linking,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 function makeStyles(c: AppColors) {
@@ -100,13 +100,13 @@ export default function CustomersScreen() {
   const { colors, tr } = useSettings();
   const S = makeStyles(colors);
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
   const [search, setSearch] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async (all = showAll) => {
-    setCustomers(all ? await getAllCustomers(db) : await getActiveCustomers(db));
+    setCustomers(all ? await getAllCustomersWithBalance(db) : await getActiveCustomersWithBalance(db));
   }, [db, showAll]);
 
   useFocusEffect(useCallback(() => { load(showAll); }, [showAll, load]));
@@ -125,7 +125,7 @@ export default function CustomersScreen() {
     );
   }, [customers, search]);
 
-  const handleDelete = (item: Customer) => {
+  const handleDelete = (item: CustomerWithBalance) => {
     Alert.alert(tr.removeCustomer, tr.removeCustomerMsg(item.name), [
       { text: tr.cancel, style: 'cancel' },
       {
@@ -140,10 +140,14 @@ export default function CustomersScreen() {
     Linking.openURL('tel:+' + phone.replace(/\D/g, ''));
   };
 
-  const renderItem = ({ item }: { item: Customer }) => {
+  const renderItem = ({ item }: { item: CustomerWithBalance }) => {
     const isDeleted = item.status === 'deleted';
     return (
-      <View style={[S.card, isDeleted && S.cardDeleted]}>
+      <TouchableOpacity
+        style={[S.card, isDeleted && S.cardDeleted]}
+        onPress={() => !isDeleted && router.push({ pathname: '/customer-detail', params: { id: item.id } })}
+        activeOpacity={isDeleted ? 1 : 0.7}
+      >
         <View style={S.cardContent}>
           <View style={S.nameRow}>
             <Text style={S.name}>{item.name}</Text>
@@ -158,6 +162,16 @@ export default function CustomersScreen() {
             {'   '}
             <MaterialIcons name="phone" size={13} color={colors.textSecondary} /> {item.phone_number}
           </Text>
+          {!isDeleted && item.balance > 0 && (
+            <Text style={{ fontSize: FontSizes.sm, color: colors.danger, fontWeight: '700', marginTop: 2 }}>
+              ₹{item.balance.toFixed(2)} {tr.due}
+            </Text>
+          )}
+          {!isDeleted && item.balance <= 0 && (
+            <Text style={{ fontSize: FontSizes.sm, color: colors.success, fontWeight: '600', marginTop: 2 }}>
+              {tr.paidInFull}
+            </Text>
+          )}
         </View>
         <View style={S.actions}>
           <TouchableOpacity style={S.callBtn} onPress={() => handleCall(item.phone_number)}>
@@ -178,7 +192,7 @@ export default function CustomersScreen() {
             </>
           )}
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

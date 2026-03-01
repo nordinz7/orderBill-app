@@ -1,8 +1,8 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { addOrder, Customer, getActiveCustomers } from '@/services/database';
+import { Customer, getActiveCustomers, insertPayment } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import {
@@ -28,7 +28,6 @@ function makeStyles(c: AppColors) {
       borderColor: c.border, borderRadius: Radius.md,
       padding: Spacing.lg, fontSize: FontSizes.lg, color: c.text,
     },
-    textArea:           { minHeight: 100 },
     pickerButton: {
       backgroundColor: c.inputBg, borderWidth: 1.5,
       borderColor: c.border, borderRadius: Radius.md,
@@ -39,7 +38,7 @@ function makeStyles(c: AppColors) {
     pickerPlaceholder:  { color: c.textMuted },
     saveButton: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      gap: Spacing.sm, backgroundColor: c.primary,
+      gap: Spacing.sm, backgroundColor: c.success,
       padding: Spacing.xl, borderRadius: Radius.lg, marginTop: Spacing.md,
     },
     saveButtonDisabled: { opacity: 0.6 },
@@ -57,9 +56,10 @@ function makeStyles(c: AppColors) {
   });
 }
 
-export default function AddOrderScreen() {
+export default function AddPaymentScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
+  const params = useLocalSearchParams<{ customerId?: string; customerName?: string; customerPlace?: string }>();
   const { colors, tr } = useSettings();
   const S = makeStyles(colors);
 
@@ -67,21 +67,26 @@ export default function AddOrderScreen() {
   const [selectedCustomer, setSelected]     = useState<Customer | null>(null);
   const [showPicker, setShowPicker]         = useState(false);
   const [amount, setAmount]                 = useState('');
-  const [quantity, setQuantity]             = useState('');
   const [description, setDescription]       = useState('');
   const [saving, setSaving]                 = useState(false);
 
-  useEffect(() => { getActiveCustomers(db).then(setCustomers); }, [db]);
+  useEffect(() => {
+    getActiveCustomers(db).then((list) => {
+      setCustomers(list);
+      if (params.customerId) {
+        const found = list.find(c => c.id === Number(params.customerId));
+        if (found) setSelected(found);
+      }
+    });
+  }, [db]);
 
   const handleSave = async () => {
     if (!selectedCustomer) { Alert.alert(tr.required, tr.pleaseSelectCustomer); return; }
     const num = parseFloat(amount);
     if (!amount || isNaN(num) || num <= 0) { Alert.alert(tr.required, tr.enterAmount); return; }
-    if (!description.trim()) { Alert.alert(tr.required, tr.enterDesc); return; }
     setSaving(true);
     try {
-      const qty = parseFloat(quantity) || 0;
-      await addOrder(db, selectedCustomer.id, num, description, qty);
+      await insertPayment(db, selectedCustomer.id, num, description || tr.paymentReceived);
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);
@@ -105,16 +110,12 @@ export default function AddOrderScreen() {
           <TextInput style={S.input} value={amount} onChangeText={setAmount} placeholder={tr.amountPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" returnKeyType="next" />
         </View>
         <View style={S.field}>
-          <Text style={S.label}><MaterialIcons name="scale" size={16} color={colors.text} /> {tr.quantity}</Text>
-          <TextInput style={S.input} value={quantity} onChangeText={setQuantity} placeholder={tr.quantityPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" returnKeyType="next" />
-        </View>
-        <View style={S.field}>
-          <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description} *</Text>
-          <TextInput style={[S.input, S.textArea]} value={description} onChangeText={setDescription} placeholder={tr.descPlaceholder} placeholderTextColor={colors.textMuted} multiline numberOfLines={4} textAlignVertical="top" />
+          <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description}</Text>
+          <TextInput style={S.input} value={description} onChangeText={setDescription} placeholder={tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
         </View>
         <TouchableOpacity style={[S.saveButton, saving && S.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
-          <MaterialIcons name="receipt" size={24} color="#FFFFFF" />
-          <Text style={S.saveButtonText}>{saving ? tr.saving : tr.saveOrder}</Text>
+          <MaterialIcons name="payments" size={24} color="#FFFFFF" />
+          <Text style={S.saveButtonText}>{saving ? tr.saving : tr.recordPayment}</Text>
         </TouchableOpacity>
       </ScrollView>
 

@@ -1,10 +1,10 @@
-import { SQLiteProvider } from 'expo-sqlite';
+import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
+import { initDatabase } from '@/services/database';
 import { Stack } from 'expo-router';
+import { SQLiteProvider } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { Suspense } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { initDatabase } from '@/services/database';
-import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
+import { ActivityIndicator, View } from 'react-native';
 
 function InnerLayout() {
   const { colors, tr } = useSettings();
@@ -31,6 +31,14 @@ function InnerLayout() {
         <Stack.Screen
           name="add-order"
           options={{ title: tr.newOrder, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="add-payment"
+          options={{ title: tr.addPayment, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="customer-detail"
+          options={{ title: tr.customerDetail }}
         />
       </Stack>
     </>

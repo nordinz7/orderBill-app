@@ -174,7 +174,10 @@ export default function OrdersScreen() {
         <Text style={S.amount}>&#8377;{item.amount.toFixed(2)}</Text>
       </View>
       <View style={S.row2}>
-        <Text style={S.row2Text} numberOfLines={1}>{item.customer_place}  ·  {item.description}</Text>
+        <Text style={S.row2Text} numberOfLines={1}>
+          {item.customer_place}  ·  {item.description}
+          {item.quantity > 0 ? `  ·  ${item.quantity} kg` : ''}
+        </Text>
         <Text style={S.dateText}>{format(new Date(item.date), 'dd MMM')}</Text>
       </View>
       <View style={S.actionRow}>

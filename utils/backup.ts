@@ -42,9 +42,12 @@ export async function createBackupFile(
 
   const payload = {
     exportedAt: new Date().toISOString(),
-    version: 1,
+    version: 2,
     customers: data.customers,
     orders: data.orders,
+    transactions: data.transactions,
+    statements: data.statements,
+    statement_transactions: data.statement_transactions,
   };
 
   const json = JSON.stringify(payload, null, 2);
