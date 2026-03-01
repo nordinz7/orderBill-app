@@ -256,7 +256,7 @@ export default function OrdersScreen() {
     <TouchableOpacity
       style={S.card}
       activeOpacity={0.7}
-      onPress={() => router.push({ pathname: '/customer-detail', params: { id: String(item.customer_id) } })}
+      onPress={() => router.push({ pathname: '/edit-order', params: { orderId: item.id, customerName: `${item.customer_name} — ${item.customer_place}`, amount: String(item.amount), description: item.description, quantity: String(item.quantity), date: item.date } })}
       onLongPress={() => handleDelete(item)}
     >
       <View style={S.qtyBadge}>
@@ -266,7 +266,7 @@ export default function OrdersScreen() {
       <View style={S.cardContent}>
         <View style={S.cardRow1}>
           <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
-          <Text style={S.amount}>&#8377;{item.amount}</Text>
+          {item.amount > 0 && <Text style={S.amount}>&#8377;{item.amount}</Text>}
         </View>
         <Text style={S.cardSub} numberOfLines={1}>
           {item.customer_place} · {format(new Date(item.date), 'dd MMM')}{item.description !== 'Kuboos' ? `  ·  ${item.description}` : ''}

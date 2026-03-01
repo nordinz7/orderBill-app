@@ -82,7 +82,6 @@ export default function AddOrderScreen() {
   const [selectedCustomer, setSelected]     = useState<Customer | null>(null);
   const [showPicker, setShowPicker]         = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [amount, setAmount]                 = useState('');
   const [quantity, setQuantity]             = useState('');
   const [description, setDescription]       = useState('Kuboos');
   const [saving, setSaving]                 = useState(false);
@@ -99,13 +98,11 @@ export default function AddOrderScreen() {
 
   const handleSave = async () => {
     if (!selectedCustomer) { Alert.alert(tr.required, tr.pleaseSelectCustomer); return; }
-    const num = parseInt(amount, 10);
-    if (!amount || isNaN(num) || num <= 0) { Alert.alert(tr.required, tr.enterAmount); return; }
     if (!description.trim()) { Alert.alert(tr.required, tr.enterDesc); return; }
     setSaving(true);
     try {
       const qty = parseInt(quantity, 10) || 0;
-      await addOrder(db, selectedCustomer.id, num, description, qty, orderDate.toISOString());
+      await addOrder(db, selectedCustomer.id, 0, description, qty, orderDate.toISOString());
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);
@@ -139,10 +136,6 @@ export default function AddOrderScreen() {
               themeVariant={colors.background === '#000000' || colors.background === '#121212' ? 'dark' : 'light'}
             />
           )}
-        </View>
-        <View style={S.field}>
-          <Text style={S.label}><MaterialIcons name="currency-rupee" size={16} color={colors.text} /> {tr.amount} *</Text>
-          <TextInput style={S.input} value={amount} onChangeText={t => setAmount(t.replace(/[^0-9]/g, ''))} placeholder={tr.amountPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="number-pad" returnKeyType="next" />
         </View>
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="scale" size={16} color={colors.text} /> {tr.quantity}</Text>

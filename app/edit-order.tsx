@@ -78,8 +78,7 @@ export default function EditOrderScreen() {
   };
 
   const handleSave = async () => {
-    const num = parseInt(amount, 10);
-    if (!amount || isNaN(num) || num <= 0) { Alert.alert(tr.required, tr.enterAmount); return; }
+    const num = parseInt(amount, 10) || 0;
     if (!description.trim()) { Alert.alert(tr.required, tr.enterDesc); return; }
     setSaving(true);
     try {
