@@ -45,7 +45,6 @@ const en = {
   searchCustomers: 'Search by customer name...',
   order: 'order',
   orders_plural: 'orders',
-  selectCustomer: 'Select a customer...',
   // Form fields
   name: 'Customer Name',
   place: 'Place / Town',
@@ -156,6 +155,7 @@ const en = {
   noBalanceDue: 'No balance due for this customer.',
   sampleStatement: 'Sample Statement',
   sampleStatementDesc: 'Preview how your statement/bill looks to customers.',
+  previewStatement: 'Preview Statement',
   // Quantity
   orderDate: 'Order Date',
   quantity: 'Quantity (kg)',
@@ -232,7 +232,6 @@ const ta: typeof en = {
   searchCustomers: 'வாடிக்கையாளர் பெயரை தேடுங்கள்...',
   order: 'ஆர்டர்',
   orders_plural: 'ஆர்டர்கள்',
-  selectCustomer: 'வாடிக்கையாளரை தேர்ந்தெடுக்கவும்...',
   name: 'வாடிக்கையாளர் பெயர்',
   place: 'இடம் / நகரம்',
   whatsappNumber: 'வாட்ஸ்அப் எண்',
@@ -334,6 +333,7 @@ const ta: typeof en = {
   noBalanceDue: 'இந்த வாடிக்கையாளருக்கு நிலுவை இல்லை.',
   sampleStatement: 'மாதிரி அறிக்கை',
   sampleStatementDesc: 'வாடிக்கையாளர்களுக்கு அறிக்கை/பில் எப்படி தெரியும் என்பதைப் பாருங்கள்.',
+  previewStatement: 'அறிக்கை முன்னோட்டம்',
   // Quantity
   orderDate: 'ஆர்டர் தேதி',
   quantity: 'அளவு (கிலோ)',

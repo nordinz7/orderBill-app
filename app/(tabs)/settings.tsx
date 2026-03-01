@@ -1,11 +1,10 @@
-import StatementBill from '@/components/StatementBill';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { Lang } from '@/constants/translations';
 import { useSettings } from '@/contexts/SettingsContext';
-import { TransactionWithQuantity } from '@/services/database';
 import { backupToGoogleDrive, createAndShareBackup, getLastBackupDate, isBackupOverdue, pickAndRestoreBackup } from '@/utils/backup';
 import { MaterialIcons } from '@expo/vector-icons';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
+import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -70,7 +69,6 @@ function makeStyles(c: AppColors) {
     overdueTagText: { fontSize: FontSizes.xs, color: '#856404', fontWeight: '700' },
     // Sample statement
     sampleDesc: { fontSize: FontSizes.sm, color: c.textSecondary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm },
-    sampleWrap: { alignItems: 'center', paddingHorizontal: Spacing.md, paddingBottom: Spacing.lg },
     // App info
     appInfoCard: {
       margin: Spacing.lg, backgroundColor: c.card,
@@ -82,18 +80,9 @@ function makeStyles(c: AppColors) {
   });
 }
 
-// Sample data for the statement preview
-function getSampleTransactions(): TransactionWithQuantity[] {
-  const today = new Date();
-  return [
-    { id: 1, customer_id: 1, order_id: 1, type: 'debit', amount: 500, description: 'Chicken Biriyani', quantity: 2, date: subDays(today, 5).toISOString(), created_date: '', updated_at: '' },
-    { id: 2, customer_id: 1, order_id: 2, type: 'debit', amount: 300, description: 'Mutton Curry', quantity: 1, date: subDays(today, 3).toISOString(), created_date: '', updated_at: '' },
-    { id: 3, customer_id: 1, order_id: null, type: 'credit', amount: 400, description: 'Cash Payment', quantity: 0, date: subDays(today, 1).toISOString(), created_date: '', updated_at: '' },
-  ];
-}
-
 export default function SettingsScreen() {
   const db = useSQLiteContext();
+  const router = useRouter();
   const { colors, tr, isDark, toggleTheme, lang, setLang, companyName, setCompanyName, companyPlace, setCompanyPlace } = useSettings();
   const S = makeStyles(colors);
 
@@ -164,7 +153,6 @@ export default function SettingsScreen() {
   };
 
   const busy = backupLoading || restoring;
-  const sampleTxns = getSampleTransactions();
 
   return (
     <ScrollView style={S.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -240,20 +228,14 @@ export default function SettingsScreen() {
         <Text style={S.sectionTitle}>{tr.sampleStatement}</Text>
         <View style={S.card}>
           <Text style={S.sampleDesc}>{tr.sampleStatementDesc}</Text>
-          <View style={S.sampleWrap}>
-            <StatementBill
-              companyName={companyName}
-              companyPlace={companyPlace}
-              customerName="Rahul Kumar"
-              customerPlace="Chennai"
-              date={format(new Date(), 'dd/MM/yyyy')}
-              transactions={sampleTxns}
-              totalOrders={800}
-              totalPaid={400}
-              balance={400}
-              lang={lang}
-            />
-          </View>
+          <TouchableOpacity
+            style={[S.row, S.rowLast]}
+            onPress={() => router.push('/preview-statement')}
+          >
+            <MaterialIcons name="receipt-long" size={24} color={colors.primary} style={S.rowIcon} />
+            <Text style={S.rowLabel}>{tr.previewStatement}</Text>
+            <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
       </View>
 

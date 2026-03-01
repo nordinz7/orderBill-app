@@ -44,6 +44,10 @@ function InnerLayout() {
           name="view-statement"
           options={{ title: tr.viewStatement }}
         />
+        <Stack.Screen
+          name="preview-statement"
+          options={{ title: tr.previewStatement }}
+        />
       </Stack>
     </>
   );
