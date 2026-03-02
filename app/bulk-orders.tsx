@@ -9,15 +9,15 @@ import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 const DRAFT_KEY = '@mfc_bulk_draft';
@@ -414,6 +414,7 @@ export default function BulkOrdersScreen() {
           data={filteredCustomers}
           keyExtractor={item => String(item.id)}
           renderItem={renderItem}
+          extraData={quantities}
           contentContainerStyle={filteredCustomers.length === 0 ? { flexGrow: 1 } : S.listContent}
           keyboardShouldPersistTaps="handled"
           ListEmptyComponent={
