@@ -446,6 +446,35 @@ export async function addOrder(
   return orderId;
 }
 
+export async function bulkAddOrders(
+  db: SQLite.SQLiteDatabase,
+  orders: { customer_id: number; quantity: number }[],
+  description: string,
+  date: string,
+): Promise<number> {
+  const now = new Date().toISOString();
+  let count = 0;
+  await db.withTransactionAsync(async () => {
+    for (const o of orders) {
+      if (o.quantity <= 0) continue;
+      const orderResult = await db.runAsync(
+        `INSERT INTO orders (customer_id, amount, description, quantity, date, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [o.customer_id, 0, description.trim(), o.quantity, date, now]
+      );
+      const orderId = orderResult.lastInsertRowId;
+      const txnResult = await db.runAsync(
+        `INSERT INTO transactions (customer_id, order_id, type, amount, description, date, created_date, updated_at)
+         VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)`,
+        [o.customer_id, orderId, 0, description.trim(), date, now, now]
+      );
+      await db.runAsync(`UPDATE orders SET transaction_id = ? WHERE id = ?`, [txnResult.lastInsertRowId, orderId]);
+      count++;
+    }
+  });
+  return count;
+}
+
 export async function updateOrder(
   db: SQLite.SQLiteDatabase,
   orderId: number,

@@ -50,6 +50,10 @@ function InnerLayout() {
           options={{ title: tr.newOrder, presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen
+          name="bulk-orders"
+          options={{ title: tr.bulkOrders, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
           name="edit-order"
           options={{ title: tr.editOrder, presentation: 'modal', animation: 'slide_from_bottom' }}
         />

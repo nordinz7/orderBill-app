@@ -1,3 +1,4 @@
+import { getBulkDraftCount } from '@/app/bulk-orders';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
@@ -108,6 +109,26 @@ function makeStyles(c: AppColors) {
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.35, shadowRadius: 8,
     },
+    bulkFab: {
+      position: 'absolute', bottom: 92, right: 28,
+      width: 48, height: 48, borderRadius: 24,
+      backgroundColor: c.success,
+      justifyContent: 'center', alignItems: 'center',
+      elevation: 5,
+      shadowColor: c.success,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3, shadowRadius: 6,
+    },
+    badge: {
+      position: 'absolute', top: -4, right: -4,
+      minWidth: 20, height: 20, borderRadius: 10,
+      backgroundColor: c.danger,
+      justifyContent: 'center', alignItems: 'center',
+      paddingHorizontal: 4,
+    },
+    badgeText: {
+      color: '#FFFFFF', fontSize: 11, fontWeight: '800',
+    },
     // Modal / dropdown styles
     modalOverlay: {
       flex: 1,
@@ -183,6 +204,7 @@ export default function OrdersScreen() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [draftCount, setDraftCount] = useState(0);
 
   const loadDropdownData = useCallback(async () => {
     const customers = await getCustomersWithOrders(db);
@@ -205,6 +227,7 @@ export default function OrdersScreen() {
   useFocusEffect(useCallback(() => {
     loadDropdownData();
     load();
+    getBulkDraftCount().then(setDraftCount);
   }, [load, loadDropdownData]));
 
   const onRefresh = async () => {
@@ -349,6 +372,15 @@ export default function OrdersScreen() {
 
       <TouchableOpacity style={S.fab} onPress={() => router.push('/add-order')} accessibilityLabel={tr.addOrder}>
         <MaterialIcons name="add" size={34} color="#FFFFFF" />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={S.bulkFab} onPress={() => router.push('/bulk-orders')} accessibilityLabel={tr.bulkOrders}>
+        <MaterialIcons name="playlist-add" size={28} color="#FFFFFF" />
+        {draftCount > 0 && (
+          <View style={S.badge}>
+            <Text style={S.badgeText}>{draftCount}</Text>
+          </View>
+        )}
       </TouchableOpacity>
 
       {/* Customer picker modal with search */}
