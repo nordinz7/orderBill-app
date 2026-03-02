@@ -96,6 +96,12 @@ function makeStyles(c: AppColors) {
     customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1, marginRight: Spacing.sm },
     amount:       { fontSize: FontSizes.lg, fontWeight: '800', color: c.success },
     cardSub:      { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 2 },
+    whatsappBtn:  {
+      width: 38, height: 38, borderRadius: 19,
+      backgroundColor: c.whatsapp,
+      justifyContent: 'center', alignItems: 'center',
+      marginLeft: Spacing.sm,
+    },
     emptyWrap:    { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
     emptyText:    { fontSize: FontSizes.xl, fontWeight: '600', color: c.textSecondary, marginTop: Spacing.lg },
     emptySubText: { fontSize: FontSizes.md, color: c.textMuted, marginTop: Spacing.sm },
@@ -295,6 +301,26 @@ export default function OrdersScreen() {
           {item.customer_place} · {format(new Date(item.date), 'dd MMM')}{item.description !== 'Kuboos' ? `  ·  ${item.description}` : ''}
         </Text>
       </View>
+      {item.amount > 0 && (
+        <TouchableOpacity
+          style={S.whatsappBtn}
+          onPress={() => router.push({
+            pathname: '/view-invoice',
+            params: {
+              customerName: item.customer_name,
+              customerPlace: item.customer_place,
+              customerPhone: item.customer_phone,
+              amount: String(item.amount),
+              description: item.description,
+              quantity: String(item.quantity),
+              date: item.date,
+            },
+          })}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <MaterialIcons name="send" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 

@@ -110,6 +110,45 @@ export async function sendWhatsAppStatement(
 }
 
 /**
+ * Share an invoice image via the system share sheet (user picks WhatsApp).
+ * @param imageUri - local file URI from ViewShot capture
+ * @param customerName - used for the filename
+ */
+export async function shareInvoiceImage(
+  imageUri: string,
+  customerName: string,
+  lang: Lang = 'en',
+): Promise<void> {
+  const tr = translations[lang];
+  try {
+    const available = await Sharing.isAvailableAsync();
+    if (!available) {
+      Alert.alert('Error', 'Sharing is not available on this device.');
+      return;
+    }
+
+    const safeName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
+    const dateTag = format(new Date(), 'yyyyMMdd');
+    const fileName = `MFC_Invoice_${safeName}_${dateTag}.png`;
+
+    const source = new File(imageUri);
+    const dest = new File(Paths.cache, fileName);
+
+    try { dest.delete(); } catch { /* doesn't exist yet */ }
+    source.copy(dest);
+
+    await Sharing.shareAsync(dest.uri, {
+      mimeType: 'image/png',
+      dialogTitle: tr.sendInvoice,
+      UTI: 'public.png',
+    });
+  } catch (error) {
+    console.error('Share invoice error:', error);
+    Alert.alert('Error', 'Could not share the invoice image. Please try again.');
+  }
+}
+
+/**
  * Share a statement image via the system share sheet (user picks WhatsApp).
  * @param imageUri - local file URI from ViewShot capture
  * @param customerName - used for the filename
