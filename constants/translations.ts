@@ -227,6 +227,19 @@ const en = {
   totalReceived: 'Received',
   totalOrdered: 'Ordered',
   call: 'Call',
+  // Reports
+  reports: 'Reports',
+  outstandingBalances: 'Outstanding Balances',
+  dailySummary: 'Daily Summary',
+  totalOutstanding: 'Total Outstanding',
+  noOutstandingBalances: 'No pending balances! All settled.',
+  lastOrder: 'Last order',
+  collect: 'Collect',
+  salesSummary: 'Sales Summary',
+  ordersSummary: 'Orders',
+  collectionsSummary: 'Collections',
+  quantitySummary: 'Quantity',
+  packetsShort: 'pkt',
 };
 
 const ta: typeof en = {
@@ -444,6 +457,19 @@ const ta: typeof en = {
   totalReceived: 'பெற்றது',
   totalOrdered: 'ஆர்டர்',
   call: 'அழைப்பு',
+  // Reports
+  reports: 'அறிக்கைகள்',
+  outstandingBalances: 'நிலுவை பாக்கி',
+  dailySummary: 'தினசரி சுருக்கம்',
+  totalOutstanding: 'மொத்த நிலுவை',
+  noOutstandingBalances: 'நிலுவை இல்லை! அனைத்தும் தீர்க்கப்பட்டது.',
+  lastOrder: 'கடைசி ஆர்டர்',
+  collect: 'வசூலி',
+  salesSummary: 'விற்பனை சுருக்கம்',
+  ordersSummary: 'ஆர்டர்கள்',
+  collectionsSummary: 'வசூல்',
+  quantitySummary: 'அளவு',
+  packetsShort: 'பாக்கெட்',
 };
 
 export const translations = { en, ta };

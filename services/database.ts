@@ -731,3 +731,80 @@ export async function restoreFromBackupData(
 
   return { customers: payload.customers.length, orders: payload.orders.length };
 }
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+
+export interface CustomerOutstanding {
+  id: number;
+  name: string;
+  place: string;
+  phone_number: string;
+  balance: number;
+  last_order_date: string | null;
+}
+
+export async function getCustomersWithOutstandingBalance(
+  db: SQLite.SQLiteDatabase,
+): Promise<CustomerOutstanding[]> {
+  return db.getAllAsync<CustomerOutstanding>(`
+    SELECT
+      c.id, c.name, c.place, c.phone_number,
+      COALESCE((
+        SELECT SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE -t.amount END)
+        FROM transactions t WHERE t.customer_id = c.id
+      ), 0) as balance,
+      (SELECT MAX(o.date) FROM orders o WHERE o.customer_id = c.id) as last_order_date
+    FROM customers c
+    WHERE c.status = 'active'
+    HAVING balance > 0
+    ORDER BY balance DESC
+  `);
+}
+
+export interface DailySummary {
+  total_sales: number;
+  order_count: number;
+  total_qty: number;
+  payment_count: number;
+  total_collected: number;
+}
+
+export async function getDailySummary(
+  db: SQLite.SQLiteDatabase,
+  dateStr: string,
+): Promise<DailySummary> {
+  const orderStats = await db.getFirstAsync<{ total_sales: number; order_count: number; total_qty: number }>(`
+    SELECT
+      COALESCE(SUM(amount), 0) as total_sales,
+      COUNT(*) as order_count,
+      COALESCE(SUM(quantity), 0) as total_qty
+    FROM orders
+    WHERE date(date) = date(?)
+  `, [dateStr]);
+
+  const paymentStats = await db.getFirstAsync<{ payment_count: number; total_collected: number }>(`
+    SELECT
+      COUNT(*) as payment_count,
+      COALESCE(SUM(amount), 0) as total_collected
+    FROM transactions
+    WHERE type = 'credit' AND date(date) = date(?)
+  `, [dateStr]);
+
+  return {
+    total_sales: orderStats?.total_sales ?? 0,
+    order_count: orderStats?.order_count ?? 0,
+    total_qty: orderStats?.total_qty ?? 0,
+    payment_count: paymentStats?.payment_count ?? 0,
+    total_collected: paymentStats?.total_collected ?? 0,
+  };
+}
+
+export async function getTotalOutstanding(db: SQLite.SQLiteDatabase): Promise<number> {
+  const row = await db.getFirstAsync<{ total: number }>(`
+    SELECT COALESCE(SUM(
+      CASE WHEN type = 'debit' THEN amount ELSE -amount END
+    ), 0) as total
+    FROM transactions
+  `);
+  return row?.total ?? 0;
+}
