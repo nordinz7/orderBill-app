@@ -2,10 +2,11 @@ import { getBulkDraftCount } from '@/app/bulk-orders';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
-    deleteOrder,
-    getCustomersWithOrders,
-    getOrdersByDateRange,
-    OrderWithCustomer,
+  deleteOrder,
+  getCustomerBalance,
+  getCustomersWithOrders,
+  getOrdersByDateRange,
+  OrderWithCustomer,
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -14,17 +15,17 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Modal,
-    Platform,
-    Pressable,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FilterMode = 'date' | 'customer';
@@ -292,6 +293,28 @@ export default function OrdersScreen() {
     ]);
   };
 
+  const handleSend = async (item: OrderWithCustomer) => {
+    const bal = await getCustomerBalance(db, item.customer_id);
+    if (bal.balance > 0) {
+      // Customer has pending balance, show statement
+      router.push({ pathname: '/view-statement', params: { id: String(item.customer_id) } });
+    } else {
+      // No pending balance, show invoice for this order
+      router.push({
+        pathname: '/view-invoice',
+        params: {
+          customerName: item.customer_name,
+          customerPlace: item.customer_place,
+          customerPhone: item.customer_phone,
+          amount: String(item.amount),
+          description: item.description,
+          quantity: String(item.quantity),
+          date: item.date,
+        },
+      });
+    }
+  };
+
   const displayed = orders;
   const totalAmount = displayed.reduce((s, o) => s + o.amount, 0);
 
@@ -323,18 +346,7 @@ export default function OrdersScreen() {
       {item.amount > 0 && (
         <TouchableOpacity
           style={S.whatsappBtn}
-          onPress={() => router.push({
-            pathname: '/view-invoice',
-            params: {
-              customerName: item.customer_name,
-              customerPlace: item.customer_place,
-              customerPhone: item.customer_phone,
-              amount: String(item.amount),
-              description: item.description,
-              quantity: String(item.quantity),
-              date: item.date,
-            },
-          })}
+          onPress={() => handleSend(item)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <MaterialIcons name="send" size={18} color="#FFFFFF" />
