@@ -7,7 +7,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { addDays, format } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -186,6 +186,48 @@ function makeStyles(c: AppColors) {
   });
 }
 
+interface CustomerRowProps {
+  item: Customer;
+  qty: string;
+  onQtyChange: (id: number, value: string) => void;
+  onSubmitEditing: () => void;
+  inputRef: (ref: TextInput | null) => void;
+  styles: ReturnType<typeof makeStyles>;
+  textMutedColor: string;
+}
+
+const CustomerRow = React.memo(function CustomerRow({
+  item,
+  qty,
+  onQtyChange,
+  onSubmitEditing,
+  inputRef,
+  styles: S,
+  textMutedColor,
+}: CustomerRowProps) {
+  const hasFill = parseInt(qty, 10) > 0;
+  return (
+    <View style={[S.row, hasFill && S.rowFilled]}>
+      <View style={S.customerInfo}>
+        <Text style={S.customerName}>{item.name}</Text>
+        {item.place ? <Text style={S.customerPlace}>{item.place}</Text> : null}
+      </View>
+      <TextInput
+        ref={inputRef}
+        style={[S.qtyInput, hasFill && S.qtyInputFilled]}
+        value={qty}
+        onChangeText={v => onQtyChange(item.id, v.replace(/[^0-9]/g, ''))}
+        placeholder="0"
+        placeholderTextColor={textMutedColor}
+        keyboardType="number-pad"
+        returnKeyType="next"
+        selectTextOnFocus
+        onSubmitEditing={onSubmitEditing}
+      />
+    </View>
+  );
+});
+
 export default function BulkOrdersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
@@ -245,10 +287,9 @@ export default function BulkOrdersScreen() {
     if (date) setOrderDate(date);
   };
 
-  const handleQtyChange = (customerId: number, value: string) => {
-    const cleaned = value.replace(/[^0-9]/g, '');
-    setQuantities(prev => ({ ...prev, [customerId]: cleaned }));
-  };
+  const handleQtyChange = useCallback((customerId: number, value: string) => {
+    setQuantities(prev => ({ ...prev, [customerId]: value }));
+  }, []);
 
   const filteredCustomers = useMemo(() => {
     if (!search.trim()) return customers;
@@ -322,35 +363,25 @@ export default function BulkOrdersScreen() {
     ]);
   };
 
-  const renderItem = ({ item, index }: { item: Customer; index: number }) => {
+  const renderItem = useCallback(({ item, index }: { item: Customer; index: number }) => {
     const qty = quantities[item.id] || '';
-    const hasFill = parseInt(qty, 10) > 0;
     return (
-      <View style={[S.row, hasFill && S.rowFilled]}>
-        <View style={S.customerInfo}>
-          <Text style={S.customerName}>{item.name}</Text>
-          {item.place ? <Text style={S.customerPlace}>{item.place}</Text> : null}
-        </View>
-        <TextInput
-          ref={ref => { inputRefs.current[item.id] = ref; }}
-          style={[S.qtyInput, hasFill && S.qtyInputFilled]}
-          value={qty}
-          onChangeText={v => handleQtyChange(item.id, v)}
-          placeholder="0"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="number-pad"
-          returnKeyType="next"
-          selectTextOnFocus
-          onSubmitEditing={() => {
-            const nextCustomer = filteredCustomers[index + 1];
-            if (nextCustomer) {
-              inputRefs.current[nextCustomer.id]?.focus();
-            }
-          }}
-        />
-      </View>
+      <CustomerRow
+        item={item}
+        qty={qty}
+        onQtyChange={handleQtyChange}
+        onSubmitEditing={() => {
+          const nextCustomer = filteredCustomers[index + 1];
+          if (nextCustomer) {
+            inputRefs.current[nextCustomer.id]?.focus();
+          }
+        }}
+        inputRef={ref => { inputRefs.current[item.id] = ref; }}
+        styles={S}
+        textMutedColor={colors.textMuted}
+      />
     );
-  };
+  }, [quantities, filteredCustomers, handleQtyChange, S, colors.textMuted]);
 
   return (
     <KeyboardAvoidingView
