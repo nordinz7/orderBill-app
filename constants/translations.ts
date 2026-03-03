@@ -171,6 +171,7 @@ const en = {
   disableDeveloperMode: 'Disable Developer Mode',
   // Quantity
   orderDate: 'Order Date',
+  paymentDate: 'Payment Date',
   quantity: 'Quantity (packets)',
   quantityPlaceholder: 'e.g. 10',
   // Company
@@ -405,6 +406,7 @@ const ta: typeof en = {
   disableDeveloperMode: 'டெவலப்பர் பயன்முறையை முடக்கு',
   // Quantity
   orderDate: 'ஆர்டர் தேதி',
+  paymentDate: 'பணம் செலுத்திய தேதி',
   quantity: 'அளவு (பாக்கெட்)',
   quantityPlaceholder: 'எ.கா. 10',
   // Company

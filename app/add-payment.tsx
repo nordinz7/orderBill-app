@@ -2,6 +2,8 @@ import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Customer, getActiveCustomers, insertPayment } from '@/services/database';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
@@ -79,6 +81,13 @@ function makeStyles(c: AppColors) {
     methodChipActive:   { borderColor: c.primary, backgroundColor: c.primaryLight },
     methodChipText:     { fontSize: FontSizes.sm, fontWeight: '600', color: c.textSecondary },
     methodChipTextActive: { color: c.primary, fontWeight: '700' },
+    dateButton: {
+      backgroundColor: c.inputBg, borderWidth: 1.5,
+      borderColor: c.border, borderRadius: Radius.md,
+      padding: Spacing.lg, flexDirection: 'row',
+      alignItems: 'center', justifyContent: 'space-between',
+    },
+    dateButtonText:     { fontSize: FontSizes.lg, color: c.text },
   });
 }
 
@@ -96,7 +105,14 @@ export default function AddPaymentScreen() {
   const [amount, setAmount]                 = useState('');
   const [description, setDescription]       = useState('Cash');
   const [selectedMethod, setSelectedMethod] = useState<string | null>('cash');
+  const [paymentDate, setPaymentDate]       = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving]                 = useState(false);
+
+  const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {
+    if (Platform.OS === 'android') setShowDatePicker(false);
+    if (date) setPaymentDate(date);
+  };
 
   useEffect(() => {
     getActiveCustomers(db).then((list) => {
@@ -124,7 +140,7 @@ export default function AddPaymentScreen() {
     if (!amount || isNaN(num) || num <= 0) { Alert.alert(tr.required, tr.enterAmount); return; }
     setSaving(true);
     try {
-      await insertPayment(db, selectedCustomer.id, num, description || tr.paymentReceived);
+      await insertPayment(db, selectedCustomer.id, num, description || tr.paymentReceived, paymentDate.toISOString());
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);
@@ -142,6 +158,22 @@ export default function AddPaymentScreen() {
             </Text>
             <MaterialIcons name="arrow-drop-down" size={28} color={colors.textSecondary} />
           </TouchableOpacity>
+        </View>
+        <View style={S.field}>
+          <Text style={S.label}><MaterialIcons name="event" size={16} color={colors.text} /> {tr.paymentDate}</Text>
+          <TouchableOpacity style={S.dateButton} onPress={() => setShowDatePicker(true)}>
+            <Text style={S.dateButtonText}>{format(paymentDate, 'dd MMM yyyy, EEEE')}</Text>
+            <MaterialIcons name="calendar-today" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={paymentDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              onChange={onDateChange}
+              themeVariant={colors.background === '#000000' || colors.background === '#121212' ? 'dark' : 'light'}
+            />
+          )}
         </View>
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="currency-rupee" size={16} color={colors.text} /> {tr.amount} *</Text>

@@ -544,13 +544,14 @@ export async function getCustomerBalance(
 }
 
 export async function insertPayment(
-  db: SQLite.SQLiteDatabase, customerId: number, amount: number, description: string = 'Payment received',
+  db: SQLite.SQLiteDatabase, customerId: number, amount: number, description: string = 'Payment received', date?: string,
 ): Promise<number> {
   const now = new Date().toISOString();
+  const txnDate = date || now;
   const result = await db.runAsync(
     `INSERT INTO transactions (customer_id, order_id, type, amount, description, date, created_date, updated_at)
      VALUES (?, NULL, 'credit', ?, ?, ?, ?, ?)`,
-    [customerId, amount, description.trim(), now, now, now]
+    [customerId, amount, description.trim(), txnDate, now, now]
   );
   return result.lastInsertRowId;
 }

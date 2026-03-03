@@ -77,12 +77,14 @@ function makeStyles(c: AppColors) {
       shadowOpacity: 0.06,
       shadowRadius: 2,
     },
-    typeBadge: {
-      width: 44, height: 44, borderRadius: 22,
+    dateBadge: {
+      width: 48, height: 48, borderRadius: 24,
       justifyContent: 'center', alignItems: 'center',
     },
-    typeBadgeCredit: { backgroundColor: c.successLight },
-    typeBadgeDebit:  { backgroundColor: c.dangerLight },
+    dateBadgeCredit: { backgroundColor: c.successLight },
+    dateBadgeDebit:  { backgroundColor: c.dangerLight },
+    dateBadgeDay:    { fontSize: FontSizes.xl, fontWeight: '800', color: c.textSecondary, lineHeight: FontSizes.xl + 2 },
+    dateBadgeMonth:  { fontSize: 10, fontWeight: '600', color: c.textMuted, marginTop: -2, textTransform: 'uppercase' },
     cardContent:  { flex: 1 },
     cardRow1:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1, marginRight: Spacing.sm },
@@ -256,12 +258,9 @@ export default function TransactionsScreen() {
         onPress={() => router.push({ pathname: '/customer-detail', params: { id: String(item.customer_id) } })}
         onLongPress={() => isCredit && handleDeleteTransaction(item)}
       >
-        <View style={[S.typeBadge, isCredit ? S.typeBadgeCredit : S.typeBadgeDebit]}>
-          <MaterialIcons
-            name={isCredit ? 'arrow-downward' : 'arrow-upward'}
-            size={24}
-            color={isCredit ? colors.success : colors.danger}
-          />
+        <View style={[S.dateBadge, isCredit ? S.dateBadgeCredit : S.dateBadgeDebit]}>
+          <Text style={S.dateBadgeDay}>{format(new Date(item.date), 'd')}</Text>
+          <Text style={S.dateBadgeMonth}>{format(new Date(item.date), 'MMM')}</Text>
         </View>
         <View style={S.cardContent}>
           <View style={S.cardRow1}>
