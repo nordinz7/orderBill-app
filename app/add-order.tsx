@@ -4,7 +4,7 @@ import { addOrder, Customer, getActiveCustomers } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import {
@@ -77,6 +77,7 @@ export default function AddOrderScreen() {
   const router = useRouter();
   const { colors, tr } = useSettings();
   const S = makeStyles(colors);
+  const params = useLocalSearchParams<{ defaultDate?: string }>();
 
   const [customers, setCustomers]           = useState<Customer[]>([]);
   const [selectedCustomer, setSelected]     = useState<Customer | null>(null);
@@ -86,7 +87,13 @@ export default function AddOrderScreen() {
   const [description, setDescription]       = useState('Kuboos');
   const [saving, setSaving]                 = useState(false);
 
-  const [orderDate, setOrderDate]           = useState<Date>(new Date());
+  const [orderDate, setOrderDate]           = useState<Date>(() => {
+    if (params.defaultDate) {
+      const d = new Date(params.defaultDate);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  });
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {

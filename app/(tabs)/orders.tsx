@@ -428,7 +428,7 @@ export default function OrdersScreen() {
         }
       />
 
-      <TouchableOpacity style={S.fab} onPress={() => router.push('/add-order')} accessibilityLabel={tr.addOrder}>
+      <TouchableOpacity style={S.fab} onPress={() => router.push({ pathname: '/add-order', params: { defaultDate: selectedDate.toISOString().slice(0, 10) } })} accessibilityLabel={tr.addOrder}>
         <MaterialIcons name="add" size={34} color="#FFFFFF" />
       </TouchableOpacity>
 
