@@ -399,6 +399,19 @@ export async function getOrdersByDateRange(
   );
 }
 
+export async function findDuplicateOrder(
+  db: SQLite.SQLiteDatabase,
+  customerId: number,
+  date: string,
+  description: string,
+): Promise<OrderWithCustomer | null> {
+  const rows = await db.getAllAsync<OrderWithCustomer>(
+    `${ORDER_SELECT} WHERE o.customer_id = ? AND date(o.date) = date(?) AND LOWER(TRIM(o.description)) = LOWER(?) LIMIT 1`,
+    [customerId, date, description.trim()]
+  );
+  return rows.length > 0 ? rows[0] : null;
+}
+
 export async function getDistinctOrderDates(
   db: SQLite.SQLiteDatabase,
 ): Promise<string[]> {

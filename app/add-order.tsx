@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { addOrder, Customer, getActiveCustomers } from '@/services/database';
+import { addOrder, Customer, findDuplicateOrder, getActiveCustomers } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -106,6 +106,44 @@ export default function AddOrderScreen() {
   const handleSave = async () => {
     if (!selectedCustomer) { Alert.alert(tr.required, tr.pleaseSelectCustomer); return; }
     if (!description.trim()) { Alert.alert(tr.required, tr.enterDesc); return; }
+
+    // Check for duplicate order (same customer + date + description)
+    const dateStr = orderDate.toISOString().slice(0, 10);
+    const existing = await findDuplicateOrder(db, selectedCustomer.id, dateStr, description);
+    if (existing) {
+      Alert.alert(tr.duplicateOrderTitle, tr.duplicateOrderMsg(selectedCustomer.name, existing.quantity), [
+        { text: tr.cancel, style: 'cancel' },
+        {
+          text: tr.editExisting, onPress: () => {
+            router.replace({
+              pathname: '/edit-order',
+              params: {
+                orderId: existing.id,
+                customerName: `${existing.customer_name} — ${existing.customer_place}`,
+                amount: String(existing.amount),
+                description: existing.description,
+                quantity: String(existing.quantity),
+                date: existing.date,
+              },
+            });
+          },
+        },
+        {
+          text: tr.addNew, onPress: async () => {
+            setSaving(true);
+            try {
+              const qty = parseInt(quantity, 10) || 0;
+              await addOrder(db, selectedCustomer.id, 0, description, qty, orderDate.toISOString());
+              router.back();
+            } catch {
+              Alert.alert('Error', tr.couldNotSave);
+            } finally { setSaving(false); }
+          },
+        },
+      ]);
+      return;
+    }
+
     setSaving(true);
     try {
       const qty = parseInt(quantity, 10) || 0;
