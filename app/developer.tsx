@@ -114,17 +114,11 @@ const QUICK_QUERIES = [
 ];
 
 const SAMPLE_CUSTOMERS = [
-  { name: 'Ravi Kumar', phone: '9876543210', place: 'Chennai' },
-  { name: 'Priya Devi', phone: '9876543211', place: 'Madurai' },
-  { name: 'Murugan S', phone: '9876543212', place: 'Trichy' },
-  { name: 'Lakshmi R', phone: '9876543213', place: 'Coimbatore' },
-  { name: 'Karthik M', phone: '9876543214', place: 'Salem' },
-  { name: 'Anitha P', phone: '9876543215', place: 'Erode' },
-  { name: 'Senthil V', phone: '9876543216', place: 'Tirunelveli' },
-  { name: 'Deepa N', phone: '9876543217', place: 'Thanjavur' },
+  { name: 'Vanavil samsul', phone: '9566753831', place: 'Adirai' },
+  { name: 'MM Store', phone: '9363485557', place: 'Pattukkottai' },
 ];
 
-const ITEMS = ['Murukku', 'Mixture', 'Ribbon Pakoda', 'Thattai', 'Seedai', 'Athirasam', 'Laddu', 'Halwa'];
+const ITEMS = ['Kuboos'];
 
 export default function DeveloperScreen() {
   const db = useSQLiteContext();
