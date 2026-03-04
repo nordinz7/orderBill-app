@@ -8,12 +8,12 @@ import { useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import ViewShot from 'react-native-view-shot';
 
@@ -90,8 +90,9 @@ export default function ViewBillScreen() {
       const results: OrderWithCustomer[] = [];
       for (const id of ids) {
         const row = await db.getFirstAsync<OrderWithCustomer>(
-          `SELECT o.*, c.name AS customer_name, c.place AS customer_place, c.phone_number AS customer_phone
+          `SELECT o.*, COALESCE(t.amount, 0) AS billed_amount, c.name AS customer_name, c.place AS customer_place, c.phone_number AS customer_phone
            FROM orders o JOIN customers c ON o.customer_id = c.id
+           LEFT JOIN transactions t ON t.order_id = o.id AND t.type = 'debit'
            WHERE o.id = ?`,
           [id]
         );

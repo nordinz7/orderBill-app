@@ -120,7 +120,6 @@ export default function AddOrderScreen() {
               params: {
                 orderId: existing.id,
                 customerName: `${existing.customer_name} — ${existing.customer_place}`,
-                amount: String(existing.amount),
                 description: existing.description,
                 quantity: String(existing.quantity),
                 date: existing.date,
@@ -133,7 +132,7 @@ export default function AddOrderScreen() {
             setSaving(true);
             try {
               const qty = parseInt(quantity, 10) || 0;
-              await addOrder(db, selectedCustomer.id, 0, description, qty, orderDate.toISOString());
+              await addOrder(db, selectedCustomer.id, description, qty, orderDate.toISOString());
               router.back();
             } catch {
               Alert.alert('Error', tr.couldNotSave);
@@ -147,7 +146,7 @@ export default function AddOrderScreen() {
     setSaving(true);
     try {
       const qty = parseInt(quantity, 10) || 0;
-      await addOrder(db, selectedCustomer.id, 0, description, qty, orderDate.toISOString());
+      await addOrder(db, selectedCustomer.id, description, qty, orderDate.toISOString());
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);

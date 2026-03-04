@@ -14,7 +14,6 @@ export interface Customer {
 export interface Order {
   id: number;
   customer_id: number;
-  amount: number;
   description: string;
   quantity: number;
   transaction_id: number | null;
@@ -26,6 +25,7 @@ export interface OrderWithCustomer extends Order {
   customer_name: string;
   customer_place: string;
   customer_phone: string;
+  billed_amount: number;
 }
 
 export interface Transaction {
@@ -312,11 +312,13 @@ export async function bulkDeleteCustomers(
 const ORDER_SELECT = `
   SELECT
     o.*,
+    COALESCE(t.amount, 0) AS billed_amount,
     c.name         AS customer_name,
     c.place        AS customer_place,
     c.phone_number AS customer_phone
   FROM orders o
   JOIN customers c ON o.customer_id = c.id
+  LEFT JOIN transactions t ON t.order_id = o.id AND t.type = 'debit'
 `;
 
 export async function getAllOrdersWithCustomer(
@@ -421,7 +423,6 @@ export async function getCustomersWithOrders(
 export async function addOrder(
   db: SQLite.SQLiteDatabase,
   customer_id: number,
-  amount: number,
   description: string,
   quantity: number = 0,
   date?: string,
@@ -430,8 +431,8 @@ export async function addOrder(
   const orderDate = date ?? now;
   const result = await db.runAsync(
     `INSERT INTO orders (customer_id, amount, description, quantity, date, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [customer_id, amount, description.trim(), quantity, orderDate, now]
+     VALUES (?, 0, ?, ?, ?, ?)`,
+    [customer_id, description.trim(), quantity, orderDate, now]
   );
   return result.lastInsertRowId;
 }
@@ -461,7 +462,6 @@ export async function bulkAddOrders(
 export async function updateOrder(
   db: SQLite.SQLiteDatabase,
   orderId: number,
-  amount: number,
   description: string,
   quantity: number = 0,
   date?: string,
@@ -469,25 +469,12 @@ export async function updateOrder(
   const now = new Date().toISOString();
   await db.withTransactionAsync(async () => {
     const params = date
-      ? [amount, description.trim(), quantity, now, date, orderId]
-      : [amount, description.trim(), quantity, now, orderId];
+      ? [description.trim(), quantity, now, date, orderId]
+      : [description.trim(), quantity, now, orderId];
     await db.runAsync(
-      `UPDATE orders SET amount = ?, description = ?, quantity = ?, updated_at = ?${date ? ', date = ?' : ''} WHERE id = ?`,
+      `UPDATE orders SET description = ?, quantity = ?, updated_at = ?${date ? ', date = ?' : ''} WHERE id = ?`,
       params
     );
-    // Only update linked transaction if order is billed
-    const order = await db.getFirstAsync<{ transaction_id: number | null }>(
-      `SELECT transaction_id FROM orders WHERE id = ?`, [orderId]
-    );
-    if (order?.transaction_id) {
-      const txnParams = date
-        ? [amount, description.trim(), now, date, orderId]
-        : [amount, description.trim(), now, orderId];
-      await db.runAsync(
-        `UPDATE transactions SET amount = ?, description = ?, updated_at = ?${date ? ', date = ?' : ''} WHERE order_id = ? AND type = 'debit'`,
-        txnParams
-      );
-    }
   });
 }
 
@@ -572,8 +559,8 @@ export async function billOrders(
       const txnId = txnResult.lastInsertRowId;
       transactionIds.push(txnId);
       await db.runAsync(
-        `UPDATE orders SET amount = ?, transaction_id = ?, updated_at = ? WHERE id = ?`,
-        [item.amount, txnId, now, item.orderId]
+        `UPDATE orders SET transaction_id = ?, updated_at = ? WHERE id = ?`,
+        [txnId, now, item.orderId]
       );
     }
   });
@@ -707,7 +694,7 @@ export interface BackupPayload {
   exportedAt: string;
   version: number;
   customers: Customer[];
-  orders: Order[];
+  orders: (Order & { amount?: number })[];
   transactions?: Transaction[];
   statements?: Statement[];
   statement_transactions?: StatementTransaction[];
@@ -751,12 +738,12 @@ export async function restoreFromBackupData(
       );
     }
 
-    // Re-insert orders (handle v1 backups that lack quantity/transaction_id)
+    // Re-insert orders (amount column kept in DB as 0 for backward compat)
     for (const o of payload.orders) {
       await db.runAsync(
         `INSERT INTO orders (id, customer_id, amount, description, quantity, transaction_id, date, updated_at, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [o.id, o.customer_id, o.amount, o.description, o.quantity ?? 0, o.transaction_id ?? null, o.date, o.updated_at, (o as any).status ?? 'active'],
+         VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?)`,
+        [o.id, o.customer_id, o.description, o.quantity ?? 0, o.transaction_id ?? null, o.date, o.updated_at, (o as any).status ?? 'active'],
       );
     }
 
@@ -786,10 +773,11 @@ export async function restoreFromBackupData(
       // v1 backup — retroactively create debit transactions for active orders
       for (const o of payload.orders) {
         if ((o as any).status !== 'deleted') {
+          const backupAmount = o.amount ?? 0;
           const txn = await db.runAsync(
             `INSERT INTO transactions (customer_id, order_id, type, amount, description, date, status, created_date, updated_at)
              VALUES (?, ?, 'debit', ?, ?, ?, 'active', ?, ?)`,
-            [o.customer_id, o.id, o.amount, o.description, o.date, o.date, o.date],
+            [o.customer_id, o.id, backupAmount, o.description, o.date, o.date, o.date],
           );
           await db.runAsync(`UPDATE orders SET transaction_id = ? WHERE id = ?`, [txn.lastInsertRowId, o.id]);
         }
@@ -843,11 +831,12 @@ export async function getDailySummary(
 ): Promise<DailySummary> {
   const orderStats = await db.getFirstAsync<{ total_sales: number; order_count: number; total_qty: number }>(`
     SELECT
-      COALESCE(SUM(amount), 0) as total_sales,
-      COUNT(*) as order_count,
-      COALESCE(SUM(quantity), 0) as total_qty
-    FROM orders
-    WHERE date(date) = date(?)
+      COALESCE(SUM(t.amount), 0) as total_sales,
+      COUNT(DISTINCT o.id) as order_count,
+      COALESCE(SUM(o.quantity), 0) as total_qty
+    FROM orders o
+    LEFT JOIN transactions t ON t.order_id = o.id AND t.type = 'debit'
+    WHERE date(o.date) = date(?)
   `, [dateStr]);
 
   const paymentStats = await db.getFirstAsync<{ payment_count: number; total_collected: number }>(`

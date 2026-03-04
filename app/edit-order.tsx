@@ -59,13 +59,11 @@ export default function EditOrderScreen() {
   const params = useLocalSearchParams<{
     orderId: string;
     customerName: string;
-    amount: string;
     description: string;
     quantity: string;
     date: string;
   }>();
 
-  const [amount, setAmount]           = useState(params.amount ?? '');
   const [quantity, setQuantity]       = useState(params.quantity ?? '0');
   const [description, setDescription] = useState(params.description ?? '');
   const [orderDate, setOrderDate]     = useState<Date>(params.date ? new Date(params.date) : new Date());
@@ -78,12 +76,11 @@ export default function EditOrderScreen() {
   };
 
   const handleSave = async () => {
-    const num = parseInt(amount, 10) || 0;
     if (!description.trim()) { Alert.alert(tr.required, tr.enterDesc); return; }
     setSaving(true);
     try {
       const qty = parseInt(quantity, 10) || 0;
-      await updateOrder(db, Number(params.orderId), num, description, qty, orderDate.toISOString());
+      await updateOrder(db, Number(params.orderId), description, qty, orderDate.toISOString());
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);
@@ -117,12 +114,6 @@ export default function EditOrderScreen() {
               themeVariant={colors.background === '#000000' || colors.background === '#121212' ? 'dark' : 'light'}
             />
           )}
-        </View>
-
-        {/* Amount */}
-        <View style={S.field}>
-          <Text style={S.label}><MaterialIcons name="currency-rupee" size={16} color={colors.text} /> {tr.amount} *</Text>
-          <TextInput style={S.input} value={amount} onChangeText={t => setAmount(t.replace(/[^0-9]/g, ''))} placeholder={tr.amountPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="number-pad" returnKeyType="next" />
         </View>
 
         {/* Quantity */}

@@ -97,7 +97,7 @@ export default function ViewInvoiceScreen() {
     customer_name: customerName ?? '',
     customer_place: customerPlace ?? '',
     customer_phone: customerPhone ?? '',
-    amount: parseFloat(amount ?? '0'),
+    billed_amount: parseFloat(amount ?? '0'),
     description: description ?? '',
     quantity: parseFloat(quantity ?? '0'),
     transaction_id: null,

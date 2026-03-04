@@ -51,7 +51,7 @@ const InvoiceBill = forwardRef<View, InvoiceBillProps>(
     if (!firstOrder) return null;
 
     const dateStr = format(new Date(firstOrder.date), 'dd/MM/yyyy');
-    const totalAmount = allOrders.reduce((s, o) => s + o.amount, 0);
+    const totalAmount = allOrders.reduce((s, o) => s + o.billed_amount, 0);
 
     return (
       <View ref={ref} style={S.container} collapsable={false}>
@@ -107,7 +107,7 @@ const InvoiceBill = forwardRef<View, InvoiceBillProps>(
               {o.quantity > 0 ? Math.round(o.quantity) : '-'}
             </Text>
             <Text style={[S.tdText, S.colAmt, { textAlign: 'right', fontWeight: '700' }]}>
-              ₹{Math.round(o.amount)}
+              ₹{Math.round(o.billed_amount)}
             </Text>
           </View>
         ))}

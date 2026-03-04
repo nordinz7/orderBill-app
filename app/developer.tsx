@@ -5,14 +5,14 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 const TABLE_NAMES = ['customers', 'orders', 'transactions', 'statements', 'statement_transactions'];
@@ -199,8 +199,7 @@ export default function DeveloperScreen() {
                   date.setDate(date.getDate() - daysAgo);
                   const item = ITEMS[Math.floor(Math.random() * ITEMS.length)];
                   const qty = 1 + Math.floor(Math.random() * 5);
-                  const rate = [100, 150, 200, 250, 300, 350][Math.floor(Math.random() * 6)];
-                  await addOrder(db, customerId, qty * rate, item, qty, date.toISOString());
+                  await addOrder(db, customerId, item, qty, date.toISOString());
                 }
                 const paymentCount = 1 + Math.floor(Math.random() * 2);
                 for (let i = 0; i < paymentCount; i++) {

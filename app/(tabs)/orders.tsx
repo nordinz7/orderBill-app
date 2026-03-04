@@ -301,7 +301,7 @@ export default function OrdersScreen() {
           customerName: item.customer_name,
           customerPlace: item.customer_place,
           customerPhone: item.customer_phone,
-          amount: String(item.amount),
+          amount: String(item.billed_amount),
           description: item.description,
           quantity: String(item.quantity),
           date: item.date,
@@ -311,7 +311,7 @@ export default function OrdersScreen() {
   };
 
   const displayed = orders;
-  const totalAmount = displayed.reduce((s, o) => s + o.amount, 0);
+  const totalAmount = displayed.reduce((s, o) => s + o.billed_amount, 0);
 
   const customerChipLabel = selectedCustomerId
     ? customerOptions.find(c => c.id === selectedCustomerId)?.label ?? null
@@ -325,7 +325,7 @@ export default function OrdersScreen() {
         activeOpacity={0.7}
         onPress={() => {
           if (isBilled) return; // billed orders cannot be edited
-          router.push({ pathname: '/edit-order', params: { orderId: item.id, customerName: `${item.customer_name} — ${item.customer_place}`, amount: String(item.amount), description: item.description, quantity: String(item.quantity), date: item.date } });
+          router.push({ pathname: '/edit-order', params: { orderId: item.id, customerName: `${item.customer_name} — ${item.customer_place}`, description: item.description, quantity: String(item.quantity), date: item.date } });
         }}
         onLongPress={() => handleDelete(item)}
       >
@@ -337,7 +337,7 @@ export default function OrdersScreen() {
           <View style={S.cardRow1}>
             <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
             {isBilled
-              ? <Text style={S.amount}>&#8377;{item.amount}</Text>
+              ? <Text style={S.amount}>&#8377;{item.billed_amount}</Text>
               : (
                 <View style={S.unbilledTag}>
                   <Text style={S.unbilledTagText}>{tr.unbilledTag}</Text>
@@ -349,7 +349,7 @@ export default function OrdersScreen() {
             {item.customer_place} · {format(new Date(item.date), 'dd MMM')}{item.description !== 'Kuboos' ? `  ·  ${item.description}` : ''}
           </Text>
         </View>
-        {isBilled && item.amount > 0 && (
+        {isBilled && item.billed_amount > 0 && (
           <TouchableOpacity
             style={S.whatsappBtn}
             onPress={() => handleSend(item)}
