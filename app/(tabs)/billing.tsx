@@ -22,7 +22,7 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { format } from 'date-fns';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -40,7 +40,7 @@ import {
 
 interface DropdownItem { id: string; label: string }
 
-type TabMode = 'unbilled' | 'history';
+type TabMode = 'unbilled' | 'billed' | 'payments' | null;
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
@@ -311,6 +311,7 @@ export default function BillingScreen() {
   const S = makeStyles(colors);
 
   const [mode, setMode] = useState<TabMode>('unbilled');
+  const toggleMode = (m: TabMode) => setMode(prev => prev === m ? null : m);
 
   // ── Unbilled state ──
   const [unbilledOrders, setUnbilledOrders] = useState<OrderWithCustomer[]>([]);
@@ -332,7 +333,7 @@ export default function BillingScreen() {
   const [historyCustomerOptions, setHistoryCustomerOptions] = useState<DropdownItem[]>([]);
   const [showHistoryCustomerModal, setShowHistoryCustomerModal] = useState(false);
   const [historyCustomerSearch, setHistoryCustomerSearch] = useState('');
-  const [paymentsOnly, setPaymentsOnly] = useState(false);
+
 
   // ── Edit amount modal state ──
   const [editingTxn, setEditingTxn] = useState<TransactionWithCustomer | null>(null);
@@ -380,6 +381,11 @@ export default function BillingScreen() {
     if (mode === 'unbilled') loadUnbilled();
     else loadHistory();
   }, [mode, loadUnbilled, loadHistory]));
+
+  // Also load history when switching from unbilled to null/billed/payments
+  useEffect(() => {
+    if (mode !== 'unbilled') loadHistory();
+  }, [mode]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -517,7 +523,11 @@ export default function BillingScreen() {
     ]);
   };
 
-  const displayedTransactions = useMemo(() => paymentsOnly ? transactions.filter(t => t.type === 'credit') : transactions, [transactions, paymentsOnly]);
+  const displayedTransactions = useMemo(() => {
+    if (mode === 'billed') return transactions.filter(t => t.type === 'debit');
+    if (mode === 'payments') return transactions.filter(t => t.type === 'credit');
+    return transactions;
+  }, [transactions, mode]);
   const totalCredit = useMemo(() => displayedTransactions.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0), [displayedTransactions]);
   const totalDebit = useMemo(() => displayedTransactions.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0), [displayedTransactions]);
 
@@ -771,15 +781,21 @@ export default function BillingScreen() {
       <View style={S.segmentRow}>
         <TouchableOpacity
           style={[S.segmentBtn, mode === 'unbilled' && S.segmentBtnActive]}
-          onPress={() => setMode('unbilled')}
+          onPress={() => toggleMode('unbilled')}
         >
           <Text style={[S.segmentText, mode === 'unbilled' && S.segmentTextActive]}>{tr.unbilled}</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[S.segmentBtn, mode === 'history' && S.segmentBtnActive]}
-          onPress={() => setMode('history')}
+          style={[S.segmentBtn, mode === 'billed' && S.segmentBtnActive]}
+          onPress={() => toggleMode('billed')}
         >
-          <Text style={[S.segmentText, mode === 'history' && S.segmentTextActive]}>{tr.history}</Text>
+          <Text style={[S.segmentText, mode === 'billed' && S.segmentTextActive]}>{tr.billedTag}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[S.segmentBtn, mode === 'payments' && S.segmentBtnActive]}
+          onPress={() => toggleMode('payments')}
+        >
+          <Text style={[S.segmentText, mode === 'payments' && S.segmentTextActive]}>{tr.paymentsOnly}</Text>
         </TouchableOpacity>
       </View>
 
@@ -882,7 +898,7 @@ export default function BillingScreen() {
       )}
 
       {/* ─── HISTORY MODE ─── */}
-      {mode === 'history' && (
+      {(mode === 'billed' || mode === 'payments' || mode === null) && (
         <>
           <View style={S.filterRow}>
             <TouchableOpacity
@@ -901,15 +917,6 @@ export default function BillingScreen() {
               <MaterialIcons name={historyCustomerId ? 'close' : 'person'} size={14} color={historyCustomerId ? '#FFFFFF' : colors.textSecondary} />
               <Text style={[S.filterChipText, historyCustomerId && S.filterChipTextActive]}>
                 {historyCustomerLabel ?? tr.customer}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.filterChip, paymentsOnly ? S.filterChipActive : undefined]}
-              onPress={() => setPaymentsOnly(p => !p)}
-            >
-              <MaterialIcons name={paymentsOnly ? 'close' : 'payments'} size={14} color={paymentsOnly ? '#FFFFFF' : colors.textSecondary} />
-              <Text style={[S.filterChipText, paymentsOnly && S.filterChipTextActive]}>
-                {tr.paymentsOnly}
               </Text>
             </TouchableOpacity>
           </View>
