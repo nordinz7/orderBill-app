@@ -19,36 +19,34 @@ export interface StatementBillProps {
 
 const LABELS = {
   en: {
-    title: 'STATEMENT / BILL',
+    title: 'STATEMENT',
     company: 'MFC FOOD PRODUCT',
     place: 'ADIRAMPATTINAM',
     to: 'To',
     date: 'Date',
-    slNo: '#',
     dateCol: 'Date',
     particulars: 'Particulars',
-    amount: 'Amount (₹)',
+    amount: 'Amount',
     balanceCol: 'Balance',
     totalOrders: 'Total Orders',
     totalPaid: 'Total Paid',
     balanceDue: 'Balance Due',
     balanceCredit: 'Advance Credit',
     allSettled: 'All Settled',
-    thankYou: 'THANK YOU!',
+    thankYou: 'Thank You!',
     eoe: 'E. & O.E.',
     order: 'Order',
     payment: 'Payment',
   },
   ta: {
-    title: 'அறிக்கை / பில்',
+    title: 'அறிக்கை',
     company: 'MFC FOOD PRODUCT',
     place: 'ADIRAMPATTINAM',
     to: 'பெறுநர்',
     date: 'தேதி',
-    slNo: '#',
     dateCol: 'தேதி',
     particulars: 'விவரம்',
-    amount: 'தொகை (₹)',
+    amount: 'தொகை',
     balanceCol: 'நிலுவை',
     totalOrders: 'மொத்த ஆர்டர்கள்',
     totalPaid: 'மொத்தம் செலுத்தியது',
@@ -87,43 +85,35 @@ const StatementBill = forwardRef<View, StatementBillProps>(
     return (
       <View ref={ref} style={S.container} collapsable={false}>
         {/* ─── Header ────────────────────────────── */}
-        <View style={S.headerBand}>
-          <Text style={S.titleText}>{L.title}</Text>
-        </View>
-
-        <View style={S.companyBlock}>
+        <View style={S.header}>
           <Text style={S.companyName}>{companyName || L.company}</Text>
           <Text style={S.companyPlace}>{companyPlace || L.place}</Text>
-          {companyPhone ? <Text style={S.companyPhone}>☎ {companyPhone}</Text> : null}
+          {companyPhone ? <Text style={S.companyPhone}>{companyPhone}</Text> : null}
+        </View>
+
+        <View style={S.titleBar}>
+          <Text style={S.titleText}>{L.title}</Text>
         </View>
 
         {/* ─── Customer & Date ────────────────────── */}
         <View style={S.metaRow}>
           <View style={S.metaLeft}>
-            <Text style={S.metaLabel}>
-              {L.to}:{' '}
-              <Text style={S.metaValue}>{customerName}</Text>
-            </Text>
-            {customerPlace ? (
-              <Text style={S.metaLabelSmall}>{customerPlace}</Text>
-            ) : null}
+            <Text style={S.metaLabel}>{L.to}</Text>
+            <Text style={S.metaValue}>{customerName}</Text>
+            {customerPlace ? <Text style={S.metaSub}>{customerPlace}</Text> : null}
           </View>
           <View style={S.metaRight}>
-            <Text style={S.metaLabel}>
-              {L.date}:{' '}
-              <Text style={S.metaValue}>{date}</Text>
-            </Text>
+            <Text style={S.metaLabel}>{L.date}</Text>
+            <Text style={S.metaValue}>{date}</Text>
           </View>
         </View>
-
-        <View style={S.divider} />
 
         {/* ─── Table Header ──────────────────────── */}
         <View style={S.tableHeader}>
           <Text style={[S.thText, S.colDate]}>{L.dateCol}</Text>
           <Text style={[S.thText, S.colDesc]}>{L.particulars}</Text>
-          <Text style={[S.thText, S.colAmt, { textAlign: 'right' }]}>{L.amount}</Text>
-          <Text style={[S.thText, S.colBal, { textAlign: 'right' }]}>{L.balanceCol}</Text>
+          <Text style={[S.thText, S.colAmt]}>{L.amount}</Text>
+          <Text style={[S.thText, S.colBal]}>{L.balanceCol}</Text>
         </View>
 
         {/* ─── Table Rows with running balance ──── */}
@@ -142,26 +132,13 @@ const StatementBill = forwardRef<View, StatementBillProps>(
                 </Text>
                 <Text style={[S.tdText, S.colDesc]} numberOfLines={1}>
                   {isDebit
-                    ? `📦 ${txn.description}${txn.quantity > 0 ? ` ×${Math.round(txn.quantity)}` : ''}`
-                    : `💰 ${txn.description}`}
+                    ? `${txn.description}${txn.quantity > 0 ? ` x${Math.round(txn.quantity)}` : ''}`
+                    : txn.description}
                 </Text>
-                <Text
-                  style={[
-                    S.tdText,
-                    S.colAmt,
-                    { textAlign: 'right', color: isDebit ? '#1B5E20' : '#B71C1C' },
-                  ]}
-                >
-                  {isDebit ? '+' : '-'}
-                  {Math.round(txn.amount)}
+                <Text style={[S.tdText, S.colAmt]}>
+                  {isDebit ? '' : '-'}{Math.round(txn.amount)}
                 </Text>
-                <Text
-                  style={[
-                    S.tdText,
-                    S.colBal,
-                    { textAlign: 'right', fontWeight: '700', color: runningBalance > 0 ? '#B71C1C' : '#1B5E20' },
-                  ]}
-                >
+                <Text style={[S.tdText, S.colBal, S.balText]}>
                   {Math.round(runningBalance)}
                 </Text>
               </View>
@@ -169,40 +146,30 @@ const StatementBill = forwardRef<View, StatementBillProps>(
           });
         })()}
 
-        {/* Empty filler if few rows */}
-        {sorted.length < 3 && <View style={{ height: 20 }} />}
-
-        <View style={S.dividerThick} />
+        {sorted.length < 3 && <View style={{ height: 16 }} />}
 
         {/* ─── Summary ───────────────────────────── */}
+        <View style={S.summaryDivider} />
+
         <View style={S.summaryBlock}>
           <View style={S.summaryRow}>
             <Text style={S.summaryLabel}>{L.totalOrders}</Text>
-            <Text style={S.summaryValue}>₹{Math.round(totalOrders)}</Text>
+            <Text style={S.summaryValue}>{Math.round(totalOrders)}</Text>
           </View>
           <View style={S.summaryRow}>
             <Text style={S.summaryLabel}>{L.totalPaid}</Text>
-            <Text style={[S.summaryValue, { color: '#1B5E20' }]}>
-              ₹{Math.round(totalPaid)}
-            </Text>
-          </View>
-          <View style={S.divider} />
-          <View style={S.summaryRow}>
-            <Text style={S.balanceLabel}>
-              {balance > 0 ? L.balanceDue : balance < 0 ? L.balanceCredit : L.allSettled}
-            </Text>
-            <Text
-              style={[
-                S.balanceValue,
-                { color: balance > 0 ? '#B71C1C' : '#1B5E20' },
-              ]}
-            >
-              ₹{Math.round(Math.abs(balance))}
-            </Text>
+            <Text style={S.summaryValue}>{Math.round(totalPaid)}</Text>
           </View>
         </View>
 
-        <View style={S.dividerThick} />
+        <View style={S.balanceBar}>
+          <Text style={S.balanceLabel}>
+            {balance > 0 ? L.balanceDue : balance < 0 ? L.balanceCredit : L.allSettled}
+          </Text>
+          <Text style={S.balanceValue}>
+            ₹{Math.round(Math.abs(balance))}
+          </Text>
+        </View>
 
         {/* ─── Footer ────────────────────────────── */}
         <View style={S.footer}>
@@ -219,130 +186,141 @@ export default StatementBill;
 
 // ─── Styles ─────────────────────────────────────────────────────────
 
-const PINK = '#F8E8EC';
-const PINK_DARK = '#D4687A';
-const RED_BORDER = '#C62828';
+const NAVY = '#1A237E';
+const NAVY_LIGHT = '#E8EAF6';
+const BORDER = '#C5CAE9';
+const TEXT = '#212121';
+const TEXT_LIGHT = '#546E7A';
+const BALANCE_RED = '#C62828';
 
 const S = StyleSheet.create({
   container: {
     width: 380,
-    backgroundColor: PINK,
-    borderWidth: 2,
-    borderColor: RED_BORDER,
-    borderRadius: 6,
-    padding: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 8,
     overflow: 'hidden',
   },
   // Header
-  headerBand: {
-    backgroundColor: RED_BORDER,
-    borderRadius: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    alignSelf: 'center',
-    marginBottom: 8,
+  header: {
+    alignItems: 'center',
+    paddingTop: 18,
+    paddingBottom: 8,
+    paddingHorizontal: 16,
   },
-  titleText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '900',
+  companyName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: NAVY,
     textAlign: 'center',
     letterSpacing: 1,
   },
-  companyBlock: {
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  companyName: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#1A237E',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-  },
   companyPlace: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1A237E',
+    fontSize: 12,
+    fontWeight: '600',
+    color: TEXT_LIGHT,
     textAlign: 'center',
+    marginTop: 2,
   },
   companyPhone: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '500',
+    color: TEXT_LIGHT,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 1,
+  },
+  // Title
+  titleBar: {
+    backgroundColor: NAVY,
+    paddingVertical: 6,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  titleText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 2,
   },
   // Meta
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
   metaLeft: { flex: 1 },
   metaRight: { alignItems: 'flex-end' },
   metaLabel: {
-    fontSize: 12,
-    color: '#333',
+    fontSize: 10,
+    color: TEXT_LIGHT,
     fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   metaValue: {
-    fontSize: 13,
-    color: '#000',
-    fontWeight: '800',
-  },
-  metaLabelSmall: {
-    fontSize: 11,
-    color: '#555',
+    fontSize: 14,
+    color: TEXT,
+    fontWeight: '700',
     marginTop: 1,
   },
-  // Dividers
-  divider: {
-    borderBottomWidth: 1,
-    borderBottomColor: PINK_DARK,
-    marginVertical: 6,
-  },
-  dividerThick: {
-    borderBottomWidth: 2,
-    borderBottomColor: RED_BORDER,
-    marginVertical: 6,
+  metaSub: {
+    fontSize: 11,
+    color: TEXT_LIGHT,
+    marginTop: 1,
   },
   // Table
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: RED_BORDER,
-    borderRadius: 3,
-    paddingVertical: 5,
-    paddingHorizontal: 6,
-    marginBottom: 2,
+    backgroundColor: NAVY_LIGHT,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: BORDER,
   },
   thText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    color: NAVY,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 5,
-    paddingHorizontal: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: PINK_DARK,
+    borderBottomColor: '#E0E0E0',
   },
-  rowEven: { backgroundColor: 'rgba(255,255,255,0.35)' },
-  rowOdd: { backgroundColor: 'transparent' },
+  rowEven: { backgroundColor: '#FAFAFA' },
+  rowOdd: { backgroundColor: '#FFFFFF' },
   tdText: {
-    fontSize: 11,
-    color: '#222',
+    fontSize: 12,
+    color: TEXT,
     fontWeight: '500',
   },
-  colDate: { width: 42 },
-  colDesc: { flex: 1, paddingHorizontal: 4 },
-  colAmt: { width: 52 },
-  colBal: { width: 52 },
+  balText: {
+    fontWeight: '600',
+    color: TEXT,
+  },
+  colDate: { width: 44 },
+  colDesc: { flex: 1, paddingHorizontal: 6 },
+  colAmt: { width: 54, textAlign: 'right' },
+  colBal: { width: 54, textAlign: 'right' },
   // Summary
+  summaryDivider: {
+    borderTopWidth: 1.5,
+    borderTopColor: BORDER,
+  },
   summaryBlock: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -351,38 +329,51 @@ const S = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#333',
+    color: TEXT_LIGHT,
     fontWeight: '600',
   },
   summaryValue: {
     fontSize: 12,
-    color: '#000',
-    fontWeight: '700',
+    color: TEXT,
+    fontWeight: '600',
+  },
+  // Balance
+  balanceBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFEBEE',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 6,
   },
   balanceLabel: {
     fontSize: 14,
-    color: '#000',
-    fontWeight: '900',
+    color: BALANCE_RED,
+    fontWeight: '800',
   },
   balanceValue: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: '900',
+    color: BALANCE_RED,
   },
   // Footer
   footer: {
     alignItems: 'center',
     paddingTop: 4,
-    paddingBottom: 2,
+    paddingBottom: 14,
   },
   thankYou: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: RED_BORDER,
-    letterSpacing: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: NAVY,
+    letterSpacing: 0.5,
   },
   eoe: {
     fontSize: 9,
-    color: '#777',
+    color: '#9E9E9E',
     marginTop: 2,
   },
 });
