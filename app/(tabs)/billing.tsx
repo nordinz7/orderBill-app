@@ -58,9 +58,10 @@ function makeStyles(c: AppColors) {
     },
     segmentBtn: {
       flex: 1,
-      paddingVertical: 8,
+      paddingVertical: 10,
       borderRadius: 20,
       alignItems: 'center',
+      justifyContent: 'center',
       backgroundColor: c.filterInactive,
     },
     segmentBtnActive: {
@@ -946,7 +947,7 @@ export default function BillingScreen() {
           />
 
           <TouchableOpacity style={S.fab} onPress={() => router.push('/add-payment')} accessibilityLabel={tr.addPayment}>
-            <MaterialIcons name="add" size={34} color="#FFFFFF" />
+            <MaterialIcons name="payments" size={28} color="#FFFFFF" />
           </TouchableOpacity>
 
           {renderCustomerModal(
