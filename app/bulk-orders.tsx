@@ -221,7 +221,6 @@ const CustomerRow = React.memo(function CustomerRow({
         placeholderTextColor={textMutedColor}
         keyboardType="number-pad"
         returnKeyType="next"
-        selectTextOnFocus
         onSubmitEditing={onSubmitEditing}
       />
     </View>
