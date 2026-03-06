@@ -154,12 +154,12 @@ export default function CustomerDetailScreen() {
 
   const getDateRange = useCallback(() => {
     const now = new Date();
-    const end = endOfDay(now).toISOString();
+    const end = format(endOfDay(now), 'yyyy-MM-dd');
     switch (filterPeriod) {
-      case 'today':  return { start: startOfDay(now).toISOString(), end };
-      case 'week':   return { start: startOfWeek(now, { weekStartsOn: 1 }).toISOString(), end };
-      case 'month':  return { start: startOfMonth(now).toISOString(), end };
-      case 'year':   return { start: startOfYear(now).toISOString(), end };
+      case 'today':  return { start: format(startOfDay(now), 'yyyy-MM-dd'), end };
+      case 'week':   return { start: format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'), end };
+      case 'month':  return { start: format(startOfMonth(now), 'yyyy-MM-dd'), end };
+      case 'year':   return { start: format(startOfYear(now), 'yyyy-MM-dd'), end };
       default:       return null;
     }
   }, [filterPeriod]);
@@ -229,7 +229,10 @@ export default function CustomerDetailScreen() {
           />
         </View>
         <View style={S.txnContent}>
-          <Text style={S.txnDesc} numberOfLines={1}>{item.description}</Text>
+          <Text style={S.txnDesc} numberOfLines={1}>
+            {item.description}
+            {isDebit && item.quantity > 0 ? ` · ${item.quantity} pkt` : ''}
+          </Text>
           <Text style={S.txnDate}>{format(new Date(item.date), 'dd MMM yyyy, hh:mm a')}</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>

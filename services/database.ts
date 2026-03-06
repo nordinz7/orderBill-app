@@ -726,7 +726,7 @@ export async function getCustomerBalanceForPeriod(
     `SELECT
        COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0) as total_debit,
        COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0) as total_credit
-     FROM transactions WHERE customer_id = ? AND date >= ? AND date <= ?`,
+     FROM transactions WHERE customer_id = ? AND date(date) >= date(?) AND date(date) <= date(?)`,
     [customerId, startDate, endDate]
   );
   const totalDebit = row?.total_debit ?? 0;
@@ -741,7 +741,7 @@ export async function getTransactionsByCustomerForPeriod(
     `SELECT t.*, COALESCE(o.quantity, 0) as quantity
      FROM transactions t
      LEFT JOIN orders o ON t.order_id = o.id
-     WHERE t.customer_id = ? AND t.date >= ? AND t.date <= ?
+     WHERE t.customer_id = ? AND date(t.date) >= date(?) AND date(t.date) <= date(?)
      ORDER BY t.date DESC`,
     [customerId, startDate, endDate]
   );
