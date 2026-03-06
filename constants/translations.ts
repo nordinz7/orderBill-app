@@ -232,6 +232,7 @@ const en = {
   transaction: 'transaction',
   transactions_plural: 'transactions',
   totalReceived: 'Received',
+  paymentsOnly: 'Payments',
   totalOrdered: 'Ordered',
   call: 'Call',
   // Reports
@@ -491,6 +492,7 @@ const ta: typeof en = {
   transaction: 'பரிவர்த்தனை',
   transactions_plural: 'பரிவர்த்தனைகள்',
   totalReceived: 'பெற்றது',
+  paymentsOnly: 'பணம்',
   totalOrdered: 'ஆர்டர்',
   call: 'அழைப்பு',
   // Reports

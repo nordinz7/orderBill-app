@@ -77,6 +77,7 @@ function makeStyles(c: AppColors) {
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
+      justifyContent: 'center',
       paddingHorizontal: Spacing.md,
       paddingVertical: Spacing.sm,
       gap: Spacing.sm,
@@ -317,6 +318,7 @@ export default function BillingScreen() {
   const [historyCustomerOptions, setHistoryCustomerOptions] = useState<DropdownItem[]>([]);
   const [showHistoryCustomerModal, setShowHistoryCustomerModal] = useState(false);
   const [historyCustomerSearch, setHistoryCustomerSearch] = useState('');
+  const [paymentsOnly, setPaymentsOnly] = useState(false);
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -497,8 +499,9 @@ export default function BillingScreen() {
     ]);
   };
 
-  const totalCredit = useMemo(() => transactions.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0), [transactions]);
-  const totalDebit = useMemo(() => transactions.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0), [transactions]);
+  const displayedTransactions = useMemo(() => paymentsOnly ? transactions.filter(t => t.type === 'credit') : transactions, [transactions, paymentsOnly]);
+  const totalCredit = useMemo(() => displayedTransactions.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0), [displayedTransactions]);
+  const totalDebit = useMemo(() => displayedTransactions.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0), [displayedTransactions]);
 
   // ── Date chip helpers ──
   const unbilledDateLabel = unbilledDate ? format(unbilledDate, 'dd MMM yyyy') : null;
@@ -672,7 +675,6 @@ export default function BillingScreen() {
                 {unbilledCustomerLabel ?? tr.selectCustomer}
               </Text>
             </TouchableOpacity>
-            <View style={S.filterSpacer} />
           </View>
 
           {showUnbilledDatePicker && (
@@ -771,7 +773,15 @@ export default function BillingScreen() {
                 {historyCustomerLabel ?? tr.selectCustomer}
               </Text>
             </TouchableOpacity>
-            <View style={S.filterSpacer} />
+            <TouchableOpacity
+              style={[S.filterChip, paymentsOnly ? S.filterChipActive : undefined]}
+              onPress={() => setPaymentsOnly(p => !p)}
+            >
+              <MaterialIcons name={paymentsOnly ? 'close' : 'payments'} size={16} color={paymentsOnly ? '#FFFFFF' : colors.textSecondary} />
+              <Text style={[S.filterChipText, paymentsOnly && S.filterChipTextActive]}>
+                {tr.paymentsOnly}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {showHistoryDatePicker && (
@@ -786,10 +796,10 @@ export default function BillingScreen() {
             />
           )}
 
-          {transactions.length > 0 && (
+          {displayedTransactions.length > 0 && (
             <View style={S.summary}>
               <Text style={S.summaryText}>
-                {transactions.length} {transactions.length === 1 ? tr.transaction : tr.transactions_plural}
+                {displayedTransactions.length} {displayedTransactions.length === 1 ? tr.transaction : tr.transactions_plural}
               </Text>
               <View style={S.summaryRight}>
                 {totalCredit > 0 && <Text style={S.summaryCredit}>+&#8377;{totalCredit} {tr.totalReceived}</Text>}
@@ -799,10 +809,10 @@ export default function BillingScreen() {
           )}
 
           <FlatList
-            data={transactions}
+            data={displayedTransactions}
             keyExtractor={item => String(item.id)}
             renderItem={renderHistoryItem}
-            contentContainerStyle={transactions.length === 0 ? S.emptyOuter : S.listContent}
+            contentContainerStyle={displayedTransactions.length === 0 ? S.emptyOuter : S.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
             ListEmptyComponent={
               <View style={S.emptyWrap}>
