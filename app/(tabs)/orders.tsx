@@ -4,7 +4,6 @@ import { useSettings } from '@/contexts/SettingsContext';
 import {
   deleteOrder,
   getAllOrdersWithCustomer,
-  getCustomerBalance,
   getCustomersWithOrders,
   getOrdersByDateRange,
   OrderWithCustomer,
@@ -298,28 +297,6 @@ export default function OrdersScreen() {
     ]);
   };
 
-  const handleSend = async (item: OrderWithCustomer) => {
-    const bal = await getCustomerBalance(db, item.customer_id);
-    if (bal.balance > 0) {
-      // Customer has pending balance, show statement
-      router.push({ pathname: '/view-statement', params: { id: String(item.customer_id) } });
-    } else {
-      // No pending balance, show invoice for this order
-      router.push({
-        pathname: '/view-invoice',
-        params: {
-          customerName: item.customer_name,
-          customerPlace: item.customer_place,
-          customerPhone: item.customer_phone,
-          amount: String(item.billed_amount),
-          description: item.description,
-          quantity: String(item.quantity),
-          date: item.date,
-        },
-      });
-    }
-  };
-
   const displayed = orders;
   const totalAmount = displayed.reduce((s, o) => s + o.billed_amount, 0);
 
@@ -367,15 +344,6 @@ export default function OrdersScreen() {
             {item.customer_place} · {format(new Date(item.date), 'dd MMM')}{item.description !== 'Kuboos' ? `  ·  ${item.description}` : ''}
           </Text>
         </View>
-        {isBilled && item.billed_amount > 0 && (
-          <TouchableOpacity
-            style={S.whatsappBtn}
-            onPress={() => handleSend(item)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <MaterialIcons name="send" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
       </TouchableOpacity>
     );
   };
