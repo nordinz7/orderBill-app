@@ -610,8 +610,15 @@ export default function BillingScreen() {
       router.push({ pathname: '/add-payment', params: { transactionId: String(item.id), customerId: String(item.customer_id) } });
       return;
     }
-    // Debit (billed order) — directly open edit amount
-    handleEditBilledAmount(item);
+    // Debit (billed order) — confirm before editing
+    Alert.alert(
+      tr.editAmount,
+      `${item.customer_name}${item.quantity > 0 ? ` · ${Math.round(item.quantity)} pkt` : ''} · ₹${item.amount}`,
+      [
+        { text: tr.cancel, style: 'cancel' },
+        { text: tr.edit, onPress: () => handleEditBilledAmount(item) },
+      ],
+    );
   };
 
   const handleInvoice = (item: TransactionWithCustomer) => {
@@ -818,7 +825,7 @@ export default function BillingScreen() {
                 {unbilledOrders.length} {unbilledOrders.length === 1 ? tr.order : tr.orders_plural}
               </Text>
               <Text style={S.summaryText}>
-                {tr.total}: {unbilledOrders.reduce((s, o) => s + (o.quantity || 0), 0)} pkt
+                {unbilledOrders.reduce((s, o) => s + (o.quantity || 0), 0)} pkt
               </Text>
             </View>
           )}
@@ -843,7 +850,7 @@ export default function BillingScreen() {
           {selectedIds.size > 0 && (
             <View style={S.bottomBar}>
               <View style={S.selectedSummary}>
-                <Text style={S.selectedSummaryText}>{selectedIds.size} {tr.selectOrdersToBill}</Text>
+                <Text style={S.selectedSummaryText}>{selectedIds.size} {tr.selected}</Text>
                 {selectedTotal > 0 && <Text style={S.selectedSummaryAmount}>&#8377;{selectedTotal}</Text>}
               </View>
               <TouchableOpacity
@@ -925,8 +932,8 @@ export default function BillingScreen() {
                 {displayedTransactions.length} {displayedTransactions.length === 1 ? tr.transaction : tr.transactions_plural}
               </Text>
               <View style={S.summaryRight}>
-                {totalCredit > 0 && <Text style={S.summaryCredit}>+&#8377;{totalCredit} {tr.totalReceived}</Text>}
-                {totalDebit > 0 && <Text style={S.summaryDebit}>-&#8377;{totalDebit} {tr.totalOrdered}</Text>}
+                {totalCredit > 0 && <Text style={S.summaryCredit}>+&#8377;{totalCredit}</Text>}
+                {totalDebit > 0 && <Text style={S.summaryDebit}>-&#8377;{totalDebit}</Text>}
               </View>
             </View>
           )}

@@ -2,11 +2,11 @@ import { getBulkDraftCount } from '@/app/bulk-orders';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
-  deleteOrder,
-  getAllOrdersWithCustomer,
-  getCustomersWithOrders,
-  getOrdersByDateRange,
-  OrderWithCustomer,
+    deleteOrder,
+    getAllOrdersWithCustomer,
+    getCustomersWithOrders,
+    getOrdersByDateRange,
+    OrderWithCustomer,
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -15,17 +15,17 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Modal,
-  Platform,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    Modal,
+    Platform,
+    Pressable,
+    RefreshControl,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface DropdownItem { id: string; label: string }
@@ -437,7 +437,7 @@ export default function OrdersScreen() {
           <Text style={S.summaryText}>
             {displayed.length} {displayed.length === 1 ? tr.order : tr.orders_plural}
           </Text>
-          <Text style={S.summaryAmount}>{tr.total}: &#8377;{totalAmount}</Text>
+          <Text style={S.summaryAmount}>&#8377;{totalAmount}</Text>
         </View>
       )}
 
