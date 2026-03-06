@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { Customer, getActiveCustomers, insertPayment } from '@/services/database';
+import { Customer, getActiveCustomers, getCustomerOutstandingBills, insertPayment } from '@/services/database';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -88,6 +88,18 @@ function makeStyles(c: AppColors) {
       alignItems: 'center', justifyContent: 'space-between',
     },
     dateButtonText:     { fontSize: FontSizes.lg, color: c.text },
+    // Outstanding bills
+    billsList:          { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+    billChip: {
+      paddingHorizontal: Spacing.md, paddingVertical: 8,
+      borderRadius: 20, borderWidth: 1.5,
+      borderColor: c.border, backgroundColor: c.inputBg,
+      alignItems: 'center',
+    },
+    billChipActive:     { borderColor: c.primary, backgroundColor: c.primaryLight },
+    billChipText:       { fontSize: FontSizes.sm, fontWeight: '600', color: c.textSecondary },
+    billChipSub:        { fontSize: FontSizes.xs, fontWeight: '700', color: c.textMuted, marginTop: 1 },
+    billChipTextActive: { color: c.primary },
   });
 }
 
@@ -108,10 +120,18 @@ export default function AddPaymentScreen() {
   const [paymentDate, setPaymentDate]       = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving]                 = useState(false);
+  const [outstandingBills, setOutstandingBills] = useState<{ id: number; bill_number: string; bill_date: string; total: number; paid: number; balance: number }[]>([]);
+  const [selectedBillId, setSelectedBillId] = useState<number | null>(null);
 
   const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
     if (date) setPaymentDate(date);
+  };
+
+  const loadOutstandingBills = async (customerId: number) => {
+    const bills = await getCustomerOutstandingBills(db, customerId);
+    setOutstandingBills(bills);
+    setSelectedBillId(null);
   };
 
   useEffect(() => {
@@ -119,7 +139,10 @@ export default function AddPaymentScreen() {
       setCustomers(list);
       if (params.customerId) {
         const found = list.find(c => c.id === Number(params.customerId));
-        if (found) setSelected(found);
+        if (found) {
+          setSelected(found);
+          loadOutstandingBills(found.id);
+        }
       }
     });
   }, [db]);
@@ -140,7 +163,7 @@ export default function AddPaymentScreen() {
     if (!amount || isNaN(num) || num <= 0) { Alert.alert(tr.required, tr.enterAmount); return; }
     setSaving(true);
     try {
-      await insertPayment(db, selectedCustomer.id, num, description || tr.paymentReceived, paymentDate.toISOString());
+      await insertPayment(db, selectedCustomer.id, num, description || tr.paymentReceived, paymentDate.toISOString(), selectedBillId);
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);
@@ -159,6 +182,37 @@ export default function AddPaymentScreen() {
             <MaterialIcons name="arrow-drop-down" size={28} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
+        {outstandingBills.length > 0 && (
+          <View style={S.field}>
+            <Text style={S.label}><MaterialIcons name="receipt" size={16} color={colors.text} /> {tr.allocateToBill}</Text>
+            <View style={S.billsList}>
+              <TouchableOpacity
+                style={[S.billChip, selectedBillId === null && S.billChipActive]}
+                onPress={() => setSelectedBillId(null)}
+              >
+                <Text style={[S.billChipText, selectedBillId === null && S.billChipTextActive]}>{tr.generalPayment}</Text>
+              </TouchableOpacity>
+              {outstandingBills.map(bill => (
+                <TouchableOpacity
+                  key={bill.id}
+                  style={[S.billChip, selectedBillId === bill.id && S.billChipActive]}
+                  onPress={() => {
+                    setSelectedBillId(bill.id);
+                    if (!amount) setAmount(String(bill.balance));
+                  }}
+                >
+                  <Text style={[S.billChipText, selectedBillId === bill.id && S.billChipTextActive]}>
+                    {bill.bill_number}
+                  </Text>
+                  <Text style={[S.billChipSub, selectedBillId === bill.id && S.billChipTextActive]}>
+                    ₹{Math.round(bill.balance)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="event" size={16} color={colors.text} /> {tr.paymentDate}</Text>
           <TouchableOpacity style={S.dateButton} onPress={() => setShowDatePicker(true)}>
@@ -245,7 +299,7 @@ export default function AddPaymentScreen() {
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={[S.customerOption, selectedCustomer?.id === item.id && S.customerOptionSel]}
-                    onPress={() => { setSelected(item); setShowPicker(false); setCustomerSearch(''); }}
+                    onPress={() => { setSelected(item); setShowPicker(false); setCustomerSearch(''); loadOutstandingBills(item.id); }}
                   >
                     <View>
                       <Text style={S.customerOptionName}>{item.name}</Text>

@@ -101,6 +101,7 @@ export default function ViewInvoiceScreen() {
     description: description ?? '',
     quantity: parseFloat(quantity ?? '0'),
     transaction_id: null,
+    bill_id: null,
     date: date ?? new Date().toISOString(),
     updated_at: '',
   };

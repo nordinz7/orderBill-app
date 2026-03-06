@@ -28,6 +28,7 @@ const LABELS = {
     dateCol: 'Date',
     particulars: 'Particulars',
     amount: 'Amount (₹)',
+    balanceCol: 'Balance',
     totalOrders: 'Total Orders',
     totalPaid: 'Total Paid',
     balanceDue: 'Balance Due',
@@ -48,6 +49,7 @@ const LABELS = {
     dateCol: 'தேதி',
     particulars: 'விவரம்',
     amount: 'தொகை (₹)',
+    balanceCol: 'நிலுவை',
     totalOrders: 'மொத்த ஆர்டர்கள்',
     totalPaid: 'மொத்தம் செலுத்தியது',
     balanceDue: 'நிலுவை தொகை',
@@ -121,37 +123,51 @@ const StatementBill = forwardRef<View, StatementBillProps>(
           <Text style={[S.thText, S.colDate]}>{L.dateCol}</Text>
           <Text style={[S.thText, S.colDesc]}>{L.particulars}</Text>
           <Text style={[S.thText, S.colAmt, { textAlign: 'right' }]}>{L.amount}</Text>
+          <Text style={[S.thText, S.colBal, { textAlign: 'right' }]}>{L.balanceCol}</Text>
         </View>
 
-        {/* ─── Table Rows ────────────────────────── */}
-        {sorted.map((txn, idx) => {
-          const isDebit = txn.type === 'debit';
-          return (
-            <View
-              key={txn.id}
-              style={[S.tableRow, idx % 2 === 0 ? S.rowEven : S.rowOdd]}
-            >
-              <Text style={[S.tdText, S.colDate]}>
-                {format(new Date(txn.date), 'dd/MM/yyyy')}
-              </Text>
-              <Text style={[S.tdText, S.colDesc]} numberOfLines={1}>
-                {isDebit
-                  ? `📦 ${txn.description}${txn.quantity > 0 ? ` ×${Math.round(txn.quantity)}` : ''}`
-                  : `💰 ${txn.description}`}
-              </Text>
-              <Text
-                style={[
-                  S.tdText,
-                  S.colAmt,
-                  { textAlign: 'right', color: isDebit ? '#1B5E20' : '#B71C1C' },
-                ]}
+        {/* ─── Table Rows with running balance ──── */}
+        {(() => {
+          let runningBalance = 0;
+          return sorted.map((txn, idx) => {
+            const isDebit = txn.type === 'debit';
+            runningBalance += isDebit ? txn.amount : -txn.amount;
+            return (
+              <View
+                key={txn.id}
+                style={[S.tableRow, idx % 2 === 0 ? S.rowEven : S.rowOdd]}
               >
-                {isDebit ? '' : '-'}
-                {Math.round(txn.amount)}
-              </Text>
-            </View>
-          );
-        })}
+                <Text style={[S.tdText, S.colDate]}>
+                  {format(new Date(txn.date), 'dd/MM')}
+                </Text>
+                <Text style={[S.tdText, S.colDesc]} numberOfLines={1}>
+                  {isDebit
+                    ? `📦 ${txn.description}${txn.quantity > 0 ? ` ×${Math.round(txn.quantity)}` : ''}`
+                    : `💰 ${txn.description}`}
+                </Text>
+                <Text
+                  style={[
+                    S.tdText,
+                    S.colAmt,
+                    { textAlign: 'right', color: isDebit ? '#1B5E20' : '#B71C1C' },
+                  ]}
+                >
+                  {isDebit ? '+' : '-'}
+                  {Math.round(txn.amount)}
+                </Text>
+                <Text
+                  style={[
+                    S.tdText,
+                    S.colBal,
+                    { textAlign: 'right', fontWeight: '700', color: runningBalance > 0 ? '#B71C1C' : '#1B5E20' },
+                  ]}
+                >
+                  {Math.round(runningBalance)}
+                </Text>
+              </View>
+            );
+          });
+        })()}
 
         {/* Empty filler if few rows */}
         {sorted.length < 3 && <View style={{ height: 20 }} />}
@@ -319,9 +335,10 @@ const S = StyleSheet.create({
     color: '#222',
     fontWeight: '500',
   },
-  colDate: { width: 68 },
+  colDate: { width: 42 },
   colDesc: { flex: 1, paddingHorizontal: 4 },
-  colAmt: { width: 72 },
+  colAmt: { width: 52 },
+  colBal: { width: 52 },
   // Summary
   summaryBlock: {
     paddingHorizontal: 6,

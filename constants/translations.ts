@@ -267,6 +267,8 @@ const en = {
   billedTag: 'Billed',
   cannotEditBilled: 'This order has already been billed and cannot be edited.',
   enterBillAmount: 'Amount',
+  allocateToBill: 'Apply to Bill',
+  generalPayment: 'General',
 };
 
 const ta: typeof en = {
@@ -524,6 +526,8 @@ const ta: typeof en = {
   billedTag: 'பில் ஆனது',
   cannotEditBilled: 'இந்த ஆர்டர் ஏற்கனவே பில் செய்யப்பட்டுள்ளது, மாற்ற இயலாது.',
   enterBillAmount: 'தொகை',
+  allocateToBill: 'பில்லுக்கு ஒதுக்கு',
+  generalPayment: 'பொது',
 };
 
 export const translations = { en, ta };

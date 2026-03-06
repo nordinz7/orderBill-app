@@ -10,7 +10,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -116,6 +116,7 @@ function makeStyles(c: AppColors) {
     txnAmount:     { fontSize: FontSizes.lg, fontWeight: '800' },
     txnDebit:      { color: c.danger },
     txnCredit:     { color: c.success },
+    txnRunningBal: { fontSize: FontSizes.xs, color: c.textMuted, marginTop: 2 },
     emptyWrap:     { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
     emptyText:     { fontSize: FontSizes.lg, color: c.textSecondary, marginTop: Spacing.md },
   });
@@ -172,7 +173,20 @@ export default function CustomerDetailScreen() {
     ]);
   };
 
-  const renderTransaction = ({ item }: { item: TransactionWithQuantity }) => {
+  // Compute running balance for each transaction (oldest first, then reverse for display)
+  const transactionsWithBalance = useMemo(() => {
+    const sorted = [...transactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime() || a.id - b.id,
+    );
+    let running = 0;
+    const withBal = sorted.map(t => {
+      running += t.type === 'debit' ? t.amount : -t.amount;
+      return { ...t, runningBalance: running };
+    });
+    return withBal.reverse(); // newest first for display
+  }, [transactions]);
+
+  const renderTransaction = ({ item }: { item: TransactionWithQuantity & { runningBalance: number } }) => {
     const isDebit = item.type === 'debit';
     return (
       <TouchableOpacity
@@ -191,9 +205,12 @@ export default function CustomerDetailScreen() {
           <Text style={S.txnDesc} numberOfLines={1}>{item.description}</Text>
           <Text style={S.txnDate}>{format(new Date(item.date), 'dd MMM yyyy, hh:mm a')}</Text>
         </View>
-        <Text style={[S.txnAmount, isDebit ? S.txnDebit : S.txnCredit]}>
-          {isDebit ? '-' : '+'}₹{item.amount.toFixed(2)}
-        </Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[S.txnAmount, isDebit ? S.txnDebit : S.txnCredit]}>
+            {isDebit ? '-' : '+'}₹{item.amount.toFixed(2)}
+          </Text>
+          <Text style={S.txnRunningBal}>₹{item.runningBalance.toFixed(2)}</Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -276,7 +293,7 @@ export default function CustomerDetailScreen() {
       <Text style={S.sectionTitle}>{tr.transactionHistory}</Text>
 
       <FlatList
-        data={transactions}
+        data={transactionsWithBalance}
         keyExtractor={item => String(item.id)}
         renderItem={renderTransaction}
         contentContainerStyle={transactions.length === 0 ? S.emptyOuter : S.listContent}

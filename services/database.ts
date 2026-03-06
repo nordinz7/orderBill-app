@@ -33,6 +33,7 @@ export interface Transaction {
   id: number;
   customer_id: number;
   order_id: number | null;
+  bill_id: number | null;
   type: 'debit' | 'credit';
   amount: number;
   description: string;
@@ -76,24 +77,10 @@ export interface Bill {
   bill_number: string;
   customer_id: number;
   bill_date: string;
-  previous_balance: number;
-  total_amount: number;
-  payment_amount: number;
-  net_amount: number;
   notes: string;
   status: string;
   created_date: string;
   updated_at: string;
-}
-
-export interface BillItemRow {
-  id: number;
-  bill_id: number;
-  order_id: number | null;
-  type: 'order' | 'previous_balance' | 'payment';
-  description: string;
-  quantity: number;
-  amount: number;
 }
 
 export interface CustomerWithBalance extends Customer {
@@ -208,6 +195,7 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     `ALTER TABLE orders ADD COLUMN quantity REAL NOT NULL DEFAULT 0`,
     `ALTER TABLE orders ADD COLUMN transaction_id INTEGER DEFAULT NULL`,
     `ALTER TABLE orders ADD COLUMN bill_id INTEGER DEFAULT NULL`,
+    `ALTER TABLE transactions ADD COLUMN bill_id INTEGER DEFAULT NULL`,
   ];
   for (const sql of migrations) {
     try { await db.execAsync(sql); } catch { /* column already exists */ }
@@ -638,12 +626,12 @@ export async function billOrders(
   let billId = 0;
   await db.withTransactionAsync(async () => {
     const billNumber = await generateBillNumber(db, customerId, billDate);
-    const totalAmount = items.reduce((s, i) => s + i.amount, 0);
 
+    // Bill is just a grouping document — no stored totals
     const billResult = await db.runAsync(
       `INSERT INTO bills (bill_number, customer_id, bill_date, previous_balance, total_amount, payment_amount, net_amount, notes, created_date, updated_at)
-       VALUES (?, ?, ?, 0, ?, 0, ?, '', ?, ?)`,
-      [billNumber, customerId, billDate, totalAmount, totalAmount, now, now]
+       VALUES (?, ?, ?, 0, 0, 0, 0, '', ?, ?)`,
+      [billNumber, customerId, billDate, now, now]
     );
     billId = billResult.lastInsertRowId;
 
@@ -653,21 +641,17 @@ export async function billOrders(
         [item.orderId, customerId]
       );
       if (!order || order.transaction_id !== null) continue;
+      // Ledger entry — the single source of truth
       const txnResult = await db.runAsync(
-        `INSERT INTO transactions (customer_id, order_id, type, amount, description, date, created_date, updated_at)
-         VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)`,
-        [customerId, item.orderId, item.amount, order.description, order.date, now, now]
+        `INSERT INTO transactions (customer_id, order_id, bill_id, type, amount, description, date, created_date, updated_at)
+         VALUES (?, ?, ?, 'debit', ?, ?, ?, ?, ?)`,
+        [customerId, item.orderId, billId, item.amount, order.description, order.date, now, now]
       );
       const txnId = txnResult.lastInsertRowId;
       transactionIds.push(txnId);
       await db.runAsync(
         `UPDATE orders SET transaction_id = ?, bill_id = ?, updated_at = ? WHERE id = ?`,
         [txnId, billId, now, item.orderId]
-      );
-      await db.runAsync(
-        `INSERT INTO bill_items (bill_id, order_id, type, description, quantity, amount)
-         VALUES (?, ?, 'order', ?, ?, ?)`,
-        [billId, item.orderId, order.description, order.quantity, item.amount]
       );
     }
   });
@@ -705,16 +689,35 @@ export async function getCustomerBalance(
 }
 
 export async function insertPayment(
-  db: SQLite.SQLiteDatabase, customerId: number, amount: number, description: string = 'Payment received', date?: string,
+  db: SQLite.SQLiteDatabase, customerId: number, amount: number, description: string = 'Payment received', date?: string, billId?: number | null,
 ): Promise<number> {
   const now = new Date().toISOString();
   const txnDate = date || now;
   const result = await db.runAsync(
-    `INSERT INTO transactions (customer_id, order_id, type, amount, description, date, created_date, updated_at)
-     VALUES (?, NULL, 'credit', ?, ?, ?, ?, ?)`,
-    [customerId, amount, description.trim(), txnDate, now, now]
+    `INSERT INTO transactions (customer_id, order_id, bill_id, type, amount, description, date, created_date, updated_at)
+     VALUES (?, NULL, ?, 'credit', ?, ?, ?, ?, ?)`,
+    [customerId, billId ?? null, amount, description.trim(), txnDate, now, now]
   );
   return result.lastInsertRowId;
+}
+
+/** Get outstanding (unpaid) bills for a customer, with balance derived from ledger. */
+export async function getCustomerOutstandingBills(
+  db: SQLite.SQLiteDatabase, customerId: number,
+): Promise<{ id: number; bill_number: string; bill_date: string; total: number; paid: number; balance: number }[]> {
+  return db.getAllAsync<{ id: number; bill_number: string; bill_date: string; total: number; paid: number; balance: number }>(`
+    SELECT
+      b.id, b.bill_number, b.bill_date,
+      COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE 0 END), 0) as total,
+      COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) as paid,
+      COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE -t.amount END), 0) as balance
+    FROM bills b
+    LEFT JOIN transactions t ON t.bill_id = b.id
+    WHERE b.customer_id = ?
+    GROUP BY b.id
+    HAVING balance > 0
+    ORDER BY b.bill_date ASC
+  `, [customerId]);
 }
 
 export async function deleteTransaction(
@@ -790,6 +793,43 @@ export async function getBillById(
   return db.getFirstAsync<Bill>(`SELECT * FROM bills WHERE id = ?`, [id]);
 }
 
+/** Derive bill total from ledger (sum of debit entries linked to this bill). */
+export async function getBillTotal(
+  db: SQLite.SQLiteDatabase, billId: number,
+): Promise<number> {
+  const row = await db.getFirstAsync<{ total: number }>(
+    `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE bill_id = ? AND type = 'debit'`,
+    [billId]
+  );
+  return row?.total ?? 0;
+}
+
+/** Derive bill balance from ledger (debits minus credits linked to this bill). */
+export async function getBillBalance(
+  db: SQLite.SQLiteDatabase, billId: number,
+): Promise<number> {
+  const row = await db.getFirstAsync<{ balance: number }>(
+    `SELECT COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE -amount END), 0) as balance
+     FROM transactions WHERE bill_id = ?`,
+    [billId]
+  );
+  return row?.balance ?? 0;
+}
+
+/** Get all ledger entries for a bill. */
+export async function getBillLedgerEntries(
+  db: SQLite.SQLiteDatabase, billId: number,
+): Promise<TransactionWithQuantity[]> {
+  return db.getAllAsync<TransactionWithQuantity>(
+    `SELECT t.*, COALESCE(o.quantity, 0) as quantity
+     FROM transactions t
+     LEFT JOIN orders o ON t.order_id = o.id
+     WHERE t.bill_id = ?
+     ORDER BY t.date ASC`,
+    [billId]
+  );
+}
+
 // ─── Backup ───────────────────────────────────────────────────────────────────
 
 export async function getAllDataForBackup(db: SQLite.SQLiteDatabase) {
@@ -799,8 +839,7 @@ export async function getAllDataForBackup(db: SQLite.SQLiteDatabase) {
   const statements             = await db.getAllAsync<Statement>(`SELECT * FROM statements`);
   const statement_transactions = await db.getAllAsync<StatementTransaction>(`SELECT * FROM statement_transactions`);
   const bills                  = await db.getAllAsync<Bill>(`SELECT * FROM bills`);
-  const bill_items             = await db.getAllAsync<BillItemRow>(`SELECT * FROM bill_items`);
-  return { customers, orders, transactions, statements, statement_transactions, bills, bill_items };
+  return { customers, orders, transactions, statements, statement_transactions, bills };
 }
 
 // ─── Restore ──────────────────────────────────────────────────────────────────
@@ -810,11 +849,10 @@ export interface BackupPayload {
   version: number;
   customers: Customer[];
   orders: (Order & { amount?: number })[];
-  transactions?: Transaction[];
+  transactions?: (Transaction & { bill_id?: number | null })[];
   statements?: Statement[];
   statement_transactions?: StatementTransaction[];
-  bills?: Bill[];
-  bill_items?: BillItemRow[];
+  bills?: (Bill & { previous_balance?: number; total_amount?: number; payment_amount?: number; net_amount?: number })[];
 }
 
 /**
@@ -870,9 +908,9 @@ export async function restoreFromBackupData(
       // v2 backup — restore all ledger data
       for (const t of payload.transactions) {
         await db.runAsync(
-          `INSERT INTO transactions (id, customer_id, order_id, type, amount, description, date, status, created_date, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, t.customer_id, t.order_id, t.type, t.amount, t.description, t.date, (t as any).status ?? 'active', t.created_date, t.updated_at],
+          `INSERT INTO transactions (id, customer_id, order_id, bill_id, type, amount, description, date, status, created_date, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [t.id, t.customer_id, t.order_id, t.bill_id ?? null, t.type, t.amount, t.description, t.date, (t as any).status ?? 'active', t.created_date, t.updated_at],
         );
       }
       for (const s of payload.statements ?? []) {
@@ -892,14 +930,7 @@ export async function restoreFromBackupData(
         await db.runAsync(
           `INSERT INTO bills (id, bill_number, customer_id, bill_date, previous_balance, total_amount, payment_amount, net_amount, notes, status, created_date, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [b.id, b.bill_number, b.customer_id, b.bill_date, b.previous_balance, b.total_amount, b.payment_amount, b.net_amount, b.notes, (b as any).status ?? 'active', b.created_date, b.updated_at],
-        );
-      }
-      for (const bi of payload.bill_items ?? []) {
-        await db.runAsync(
-          `INSERT INTO bill_items (id, bill_id, order_id, type, description, quantity, amount)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [bi.id, bi.bill_id, bi.order_id, bi.type, bi.description, bi.quantity, bi.amount],
+          [b.id, b.bill_number, b.customer_id, b.bill_date, b.previous_balance ?? 0, b.total_amount ?? 0, b.payment_amount ?? 0, b.net_amount ?? 0, b.notes, (b as any).status ?? 'active', b.created_date, b.updated_at],
         );
       }
     } else {
