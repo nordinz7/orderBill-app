@@ -286,6 +286,17 @@ function makeStyles(c: AppColors) {
       padding: Spacing.md, fontSize: FontSizes.md, color: c.text,
       marginHorizontal: Spacing.lg, marginTop: Spacing.md, marginBottom: Spacing.xs,
     },
+    actionIcons: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      marginLeft: Spacing.xs,
+    },
+    actionIcon: {
+      padding: 6,
+      borderRadius: Radius.sm,
+      backgroundColor: c.background,
+    },
   });
 }
 
@@ -579,8 +590,46 @@ export default function BillingScreen() {
     }
   };
 
+  const handleInvoice = (item: TransactionWithCustomer) => {
+    router.push({
+      pathname: '/view-invoice',
+      params: {
+        customerName: item.customer_name,
+        customerPlace: item.customer_place,
+        customerPhone: item.customer_phone,
+        amount: String(item.amount),
+        description: item.description,
+        quantity: String(item.quantity ?? 0),
+        date: item.date,
+      },
+    });
+  };
+
+  const handlePaymentReceipt = (item: TransactionWithCustomer) => {
+    router.push({
+      pathname: '/view-payment-receipt',
+      params: {
+        customerName: item.customer_name,
+        customerPlace: item.customer_place,
+        customerPhone: item.customer_phone,
+        amount: String(item.amount),
+        date: item.date,
+        description: item.description,
+      },
+    });
+  };
+
+  const handleStatement = (item: TransactionWithCustomer) => {
+    const endOfDay = item.date.slice(0, 10) + 'T23:59:59.999Z';
+    router.push({
+      pathname: '/view-statement',
+      params: { id: String(item.customer_id), upToDate: endOfDay },
+    });
+  };
+
   const renderHistoryItem = ({ item }: { item: TransactionWithCustomer }) => {
     const isCredit = item.type === 'credit';
+    const isDebit = item.type === 'debit';
     return (
       <TouchableOpacity
         style={S.card}
@@ -606,6 +655,33 @@ export default function BillingScreen() {
             {item.description && item.description !== 'Kuboos' && item.description !== 'Payment received'
               ? ` · ${item.description}` : ''}
           </Text>
+        </View>
+        <View style={S.actionIcons}>
+          {isDebit && (
+            <TouchableOpacity
+              style={S.actionIcon}
+              onPress={() => handleInvoice(item)}
+              hitSlop={8}
+            >
+              <MaterialIcons name="receipt" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          )}
+          {isCredit && (
+            <TouchableOpacity
+              style={S.actionIcon}
+              onPress={() => handlePaymentReceipt(item)}
+              hitSlop={8}
+            >
+              <MaterialIcons name="receipt" size={20} color={colors.primary} />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={S.actionIcon}
+            onPress={() => handleStatement(item)}
+            hitSlop={8}
+          >
+            <MaterialIcons name="receipt-long" size={20} color={colors.success} />
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );

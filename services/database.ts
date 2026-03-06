@@ -673,6 +673,34 @@ export async function getTransactionsByCustomer(
   );
 }
 
+export async function getTransactionsByCustomerUpToDate(
+  db: SQLite.SQLiteDatabase, customerId: number, upToDate: string,
+): Promise<TransactionWithQuantity[]> {
+  return db.getAllAsync<TransactionWithQuantity>(
+    `SELECT t.*, COALESCE(o.quantity, 0) as quantity
+     FROM transactions t
+     LEFT JOIN orders o ON t.order_id = o.id
+     WHERE t.customer_id = ? AND t.date <= ?
+     ORDER BY t.date DESC`,
+    [customerId, upToDate]
+  );
+}
+
+export async function getCustomerBalanceUpToDate(
+  db: SQLite.SQLiteDatabase, customerId: number, upToDate: string,
+): Promise<{ totalDebit: number; totalCredit: number; balance: number }> {
+  const row = await db.getFirstAsync<{ total_debit: number; total_credit: number }>(
+    `SELECT
+       COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0) as total_debit,
+       COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0) as total_credit
+     FROM transactions WHERE customer_id = ? AND date <= ?`,
+    [customerId, upToDate]
+  );
+  const totalDebit = row?.total_debit ?? 0;
+  const totalCredit = row?.total_credit ?? 0;
+  return { totalDebit, totalCredit, balance: totalDebit - totalCredit };
+}
+
 export async function getCustomerBalance(
   db: SQLite.SQLiteDatabase, customerId: number,
 ): Promise<{ totalDebit: number; totalCredit: number; balance: number }> {

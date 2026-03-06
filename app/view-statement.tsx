@@ -3,8 +3,10 @@ import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
   getCustomerBalance,
+  getCustomerBalanceUpToDate,
   getCustomerById,
   getTransactionsByCustomer,
+  getTransactionsByCustomerUpToDate,
   insertStatement,
   TransactionWithQuantity,
 } from '@/services/database';
@@ -49,7 +51,7 @@ function makeStyles(c: AppColors) {
 
 export default function ViewStatementScreen() {
   const db = useSQLiteContext();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, upToDate } = useLocalSearchParams<{ id: string; upToDate?: string }>();
   const { colors, tr, lang, companyName, companyPlace, companyPhone } = useSettings();
   const S = makeStyles(colors);
 
@@ -108,17 +110,19 @@ export default function ViewStatementScreen() {
 
   useEffect(() => {
     (async () => {
-      const [c, txns, bal] = await Promise.all([
-        getCustomerById(db, customerId),
-        getTransactionsByCustomer(db, customerId),
-        getCustomerBalance(db, customerId),
-      ]);
+      const c = await getCustomerById(db, customerId);
+      const txns = upToDate
+        ? await getTransactionsByCustomerUpToDate(db, customerId, upToDate)
+        : await getTransactionsByCustomer(db, customerId);
+      const bal = upToDate
+        ? await getCustomerBalanceUpToDate(db, customerId, upToDate)
+        : await getCustomerBalance(db, customerId);
       setCustomer(c);
       setTransactions(txns);
       setBalance(bal);
       setLoading(false);
     })();
-  }, [db, customerId]);
+  }, [db, customerId, upToDate]);
 
   if (loading) {
     return (

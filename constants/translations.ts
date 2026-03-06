@@ -274,6 +274,9 @@ const en = {
   enterBillAmount: 'Amount',
   allocateToBill: 'Apply to Bill',
   generalPayment: 'General',
+  // Payment receipt
+  paymentReceipt: 'Payment Receipt',
+  sendPaymentReceipt: 'Send Receipt',
 };
 
 const ta: typeof en = {
@@ -538,6 +541,9 @@ const ta: typeof en = {
   enterBillAmount: 'தொகை',
   allocateToBill: 'பில்லுக்கு ஒதுக்கு',
   generalPayment: 'பொது',
+  // Payment receipt
+  paymentReceipt: 'பணம் பெற்ற ரசீது',
+  sendPaymentReceipt: 'ரசீது அனுப்பு',
 };
 
 export const translations = { en, ta };

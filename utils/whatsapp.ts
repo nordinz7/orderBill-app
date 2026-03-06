@@ -188,3 +188,42 @@ export async function shareStatementImage(
     Alert.alert('Error', 'Could not share the statement image. Please try again.');
   }
 }
+
+/**
+ * Share a payment receipt image via the system share sheet.
+ * @param imageUri - local file URI from ViewShot capture
+ * @param customerName - used for the filename
+ */
+export async function sharePaymentReceiptImage(
+  imageUri: string,
+  customerName: string,
+  lang: Lang = 'en',
+): Promise<void> {
+  const tr = translations[lang];
+  try {
+    const available = await Sharing.isAvailableAsync();
+    if (!available) {
+      Alert.alert('Error', 'Sharing is not available on this device.');
+      return;
+    }
+
+    const safeName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
+    const dateTag = format(new Date(), 'yyyyMMdd');
+    const fileName = `MFC_Receipt_${safeName}_${dateTag}.png`;
+
+    const source = new File(imageUri);
+    const dest = new File(Paths.cache, fileName);
+
+    try { dest.delete(); } catch { /* doesn't exist yet */ }
+    source.copy(dest);
+
+    await Sharing.shareAsync(dest.uri, {
+      mimeType: 'image/png',
+      dialogTitle: tr.sendPaymentReceipt,
+      UTI: 'public.png',
+    });
+  } catch (error) {
+    console.error('Share payment receipt error:', error);
+    Alert.alert('Error', 'Could not share the payment receipt. Please try again.');
+  }
+}
