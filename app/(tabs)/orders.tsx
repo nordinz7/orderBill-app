@@ -106,7 +106,15 @@ function makeStyles(c: AppColors) {
       borderRadius: 4,
     },
     billedTagText: { fontSize: 10, fontWeight: '800', color: c.success },
-    cardSub:      { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 2 },
+    cardSub:      { fontSize: FontSizes.sm, color: c.textSecondary },
+    descTag: {
+      backgroundColor: c.primaryLight,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 4,
+      marginLeft: 4,
+    },
+    descTagText:  { fontSize: FontSizes.xs, fontWeight: '700', color: c.primary },
     whatsappBtn:  {
       width: 38, height: 38, borderRadius: 19,
       backgroundColor: c.whatsapp,
@@ -342,9 +350,16 @@ export default function OrdersScreen() {
               )
             }
           </View>
-          <Text style={S.cardSub} numberOfLines={1}>
-            {item.customer_place} · {format(new Date(item.date), 'dd MMM')}{item.description !== 'Kuboos' ? `  ·  ${item.description}` : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+            <Text style={S.cardSub} numberOfLines={1}>
+              {item.customer_place} · {format(new Date(item.date), 'dd MMM')}
+            </Text>
+            {item.description !== 'Kuboos' && (
+              <View style={S.descTag}>
+                <Text style={S.descTagText}>{item.description}</Text>
+              </View>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
