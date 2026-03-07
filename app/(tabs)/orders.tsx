@@ -68,16 +68,15 @@ function makeStyles(c: AppColors) {
     card: {
       backgroundColor: c.card,
       borderRadius: Radius.md,
-      padding: Spacing.sm,
-      paddingHorizontal: Spacing.md,
+      padding: Spacing.md,
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.md,
       elevation: 1,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.06,
-      shadowRadius: 2,
+      shadowOpacity: 0.08,
+      shadowRadius: 3,
     },
     qtyBadge: {
       width: 48, height: 48, borderRadius: 24,
@@ -87,41 +86,35 @@ function makeStyles(c: AppColors) {
     qtyNum:       { fontSize: FontSizes.xl, fontWeight: '800', color: c.primary, lineHeight: FontSizes.xl + 2 },
     qtyUnit:      { fontSize: 10, fontWeight: '600', color: c.primary, marginTop: -2 },
     cardContent:  { flex: 1 },
-    cardRow1:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1, marginRight: Spacing.sm },
+    cardRow1:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
+    customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1 },
     amount:       { fontSize: FontSizes.lg, fontWeight: '800', color: c.success },
     unbilledTag: {
       backgroundColor: c.dangerLight,
-      paddingHorizontal: 6,
+      paddingHorizontal: 8,
       paddingVertical: 2,
-      borderRadius: 4,
+      borderRadius: 10,
     },
-    unbilledTagText: { fontSize: 10, fontWeight: '800', color: c.danger },
+    unbilledTagText: { fontSize: 11, fontWeight: '800', color: c.danger },
     billedTag: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 3,
       backgroundColor: c.successLight,
-      paddingHorizontal: 6,
+      paddingHorizontal: 8,
       paddingVertical: 2,
-      borderRadius: 4,
+      borderRadius: 10,
     },
-    billedTagText: { fontSize: 10, fontWeight: '800', color: c.success },
+    billedTagText: { fontSize: 11, fontWeight: '800', color: c.success },
+    cardRow2:     { flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 4, flexWrap: 'wrap' },
     cardSub:      { fontSize: FontSizes.sm, color: c.textSecondary },
     descTag: {
       backgroundColor: c.primaryLight,
       paddingHorizontal: 6,
       paddingVertical: 1,
-      borderRadius: 4,
-      marginLeft: 4,
+      borderRadius: 8,
     },
     descTagText:  { fontSize: FontSizes.xs, fontWeight: '700', color: c.primary },
-    whatsappBtn:  {
-      width: 38, height: 38, borderRadius: 19,
-      backgroundColor: c.whatsapp,
-      justifyContent: 'center', alignItems: 'center',
-      marginLeft: Spacing.sm,
-    },
     emptyWrap:    { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
     emptyText:    { fontSize: FontSizes.xl, fontWeight: '600', color: c.textSecondary, marginTop: Spacing.lg },
     emptySubText: { fontSize: FontSizes.md, color: c.textMuted, marginTop: Spacing.sm },
@@ -353,13 +346,13 @@ export default function OrdersScreen() {
             <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
             {isBilled
               ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <>
                   <View style={S.billedTag}>
-                    <MaterialIcons name="receipt" size={10} color={colors.success} />
+                    <MaterialIcons name="receipt" size={11} color={colors.success} />
                     <Text style={S.billedTagText}>{tr.billedTag}</Text>
                   </View>
                   <Text style={S.amount}>&#8377;{item.billed_amount}</Text>
-                </View>
+                </>
               )
               : (
                 <View style={S.unbilledTag}>
@@ -368,7 +361,7 @@ export default function OrdersScreen() {
               )
             }
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+          <View style={S.cardRow2}>
             <Text style={S.cardSub} numberOfLines={1}>
               {item.customer_place} · {format(new Date(item.date), 'dd MMM')}
             </Text>
