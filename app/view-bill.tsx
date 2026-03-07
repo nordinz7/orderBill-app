@@ -60,7 +60,7 @@ export default function ViewBillScreen() {
     setSharing(true);
     try {
       const uri = await billRef.current.capture();
-      await shareInvoiceImage(uri, orders[0]?.customer_name ?? '', lang, orders[0]?.customer_phone);
+      await shareInvoiceImage(uri, orders[0]?.customer_name ?? '', lang);
     } catch (error) {
       console.error('Bill share error:', error);
     } finally {

@@ -83,7 +83,7 @@ export default function ViewInvoiceScreen() {
     try {
       if (billRef.current?.capture) {
         const uri = await billRef.current.capture();
-        await shareInvoiceImage(uri, order.customer_name, lang, order.customer_phone);
+        await shareInvoiceImage(uri, order.customer_name, lang);
       }
     } catch (error) {
       console.error('Invoice share error:', error);

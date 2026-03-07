@@ -127,25 +127,13 @@ function prepareImageFile(imageUri: string, prefix: string, customerName: string
 }
 
 /**
- * Share an image via system share sheet.
- * If a phone number is provided, opens WhatsApp to that contact's chat first.
+ * Share an image via the Android/iOS share sheet.
+ * The user picks WhatsApp (or any app) and the contact from there.
  */
 async function shareImage(
   imageUri: string,
   dialogTitle: string,
-  phone?: string,
 ): Promise<void> {
-  if (phone) {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const waUrl = `whatsapp://send?phone=${cleanPhone}`;
-    try {
-      const canOpen = await Linking.canOpenURL(waUrl);
-      if (canOpen) {
-        await Linking.openURL(waUrl);
-      }
-    } catch { /* WhatsApp not available, fall through to share sheet */ }
-  }
-
   const available = await Sharing.isAvailableAsync();
   if (!available) {
     Alert.alert('Error', 'Sharing is not available on this device.');
@@ -165,12 +153,11 @@ export async function shareInvoiceImage(
   imageUri: string,
   customerName: string,
   lang: Lang = 'en',
-  phone?: string,
 ): Promise<void> {
   const tr = translations[lang];
   try {
     const fileUri = prepareImageFile(imageUri, 'MFC_Invoice', customerName);
-    await shareImage(fileUri, tr.sendInvoice, phone);
+    await shareImage(fileUri, tr.sendInvoice);
   } catch (error) {
     console.error('Share invoice error:', error);
     Alert.alert('Error', 'Could not share the invoice image. Please try again.');
@@ -178,18 +165,17 @@ export async function shareInvoiceImage(
 }
 
 /**
- * Share a statement image directly to WhatsApp.
+ * Share a statement image via share sheet.
  */
 export async function shareStatementImage(
   imageUri: string,
   customerName: string,
   lang: Lang = 'en',
-  phone?: string,
 ): Promise<void> {
   const tr = translations[lang];
   try {
     const fileUri = prepareImageFile(imageUri, 'MFC_Statement', customerName);
-    await shareImage(fileUri, tr.shareStatement, phone);
+    await shareImage(fileUri, tr.shareStatement);
   } catch (error) {
     console.error('Share statement error:', error);
     Alert.alert('Error', 'Could not share the statement image. Please try again.');
@@ -197,18 +183,17 @@ export async function shareStatementImage(
 }
 
 /**
- * Share a payment receipt image directly to WhatsApp.
+ * Share a payment receipt image via share sheet.
  */
 export async function sharePaymentReceiptImage(
   imageUri: string,
   customerName: string,
   lang: Lang = 'en',
-  phone?: string,
 ): Promise<void> {
   const tr = translations[lang];
   try {
     const fileUri = prepareImageFile(imageUri, 'MFC_Receipt', customerName);
-    await shareImage(fileUri, tr.sendPaymentReceipt, phone);
+    await shareImage(fileUri, tr.sendPaymentReceipt);
   } catch (error) {
     console.error('Share payment receipt error:', error);
     Alert.alert('Error', 'Could not share the payment receipt. Please try again.');

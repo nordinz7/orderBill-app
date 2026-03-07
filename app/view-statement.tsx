@@ -85,7 +85,7 @@ export default function ViewStatementScreen() {
 
       if (billRef.current?.capture) {
         const uri = await billRef.current.capture();
-        await shareStatementImage(uri, customer.name, lang, customer.phone_number);
+        await shareStatementImage(uri, customer.name, lang);
       }
     } catch (error) {
       console.error('Statement share error:', error);
