@@ -130,10 +130,11 @@ function makeStyles(c: AppColors) {
     orderRow: {
       backgroundColor: c.card,
       borderRadius: Radius.md,
-      padding: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.md,
+      gap: Spacing.sm,
       elevation: 1,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
@@ -152,16 +153,11 @@ function makeStyles(c: AppColors) {
     checkboxChecked: {
       backgroundColor: c.primary, borderColor: c.primary,
     },
-    qtyBadge: {
-      width: 48, height: 48, borderRadius: 24,
-      backgroundColor: c.primaryLight,
-      justifyContent: 'center', alignItems: 'center',
-    },
-    qtyNum: { fontSize: FontSizes.xl, fontWeight: '800', color: c.primary, lineHeight: FontSizes.xl + 2 },
-    qtyUnit: { fontSize: 10, fontWeight: '600', color: c.primary, marginTop: -2 },
     orderInfo: { flex: 1 },
-    orderDesc: { fontSize: FontSizes.md, fontWeight: '700', color: c.text },
-    orderDate: { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 3 },
+    orderRow1: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
+    orderDesc: { fontSize: FontSizes.md, fontWeight: '600', color: c.text, flex: 1 },
+    orderQty: { fontSize: FontSizes.sm, fontWeight: '700', color: c.primary },
+    orderDate: { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 1 },
     amountInput: {
       width: 80,
       borderWidth: 1.5,
@@ -222,30 +218,23 @@ function makeStyles(c: AppColors) {
     card: {
       backgroundColor: c.card,
       borderRadius: Radius.md,
-      padding: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.md,
+      gap: Spacing.sm,
       elevation: 1,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.08,
       shadowRadius: 3,
     },
-    dateBadge: {
-      width: 48, height: 48, borderRadius: 24,
-      justifyContent: 'center', alignItems: 'center',
-    },
-    dateBadgeCredit: { backgroundColor: c.successLight },
-    dateBadgeDebit: { backgroundColor: c.dangerLight },
-    dateBadgeDay: { fontSize: FontSizes.xl, fontWeight: '800', color: c.textSecondary, lineHeight: FontSizes.xl + 2 },
-    dateBadgeMonth: { fontSize: 10, fontWeight: '600', color: c.textMuted, marginTop: -2, textTransform: 'uppercase' },
     cardContent: { flex: 1 },
     cardRow1: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
     customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1 },
-    amountCredit: { fontSize: FontSizes.lg, fontWeight: '800', color: c.success },
-    amountDebit: { fontSize: FontSizes.lg, fontWeight: '800', color: c.danger },
-    cardSub: { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 3 },
+    amountCredit: { fontSize: FontSizes.md, fontWeight: '800', color: c.success },
+    amountDebit: { fontSize: FontSizes.md, fontWeight: '800', color: c.danger },
+    cardSub: { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 1 },
     // Empty + FAB
     emptyWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
     emptyText: { fontSize: FontSizes.xl, fontWeight: '600', color: c.textSecondary, marginTop: Spacing.lg },
@@ -574,12 +563,11 @@ export default function BillingScreen() {
         <TouchableOpacity style={[S.checkbox, isSelected && S.checkboxChecked]} onPress={() => toggleSelect(item.id)}>
           {isSelected && <MaterialIcons name="check" size={16} color="#FFFFFF" />}
         </TouchableOpacity>
-        <View style={S.qtyBadge}>
-          <Text style={S.qtyNum}>{item.quantity || 0}</Text>
-          <Text style={S.qtyUnit}>pcs</Text>
-        </View>
         <View style={S.orderInfo}>
-          <Text style={S.orderDesc} numberOfLines={1}>{item.description}</Text>
+          <View style={S.orderRow1}>
+            <Text style={S.orderDesc} numberOfLines={1}>{item.description}</Text>
+            {item.quantity > 0 && <Text style={S.orderQty}>{item.quantity} pcs</Text>}
+          </View>
           <Text style={S.orderDate}>{format(new Date(item.date), 'dd MMM yyyy')}</Text>
         </View>
         {isSelected && (
@@ -701,10 +689,6 @@ export default function BillingScreen() {
         onPress={() => handleHistoryItemPress(item)}
         onLongPress={() => isCredit && handleDeleteTransaction(item)}
       >
-        <View style={[S.dateBadge, isCredit ? S.dateBadgeCredit : S.dateBadgeDebit]}>
-          <Text style={S.dateBadgeDay}>{format(new Date(item.date), 'd')}</Text>
-          <Text style={S.dateBadgeMonth}>{format(new Date(item.date), 'MMM')}</Text>
-        </View>
         <View style={S.cardContent}>
           <View style={S.cardRow1}>
             <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
@@ -713,9 +697,8 @@ export default function BillingScreen() {
             </Text>
           </View>
           <Text style={S.cardSub} numberOfLines={1}>
-            {isCredit ? tr.credit : tr.debit}
+            {format(new Date(item.date), 'dd MMM')} · {isCredit ? tr.credit : tr.debit}
             {!isCredit && item.quantity > 0 ? ` · ${Math.round(item.quantity)} pcs` : ''}
-            {item.customer_place ? ` · ${item.customer_place}` : ''}
             {item.description && item.description !== 'Kuboos' && item.description !== 'Payment received'
               ? ` · ${item.description}` : ''}
           </Text>

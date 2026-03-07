@@ -68,53 +68,38 @@ function makeStyles(c: AppColors) {
     card: {
       backgroundColor: c.card,
       borderRadius: Radius.md,
-      padding: Spacing.md,
+      paddingHorizontal: Spacing.md,
+      paddingVertical: Spacing.sm,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: Spacing.md,
+      gap: Spacing.sm,
       elevation: 1,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.08,
       shadowRadius: 3,
     },
-    qtyBadge: {
-      width: 48, height: 48, borderRadius: 24,
-      backgroundColor: c.primaryLight,
-      justifyContent: 'center', alignItems: 'center',
-    },
-    qtyNum:       { fontSize: FontSizes.xl, fontWeight: '800', color: c.primary, lineHeight: FontSizes.xl + 2 },
-    qtyUnit:      { fontSize: 10, fontWeight: '600', color: c.primary, marginTop: -2 },
     cardContent:  { flex: 1 },
     cardRow1:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
     customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1 },
-    amount:       { fontSize: FontSizes.lg, fontWeight: '800', color: c.success },
+    cardRight:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    amount:       { fontSize: FontSizes.md, fontWeight: '800', color: c.success },
+    qtyText:      { fontSize: FontSizes.sm, fontWeight: '700', color: c.primary },
     unbilledTag: {
       backgroundColor: c.dangerLight,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-    },
-    unbilledTagText: { fontSize: 11, fontWeight: '800', color: c.danger },
-    billedTag: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 3,
-      backgroundColor: c.successLight,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-    },
-    billedTagText: { fontSize: 11, fontWeight: '800', color: c.success },
-    cardRow2:     { flexDirection: 'row', alignItems: 'center', marginTop: 3, gap: 4, flexWrap: 'wrap' },
-    cardSub:      { fontSize: FontSizes.sm, color: c.textSecondary },
-    descTag: {
-      backgroundColor: c.primaryLight,
       paddingHorizontal: 6,
       paddingVertical: 1,
       borderRadius: 8,
     },
-    descTagText:  { fontSize: FontSizes.xs, fontWeight: '700', color: c.primary },
+    unbilledTagText: { fontSize: 10, fontWeight: '800', color: c.danger },
+    billedTag: {
+      backgroundColor: c.successLight,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 8,
+    },
+    billedTagText: { fontSize: 10, fontWeight: '800', color: c.success },
+    cardSub:      { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 1 },
     emptyWrap:    { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
     emptyText:    { fontSize: FontSizes.xl, fontWeight: '600', color: c.textSecondary, marginTop: Spacing.lg },
     emptySubText: { fontSize: FontSizes.md, color: c.textMuted, marginTop: Spacing.sm },
@@ -337,40 +322,32 @@ export default function OrdersScreen() {
         }}
         onLongPress={() => isBilled ? handleUnbill(item) : handleDelete(item)}
       >
-        <View style={S.qtyBadge}>
-          <Text style={S.qtyNum}>{item.quantity || 0}</Text>
-          <Text style={S.qtyUnit}>pcs</Text>
-        </View>
         <View style={S.cardContent}>
           <View style={S.cardRow1}>
             <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
-            {isBilled
-              ? (
-                <>
-                  <View style={S.billedTag}>
-                    <MaterialIcons name="receipt" size={11} color={colors.success} />
-                    <Text style={S.billedTagText}>{tr.billedTag}</Text>
+            <View style={S.cardRight}>
+              {item.quantity > 0 && <Text style={S.qtyText}>{item.quantity} pcs</Text>}
+              {isBilled
+                ? (
+                  <>
+                    <View style={S.billedTag}>
+                      <Text style={S.billedTagText}>{tr.billedTag}</Text>
+                    </View>
+                    <Text style={S.amount}>&#8377;{item.billed_amount}</Text>
+                  </>
+                )
+                : (
+                  <View style={S.unbilledTag}>
+                    <Text style={S.unbilledTagText}>{tr.unbilledTag}</Text>
                   </View>
-                  <Text style={S.amount}>&#8377;{item.billed_amount}</Text>
-                </>
-              )
-              : (
-                <View style={S.unbilledTag}>
-                  <Text style={S.unbilledTagText}>{tr.unbilledTag}</Text>
-                </View>
-              )
-            }
+                )
+              }
+            </View>
           </View>
-          <View style={S.cardRow2}>
-            <Text style={S.cardSub} numberOfLines={1}>
-              {item.customer_place} · {format(new Date(item.date), 'dd MMM')}
-            </Text>
-            {item.description !== 'Kuboos' && (
-              <View style={S.descTag}>
-                <Text style={S.descTagText}>{item.description}</Text>
-              </View>
-            )}
-          </View>
+          <Text style={S.cardSub} numberOfLines={1}>
+            {format(new Date(item.date), 'dd MMM')}
+            {item.description !== 'Kuboos' ? ` · ${item.description}` : ''}
+          </Text>
         </View>
       </TouchableOpacity>
     );
