@@ -230,13 +230,13 @@ const CustomerRow = React.memo(function CustomerRow({
 export default function BulkOrdersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr } = useSettings();
+  const { colors, tr, defaultOrderDescription } = useSettings();
   const insets = useSafeAreaInsets();
   const S = makeStyles(colors);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [quantities, setQuantities] = useState<Record<number, string>>({});
-  const [description, setDescription] = useState('Kuboos');
+  const [description, setDescription] = useState(defaultOrderDescription || 'Kuboos');
   const [orderDate, setOrderDate] = useState<Date>(addDays(new Date(), 1));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -320,7 +320,7 @@ export default function BulkOrdersScreen() {
       {
         text: tr.delete, style: 'destructive', onPress: async () => {
           setQuantities({});
-          setDescription('Kuboos');
+          setDescription(defaultOrderDescription || 'Kuboos');
           setOrderDate(addDays(new Date(), 1));
           await clearBulkDraft();
         },
