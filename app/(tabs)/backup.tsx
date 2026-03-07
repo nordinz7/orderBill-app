@@ -1,6 +1,14 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { backupToGoogleDrive, createAndShareBackup, getLastBackupDate, isBackupOverdue, pickAndRestoreBackup } from '@/utils/backup';
+import {
+  createAndShareBackup,
+  getBackupDirectoryPath,
+  getLastBackupDate,
+  getLocalBackupFiles,
+  isBackupOverdue,
+  pickAndRestoreBackup,
+  restoreFromLocalBackup,
+} from '@/utils/backup';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -18,9 +26,9 @@ function makeStyles(c: AppColors) {
       shadowOpacity: 0.1, shadowRadius: 6,
       marginBottom: Spacing.xl,
     },
-    title:       { fontSize: FontSizes.xxl, fontWeight: '800', color: c.text, marginBottom: Spacing.md, textAlign: 'center' },
-    description: { fontSize: FontSizes.md, color: c.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: Spacing.lg },
-    lastBackup:  { fontSize: FontSizes.sm, color: c.primary, marginBottom: Spacing.lg, fontWeight: '600' },
+    title: { fontSize: FontSizes.xxl, fontWeight: '800', color: c.text, marginBottom: Spacing.md, textAlign: 'center' },
+    hintText: { fontSize: FontSizes.sm, color: c.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.lg },
+    lastBackup: { fontSize: FontSizes.sm, color: c.primary, marginBottom: Spacing.lg, fontWeight: '600' },
     button: {
       flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
       backgroundColor: c.primary,
@@ -28,11 +36,7 @@ function makeStyles(c: AppColors) {
       borderRadius: Radius.lg, minWidth: 200, justifyContent: 'center',
     },
     buttonDisabled: { opacity: 0.6 },
-    buttonText:    { color: '#FFFFFF', fontSize: FontSizes.lg, fontWeight: '700' },
-    infoCard:      { backgroundColor: c.card, borderRadius: Radius.lg, padding: Spacing.xl, elevation: 2 },
-    infoTitle:     { fontSize: FontSizes.lg, fontWeight: '700', color: c.text, marginBottom: Spacing.md },
-    infoRow:       { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
-    infoText:      { fontSize: FontSizes.md, color: c.textSecondary, flex: 1 },
+    buttonText: { color: '#FFFFFF', fontSize: FontSizes.lg, fontWeight: '700' },
     restoreButton: {
       flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
       backgroundColor: c.card,
@@ -41,30 +45,45 @@ function makeStyles(c: AppColors) {
       borderRadius: Radius.lg, minWidth: 200, justifyContent: 'center',
     },
     restoreButtonText: { color: c.primary, fontSize: FontSizes.lg, fontWeight: '700' },
-    divider:       { height: 1, backgroundColor: c.border, marginVertical: Spacing.xl },
-    warningCard:   { backgroundColor: c.card, borderRadius: Radius.lg, padding: Spacing.xl, elevation: 2, marginTop: Spacing.xl },
+    description: { fontSize: FontSizes.md, color: c.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: Spacing.lg },
+    infoCard: { backgroundColor: c.card, borderRadius: Radius.lg, padding: Spacing.xl, elevation: 2 },
+    infoTitle: { fontSize: FontSizes.lg, fontWeight: '700', color: c.text, marginBottom: Spacing.md },
+    infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
+    infoText: { fontSize: FontSizes.md, color: c.textSecondary, flex: 1 },
     overdueCard: {
       backgroundColor: '#FFF3CD', borderRadius: Radius.lg, padding: Spacing.xl,
       marginBottom: Spacing.xl, borderWidth: 1, borderColor: '#FFECB5',
       flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     },
     overdueText: { fontSize: FontSizes.md, color: '#856404', flex: 1, fontWeight: '600' },
-    driveButton: {
-      flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-      backgroundColor: '#1A73E8',
-      paddingVertical: Spacing.lg, paddingHorizontal: Spacing.xxl,
-      borderRadius: Radius.lg, minWidth: 200, justifyContent: 'center',
-      marginBottom: Spacing.md,
+    autoBackupCard: {
+      backgroundColor: c.card, borderRadius: Radius.lg, padding: Spacing.xl,
+      elevation: 2, marginBottom: Spacing.xl,
     },
-    driveButtonText: { color: '#FFFFFF', fontSize: FontSizes.lg, fontWeight: '700' },
-    secondaryButton: {
-      flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-      backgroundColor: 'transparent',
-      paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl,
-      borderRadius: Radius.lg, justifyContent: 'center',
+    autoBackupHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
+    autoBackupTitle: { fontSize: FontSizes.lg, fontWeight: '700', color: c.text, flex: 1 },
+    autoBackupBadge: {
+      backgroundColor: c.successLight, paddingHorizontal: Spacing.sm, paddingVertical: 2,
+      borderRadius: Radius.sm,
     },
-    secondaryButtonText: { color: c.textSecondary, fontSize: FontSizes.md, fontWeight: '600' },
-    hintText: { fontSize: FontSizes.sm, color: c.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: Spacing.lg },
+    autoBackupBadgeText: { fontSize: FontSizes.xs, fontWeight: '700', color: c.success },
+    backupFileRow: {
+      flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+      paddingVertical: Spacing.sm, borderTopWidth: 1, borderTopColor: c.separator,
+    },
+    backupFileName: { fontSize: FontSizes.sm, color: c.text, flex: 1 },
+    backupFileDate: { fontSize: FontSizes.xs, color: c.textMuted },
+    restoreFileBtn: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
+    restoreFileBtnText: { fontSize: FontSizes.sm, color: c.primary, fontWeight: '600' },
+    emptyBackupText: { fontSize: FontSizes.sm, color: c.textMuted, fontStyle: 'italic' },
+    locationRow: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
+      backgroundColor: c.background, borderRadius: Radius.sm,
+      padding: Spacing.sm, marginTop: Spacing.md,
+    },
+    locationPath: { fontSize: FontSizes.xs, color: c.textMuted, flex: 1, fontFamily: 'monospace' },
+    warningCard: { backgroundColor: c.card, borderRadius: Radius.lg, padding: Spacing.xl, elevation: 2, marginTop: Spacing.xl },
+    divider: { height: 1, backgroundColor: c.border, marginVertical: Spacing.xl },
   });
 }
 
@@ -76,13 +95,16 @@ export default function BackupScreen() {
   const [restoring, setRestoring] = useState(false);
   const [lastBackup, setLastBackup] = useState<Date | null>(null);
   const [overdue, setOverdue] = useState(false);
+  const [backupFiles, setBackupFiles] = useState<{ uri: string; filename: string; date: string }[]>([]);
+  const [backupDir, setBackupDir] = useState('');
 
-  // Load persisted backup date on mount
   useEffect(() => {
     (async () => {
       const date = await getLastBackupDate();
       setLastBackup(date);
       setOverdue(await isBackupOverdue());
+      setBackupFiles(getLocalBackupFiles());
+      try { setBackupDir(getBackupDirectoryPath()); } catch { /* ignore */ }
     })();
   }, []);
 
@@ -90,21 +112,10 @@ export default function BackupScreen() {
     const date = await getLastBackupDate();
     setLastBackup(date);
     setOverdue(await isBackupOverdue());
+    setBackupFiles(getLocalBackupFiles());
   };
 
-  const handleGoogleDrive = async () => {
-    setLoading(true);
-    try {
-      await backupToGoogleDrive(db);
-      await refreshBackupState();
-    } catch {
-      Alert.alert(tr.backupFailed, tr.backupFailedMsg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleShareBackup = async () => {
+  const handleSaveBackup = async () => {
     setLoading(true);
     try {
       await createAndShareBackup(db);
@@ -116,7 +127,7 @@ export default function BackupScreen() {
     }
   };
 
-  const handleRestore = () => {
+  const handleRestoreFromFile = () => {
     Alert.alert(tr.restoreConfirm, tr.restoreConfirmMsg, [
       { text: tr.cancel, style: 'cancel' },
       {
@@ -139,11 +150,36 @@ export default function BackupScreen() {
     ]);
   };
 
+  const handleRestoreFromAutoBackup = (uri: string, dateStr: string) => {
+    Alert.alert(tr.restoreConfirm, tr.restoreConfirmMsg, [
+      { text: tr.cancel, style: 'cancel' },
+      {
+        text: tr.proceed,
+        style: 'destructive',
+        onPress: async () => {
+          setRestoring(true);
+          try {
+            const result = await restoreFromLocalBackup(db, uri);
+            if (result) {
+              Alert.alert(tr.restoreSuccess, tr.restoreSuccessMsg(result.customers, result.orders));
+            } else {
+              Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
+            }
+          } catch {
+            Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
+          } finally {
+            setRestoring(false);
+          }
+        },
+      },
+    ]);
+  };
+
   const busy = loading || restoring;
 
   return (
     <ScrollView style={S.container} contentContainerStyle={{ paddingBottom: Spacing.xxl * 2 }}>
-      {/* ── Overdue / Never-backed-up Warning ── */}
+      {/* Overdue Warning */}
       {overdue && (
         <View style={S.overdueCard}>
           <MaterialIcons name="warning" size={28} color="#856404" />
@@ -153,44 +189,75 @@ export default function BackupScreen() {
         </View>
       )}
 
-      {/* ── Google Drive (Primary) ── */}
+      {/* Save Backup */}
       <View style={S.card}>
-        <MaterialIcons name="cloud-upload" size={72} color="#1A73E8" style={{ marginBottom: Spacing.lg }} />
-        <Text style={S.title}>{tr.saveToGoogleDrive}</Text>
-        <Text style={S.hintText}>{tr.googleDriveHint}</Text>
+        <MaterialIcons name="save" size={72} color={colors.primary} style={{ marginBottom: Spacing.lg }} />
+        <Text style={S.title}>{tr.saveBackup}</Text>
+        <Text style={S.hintText}>{tr.saveBackupHint}</Text>
         {lastBackup && (
           <Text style={S.lastBackup}>{tr.lastBackup}: {format(lastBackup, 'dd MMM yyyy, hh:mm a')}</Text>
         )}
-        <TouchableOpacity style={[S.driveButton, busy && S.buttonDisabled]} onPress={handleGoogleDrive} disabled={busy}>
+        <TouchableOpacity style={[S.button, busy && S.buttonDisabled]} onPress={handleSaveBackup} disabled={busy}>
           {loading ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
             <>
-              <MaterialIcons name="add-to-drive" size={24} color="#FFFFFF" />
-              <Text style={S.driveButtonText}>{tr.saveToGoogleDrive}</Text>
+              <MaterialIcons name="file-download" size={24} color="#FFFFFF" />
+              <Text style={S.buttonText}>{tr.saveBackup}</Text>
             </>
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={S.secondaryButton} onPress={handleShareBackup} disabled={busy}>
-          <MaterialIcons name="share" size={20} color={colors.textSecondary} />
-          <Text style={S.secondaryButtonText}>{tr.shareBackup}</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* ── Restore from Backup ── */}
+      {/* Auto-backups List */}
+      <View style={S.autoBackupCard}>
+        <View style={S.autoBackupHeader}>
+          <MaterialIcons name="history" size={24} color={colors.primary} />
+          <Text style={S.autoBackupTitle}>{tr.autoBackup}</Text>
+          <View style={S.autoBackupBadge}>
+            <Text style={S.autoBackupBadgeText}>{tr.autoBackupActive}</Text>
+          </View>
+        </View>
+        <Text style={[S.infoText, { marginBottom: Spacing.md }]}>{tr.autoBackupDesc}</Text>
+        {backupFiles.length === 0 ? (
+          <Text style={S.emptyBackupText}>{tr.autoBackupsInfo(0, '')}</Text>
+        ) : (
+          backupFiles.map((bf) => (
+            <View style={S.backupFileRow} key={bf.filename}>
+              <MaterialIcons name="insert-drive-file" size={18} color={colors.textMuted} />
+              <Text style={S.backupFileName}>{bf.date}</Text>
+              <TouchableOpacity
+                style={S.restoreFileBtn}
+                onPress={() => handleRestoreFromAutoBackup(bf.uri, bf.date)}
+                disabled={busy}
+              >
+                <Text style={S.restoreFileBtnText}>{tr.restoreButton}</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+        {backupDir ? (
+          <View style={S.locationRow}>
+            <MaterialIcons name="folder" size={14} color={colors.textMuted} />
+            <Text style={S.locationPath} selectable>{backupDir}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Restore from File */}
       <View style={S.card}>
-        <MaterialIcons name="cloud-download" size={72} color={colors.primary} style={{ marginBottom: Spacing.lg }} />
+        <MaterialIcons name="folder-open" size={72} color={colors.primary} style={{ marginBottom: Spacing.lg }} />
         <Text style={S.title}>{tr.restoreTitle}</Text>
         <Text style={S.description}>{tr.restoreDesc}</Text>
-        <TouchableOpacity style={[S.restoreButton, restoring && S.buttonDisabled]} onPress={handleRestore} disabled={busy}>
+        <TouchableOpacity style={[S.restoreButton, restoring && S.buttonDisabled]} onPress={handleRestoreFromFile} disabled={busy}>
           {restoring ? <ActivityIndicator color={colors.primary} size="small" /> : (
             <>
               <MaterialIcons name="restore" size={24} color={colors.primary} />
-              <Text style={S.restoreButtonText}>{tr.restoreButton}</Text>
+              <Text style={S.restoreButtonText}>{tr.restoreFromFile}</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* ── What's Backed Up ── */}
+      {/* What's Backed Up */}
       <View style={S.infoCard}>
         <Text style={S.infoTitle}>{tr.whatBackedUp}</Text>
         {[tr.backupItem1, tr.backupItem2, tr.backupItem3].map((item, i) => (
@@ -201,7 +268,7 @@ export default function BackupScreen() {
         ))}
       </View>
 
-      {/* ── Backup Recommendations ── */}
+      {/* Backup Recommendations */}
       <View style={S.warningCard}>
         <Text style={S.infoTitle}>{tr.backupPlanTitle}</Text>
         {[tr.backupPlanItem1, tr.backupPlanItem2, tr.backupPlanItem3].map((item, i) => (

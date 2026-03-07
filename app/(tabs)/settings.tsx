@@ -1,7 +1,7 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { Lang } from '@/constants/translations';
 import { useSettings } from '@/contexts/SettingsContext';
-import { backupToGoogleDrive, createAndShareBackup, getLastLocalBackupDate, pickAndRestoreBackup } from '@/utils/backup';
+import { createAndShareBackup, getLastLocalBackupDate, pickAndRestoreBackup } from '@/utils/backup';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns';
@@ -88,19 +88,7 @@ export default function SettingsScreen() {
     setLastLocalBackup(await getLastLocalBackupDate());
   };
 
-  const handleGoogleDrive = async () => {
-    setBackupLoading(true);
-    try {
-      await backupToGoogleDrive(db);
-      await refreshBackupState();
-    } catch {
-      Alert.alert(tr.backupFailed, tr.backupFailedMsg);
-    } finally {
-      setBackupLoading(false);
-    }
-  };
-
-  const handleShareBackup = async () => {
+  const handleSaveBackup = async () => {
     setBackupLoading(true);
     try {
       await createAndShareBackup(db);
@@ -289,20 +277,14 @@ export default function SettingsScreen() {
               <Text style={[S.overdueTagText, { color: colors.success }]}>{tr.autoBackupActive}</Text>
             </View>
           </View>
-          {/* Google Drive */}
-          <TouchableOpacity style={S.row} onPress={handleGoogleDrive} disabled={busy}>
-            <MaterialIcons name="add-to-drive" size={24} color="#1A73E8" style={S.rowIcon} />
-            <Text style={S.rowLabel}>{tr.saveToGoogleDrive}</Text>
+          {/* Save Backup */}
+          <TouchableOpacity style={S.row} onPress={handleSaveBackup} disabled={busy}>
+            <MaterialIcons name="save" size={24} color={colors.primary} style={S.rowIcon} />
+            <Text style={S.rowLabel}>{tr.saveBackup}</Text>
             {backupLoading
               ? <ActivityIndicator color={colors.primary} size="small" />
               : <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
             }
-          </TouchableOpacity>
-          {/* Share */}
-          <TouchableOpacity style={S.row} onPress={handleShareBackup} disabled={busy}>
-            <MaterialIcons name="share" size={24} color={colors.primary} style={S.rowIcon} />
-            <Text style={S.rowLabel}>{tr.shareBackup}</Text>
-            <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
           </TouchableOpacity>
           {/* Restore */}
           <TouchableOpacity style={[S.row, S.rowLast]} onPress={handleRestore} disabled={busy}>

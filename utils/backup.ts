@@ -2,14 +2,23 @@ import { getAllDataForBackup, isValidBackup, restoreFromBackupData } from '@/ser
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { differenceInDays, format } from 'date-fns';
 import * as DocumentPicker from 'expo-document-picker';
-import { File, Paths } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { Alert } from 'react-native';
 
 const LAST_BACKUP_KEY = '@mfc_last_backup';
 const LAST_LOCAL_BACKUP_KEY = '@mfc_last_local_backup';
-const LOCAL_BACKUP_FILENAME = 'mfc-auto-backup.json';
+const BACKUP_PREFIX = 'mfc-auto-backup-';
+
+/** Returns a user-friendly path string for the auto-backup directory. */
+export function getBackupDirectoryPath(): string {
+  // Derive path from a temp file reference since Paths.document.uri may not work directly
+  const tempFile = new File(Paths.document, '__probe__');
+  const fullUri = tempFile.uri.replace('file://', '');
+  return fullUri.replace('/__probe__', '');
+}
+const MAX_ROLLING_BACKUPS = 5;
 
 // ─── Persistence helpers ──────────────────────────────────────────────────────
 
@@ -31,11 +40,58 @@ export async function isBackupOverdue(): Promise<boolean> {
   return differenceInDays(new Date(), last) >= 7;
 }
 
-// ─── Auto local backup ────────────────────────────────────────────────────────
+// ─── Rolling auto backup ─────────────────────────────────────────────────────
 
-/** Save a JSON backup to the persistent documents directory. */
+function getRollingFilename(date: Date): string {
+  return `${BACKUP_PREFIX}${format(date, 'yyyy-MM-dd')}.json`;
+}
+
+/** Returns all rolling backup files sorted newest-first. */
+export function getLocalBackupFiles(): { uri: string; filename: string; date: string }[] {
+  try {
+    const dir = new Directory(Paths.document);
+    const entries = dir.list();
+    const backups: { uri: string; filename: string; date: string }[] = [];
+
+    for (const entry of entries) {
+      if (entry instanceof File && entry.name.startsWith(BACKUP_PREFIX) && entry.name.endsWith('.json')) {
+        const dateStr = entry.name.replace(BACKUP_PREFIX, '').replace('.json', '');
+        backups.push({ uri: entry.uri, filename: entry.name, date: dateStr });
+      }
+    }
+
+    backups.sort((a, b) => b.date.localeCompare(a.date));
+    return backups;
+  } catch {
+    return [];
+  }
+}
+
+/** Remove old backups beyond MAX_ROLLING_BACKUPS. */
+function pruneOldBackups(): void {
+  const backups = getLocalBackupFiles();
+  if (backups.length <= MAX_ROLLING_BACKUPS) return;
+
+  for (let i = MAX_ROLLING_BACKUPS; i < backups.length; i++) {
+    try {
+      const file = new File(backups[i].uri);
+      file.delete();
+    } catch {
+      // ignore deletion errors
+    }
+  }
+}
+
+/** Save a rolling JSON backup (one per day, max 5 kept). */
 export async function saveLocalBackup(db: SQLiteDatabase): Promise<void> {
   try {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const lastRaw = await AsyncStorage.getItem(LAST_LOCAL_BACKUP_KEY);
+    const lastDate = lastRaw ? lastRaw.slice(0, 10) : null;
+
+    // Skip if already backed up today
+    if (lastDate === today) return;
+
     const data = await getAllDataForBackup(db);
     const payload = {
       exportedAt: new Date().toISOString(),
@@ -47,9 +103,11 @@ export async function saveLocalBackup(db: SQLiteDatabase): Promise<void> {
       statement_transactions: data.statement_transactions,
     };
     const json = JSON.stringify(payload, null, 2);
-    const file = new File(Paths.document, LOCAL_BACKUP_FILENAME);
+    const file = new File(Paths.document, getRollingFilename(new Date()));
     file.write(json);
+
     await AsyncStorage.setItem(LAST_LOCAL_BACKUP_KEY, new Date().toISOString());
+    pruneOldBackups();
   } catch (e) {
     console.warn('Auto local backup failed:', e);
   }
@@ -61,15 +119,23 @@ export async function getLastLocalBackupDate(): Promise<Date | null> {
   return raw ? new Date(raw) : null;
 }
 
-/** Get the URI of the local auto-backup file (or null if it doesn't exist). */
+/** Get the URI of the most recent rolling backup file (or null). */
 export function getLocalBackupUri(): string | null {
-  try {
-    const file = new File(Paths.document, LOCAL_BACKUP_FILENAME);
-    if (file.exists) return file.uri;
-    return null;
-  } catch {
-    return null;
-  }
+  const backups = getLocalBackupFiles();
+  return backups.length > 0 ? backups[0].uri : null;
+}
+
+/** Restore from a specific local backup file URI. */
+export async function restoreFromLocalBackup(
+  db: SQLiteDatabase,
+  uri: string,
+): Promise<{ customers: number; orders: number } | null> {
+  const file = new File(uri);
+  const contents = await file.text();
+  const parsed = JSON.parse(contents);
+
+  if (!isValidBackup(parsed)) return null;
+  return restoreFromBackupData(db, parsed);
 }
 
 // ─── Backup file creation ─────────────────────────────────────────────────────
@@ -134,36 +200,6 @@ export async function createAndShareBackup(db: SQLiteDatabase): Promise<void> {
   }
 }
 
-/**
- * Creates a JSON backup and opens the share sheet with a Google Drive prompt.
- * On Android the system share sheet appears — the dialog title reminds the
- * user to choose Google Drive.  This is the most reliable cross-device
- * approach without requiring Google OAuth.
- */
-/**
- * Creates a JSON backup and opens the share sheet with a Google Drive prompt.
- * Uses the latest auto-saved local file if available, otherwise creates a new one.
- */
-export async function backupToGoogleDrive(db: SQLiteDatabase): Promise<void> {
-  try {
-    // Ensure local backup is fresh
-    await saveLocalBackup(db);
-    const localUri = getLocalBackupUri();
-    const uri = localUri ?? (await createBackupFile(db)).uri;
-    if (!(await ensureSharingAvailable())) return;
-
-    await Sharing.shareAsync(uri, {
-      mimeType: 'application/json',
-      dialogTitle: '📁 Choose "Google Drive" to save your backup',
-      UTI: 'public.json',
-    });
-
-    await saveLastBackupDate();
-  } catch (error) {
-    console.error('Google Drive backup error:', error);
-    Alert.alert('Backup Failed', 'An error occurred while creating the backup.');
-  }
-}
 
 /**
  * Opens a document picker, reads the selected JSON backup file,
