@@ -293,6 +293,16 @@ const en = {
   unbillOrderMsg: 'This will remove the bill for this order so you can edit the quantity and re-bill it. Continue?',
   unbillSuccess: 'Order unbilled successfully. You can now edit it and re-bill.',
   unbill: 'Unbill',
+  // Bulk payments
+  bulkPayments: 'Bulk Payments',
+  bulkPaymentsSaved: 'Bulk Payments Saved',
+  bulkPaymentsSavedMsg: (count: number) => `${count} payment${count === 1 ? '' : 's'} recorded successfully.`,
+  noBulkPayments: 'No amounts entered. Enter at least one amount to save.',
+  finalizePayments: 'Finalize Payments',
+  finalizePaymentsConfirm: 'Record Payments?',
+  finalizePaymentsConfirmMsg: (count: number) => `This will record ${count} payment${count === 1 ? '' : 's'}. Continue?`,
+  payment_singular: 'payment',
+  payments_plural: 'payments',
 };
 
 const ta: typeof en = {
@@ -576,6 +586,16 @@ const ta: typeof en = {
   unbillOrderMsg: 'இது இந்த ஆர்டரின் பில்லை நீக்கும், பிறகு அளவை மாற்றி மீண்டும் பில் செய்யலாம். தொடரவா?',
   unbillSuccess: 'பில் வெற்றிகரமாக நீக்கப்பட்டது. இப்போது திருத்தி மீண்டும் பில் செய்யலாம்.',
   unbill: 'பில் நீக்கு',
+  // Bulk payments
+  bulkPayments: 'மொத்த பணம்',
+  bulkPaymentsSaved: 'மொத்த பணம் சேமிக்கப்பட்டது',
+  bulkPaymentsSavedMsg: (count: number) => `${count} பணம் வெற்றிகரமாக பதிவு செய்யப்பட்டன.`,
+  noBulkPayments: 'தொகை எதுவும் உள்ளிடவில்லை. சேமிக்க குறைந்தது ஒரு தொகையை உள்ளிடவும்.',
+  finalizePayments: 'பணத்தை உறுதிப்படுத்து',
+  finalizePaymentsConfirm: 'பணம் பதிவு செய்யவா?',
+  finalizePaymentsConfirmMsg: (count: number) => `${count} பணம் பதிவு செய்யப்படும். தொடரவா?`,
+  payment_singular: 'பணம்',
+  payments_plural: 'பணங்கள்',
 };
 
 export const translations = { en, ta };

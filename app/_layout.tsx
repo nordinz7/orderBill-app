@@ -62,6 +62,10 @@ function InnerLayout() {
           options={{ title: tr.addPayment, presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen
+          name="bulk-payments"
+          options={{ title: tr.bulkPayments, presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
           name="customer-detail"
           options={{ title: tr.customerDetail }}
         />

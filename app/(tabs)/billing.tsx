@@ -1,3 +1,4 @@
+import { getBulkPaymentDraftCount } from '@/app/bulk-payments';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
@@ -261,6 +262,26 @@ function makeStyles(c: AppColors) {
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.35, shadowRadius: 8,
     },
+    bulkFab: {
+      position: 'absolute', bottom: 92, right: 28,
+      width: 48, height: 48, borderRadius: 24,
+      backgroundColor: c.success,
+      justifyContent: 'center', alignItems: 'center',
+      elevation: 5,
+      shadowColor: c.success,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3, shadowRadius: 6,
+    },
+    badge: {
+      position: 'absolute', top: -4, right: -4,
+      backgroundColor: c.danger,
+      borderRadius: 10, minWidth: 20, height: 20,
+      justifyContent: 'center', alignItems: 'center',
+      paddingHorizontal: 4,
+    },
+    badgeText: {
+      color: '#FFFFFF', fontSize: 11, fontWeight: '800',
+    },
     // Modal
     modalOverlay: {
       flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end',
@@ -342,6 +363,7 @@ export default function BillingScreen() {
   const [editAmountValue, setEditAmountValue] = useState('');
 
   const [refreshing, setRefreshing] = useState(false);
+  const [paymentDraftCount, setPaymentDraftCount] = useState(0);
 
   // ── Load data ──
   const loadUnbilled = useCallback(async () => {
@@ -382,6 +404,7 @@ export default function BillingScreen() {
   useFocusEffect(useCallback(() => {
     if (mode === 'unbilled') loadUnbilled();
     else loadHistory();
+    getBulkPaymentDraftCount().then(setPaymentDraftCount);
   }, [mode, loadUnbilled, loadHistory]));
 
   // Also load history when switching from unbilled to null/billed/payments
@@ -882,9 +905,19 @@ export default function BillingScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity style={S.fab} onPress={() => router.push('/add-payment')} accessibilityLabel={tr.addPayment}>
-              <MaterialIcons name="payments" size={28} color="#FFFFFF" />
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity style={S.fab} onPress={() => router.push('/add-payment')} accessibilityLabel={tr.addPayment}>
+                <MaterialIcons name="payments" size={28} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity style={S.bulkFab} onPress={() => router.push('/bulk-payments')} accessibilityLabel={tr.bulkPayments}>
+                <MaterialIcons name="playlist-add" size={24} color="#FFFFFF" />
+                {paymentDraftCount > 0 && (
+                  <View style={S.badge}>
+                    <Text style={S.badgeText}>{paymentDraftCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </>
           )}
 
           {renderCustomerModal(
@@ -964,6 +997,14 @@ export default function BillingScreen() {
 
           <TouchableOpacity style={S.fab} onPress={() => router.push('/add-payment')} accessibilityLabel={tr.addPayment}>
             <MaterialIcons name="payments" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity style={S.bulkFab} onPress={() => router.push('/bulk-payments')} accessibilityLabel={tr.bulkPayments}>
+            <MaterialIcons name="playlist-add" size={24} color="#FFFFFF" />
+            {paymentDraftCount > 0 && (
+              <View style={S.badge}>
+                <Text style={S.badgeText}>{paymentDraftCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           {renderCustomerModal(

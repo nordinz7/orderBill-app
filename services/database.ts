@@ -794,6 +794,27 @@ export async function getCustomerOutstandingBills(
   `, [customerId]);
 }
 
+export async function bulkInsertPayments(
+  db: SQLite.SQLiteDatabase,
+  payments: { customer_id: number; amount: number; description: string }[],
+  date: string,
+): Promise<number> {
+  const now = new Date().toISOString();
+  let count = 0;
+  await db.withTransactionAsync(async () => {
+    for (const p of payments) {
+      if (p.amount <= 0) continue;
+      await db.runAsync(
+        `INSERT INTO transactions (customer_id, order_id, bill_id, type, amount, description, date, created_date, updated_at)
+         VALUES (?, NULL, NULL, 'credit', ?, ?, ?, ?, ?)`,
+        [p.customer_id, p.amount, p.description.trim(), date, now, now]
+      );
+      count++;
+    }
+  });
+  return count;
+}
+
 export async function deleteTransaction(
   db: SQLite.SQLiteDatabase, id: number,
 ): Promise<void> {
