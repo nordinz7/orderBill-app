@@ -346,7 +346,7 @@ export default function OrdersScreen() {
       >
         <View style={S.qtyBadge}>
           <Text style={S.qtyNum}>{item.quantity || 0}</Text>
-          <Text style={S.qtyUnit}>pkt</Text>
+          <Text style={S.qtyUnit}>pcs</Text>
         </View>
         <View style={S.cardContent}>
           <View style={S.cardRow1}>

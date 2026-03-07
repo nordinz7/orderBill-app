@@ -37,6 +37,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface DropdownItem { id: string; label: string }
 
@@ -308,6 +309,7 @@ export default function BillingScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { colors, tr } = useSettings();
+  const insets = useSafeAreaInsets();
   const S = makeStyles(colors);
 
   const [mode, setMode] = useState<TabMode>('unbilled');
@@ -553,7 +555,7 @@ export default function BillingScreen() {
         </TouchableOpacity>
         <View style={S.qtyBadge}>
           <Text style={S.qtyNum}>{item.quantity || 0}</Text>
-          <Text style={S.qtyUnit}>pkt</Text>
+          <Text style={S.qtyUnit}>pcs</Text>
         </View>
         <View style={S.orderInfo}>
           <Text style={S.orderDesc} numberOfLines={1}>{item.description}</Text>
@@ -623,7 +625,7 @@ export default function BillingScreen() {
     // Debit (billed order) — confirm before editing
     Alert.alert(
       tr.editAmount,
-      `${item.customer_name}${item.quantity > 0 ? ` · ${Math.round(item.quantity)} pkt` : ''} · ₹${item.amount}`,
+      `${item.customer_name}${item.quantity > 0 ? ` · ${Math.round(item.quantity)} pcs` : ''} · ₹${item.amount}`,
       [
         { text: tr.cancel, style: 'cancel' },
         { text: tr.edit, onPress: () => handleEditBilledAmount(item) },
@@ -691,7 +693,7 @@ export default function BillingScreen() {
           </View>
           <Text style={S.cardSub} numberOfLines={1}>
             {isCredit ? tr.credit : tr.debit}
-            {!isCredit && item.quantity > 0 ? ` · ${Math.round(item.quantity)} pkt` : ''}
+            {!isCredit && item.quantity > 0 ? ` · ${Math.round(item.quantity)} pcs` : ''}
             {item.customer_place ? ` · ${item.customer_place}` : ''}
             {item.description && item.description !== 'Kuboos' && item.description !== 'Payment received'
               ? ` · ${item.description}` : ''}
@@ -841,7 +843,7 @@ export default function BillingScreen() {
                 {unbilledOrders.length} {unbilledOrders.length === 1 ? tr.order : tr.orders_plural}
               </Text>
               <Text style={S.summaryText}>
-                {unbilledOrders.reduce((s, o) => s + (o.quantity || 0), 0)} pkt
+                {unbilledOrders.reduce((s, o) => s + (o.quantity || 0), 0)} pcs
               </Text>
             </View>
           )}
@@ -863,8 +865,8 @@ export default function BillingScreen() {
             }
           />
 
-          {selectedIds.size > 0 && (
-            <View style={S.bottomBar}>
+          {selectedIds.size > 0 ? (
+            <View style={[S.bottomBar, { paddingBottom: Math.max(Spacing.md, insets.bottom) }]}>
               <View style={S.selectedSummary}>
                 <Text style={S.selectedSummaryText}>{selectedIds.size} {tr.selected}</Text>
                 {selectedTotal > 0 && <Text style={S.selectedSummaryAmount}>&#8377;{selectedTotal}</Text>}
@@ -879,6 +881,10 @@ export default function BillingScreen() {
                 <Text style={S.billBtnText}>{tr.generateBill}</Text>
               </TouchableOpacity>
             </View>
+          ) : (
+            <TouchableOpacity style={S.fab} onPress={() => router.push('/add-payment')} accessibilityLabel={tr.addPayment}>
+              <MaterialIcons name="payments" size={28} color="#FFFFFF" />
+            </TouchableOpacity>
           )}
 
           {renderCustomerModal(
@@ -890,10 +896,6 @@ export default function BillingScreen() {
             unbilledCustomerId,
             (id) => { setUnbilledCustomerId(id); setShowUnbilledCustomerModal(false); setUnbilledCustomerSearch(''); },
           )}
-
-          <TouchableOpacity style={S.fab} onPress={() => router.push('/add-payment')} accessibilityLabel={tr.addPayment}>
-            <MaterialIcons name="payments" size={28} color="#FFFFFF" />
-          </TouchableOpacity>
         </>
       )}
 

@@ -82,6 +82,14 @@ function InnerLayout() {
           options={{ title: tr.previewStatement }}
         />
         <Stack.Screen
+          name="view-payment-receipt"
+          options={{ title: tr.paymentReceipt }}
+        />
+        <Stack.Screen
+          name="reports"
+          options={{ title: tr.reports }}
+        />
+        <Stack.Screen
           name="developer"
           options={{ title: 'Developer Tools' }}
         />

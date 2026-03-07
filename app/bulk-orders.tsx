@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DRAFT_KEY = '@mfc_bulk_draft';
 
@@ -138,7 +139,6 @@ function makeStyles(c: AppColors) {
       padding: Spacing.lg,
       borderTopWidth: 1,
       borderTopColor: c.border,
-      paddingBottom: 32,
       gap: Spacing.sm,
     },
     footerRow: {
@@ -231,6 +231,7 @@ export default function BulkOrdersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { colors, tr } = useSettings();
+  const insets = useSafeAreaInsets();
   const S = makeStyles(colors);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -434,7 +435,7 @@ export default function BulkOrdersScreen() {
               {filledCount} {filledCount === 1 ? tr.order : tr.orders_plural}
             </Text>
             <Text style={S.summaryText}>
-              {tr.total}: {totalQty} pkt
+              {tr.total}: {totalQty} pcs
             </Text>
           </View>
         )}
@@ -456,7 +457,7 @@ export default function BulkOrdersScreen() {
         />
 
         {/* Footer: Draft + Clear + Finalize */}
-        <View style={S.footer}>
+        <View style={[S.footer, { paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.sm) }]}>
           <View style={S.footerRow}>
             <TouchableOpacity style={S.draftButton} onPress={handleSaveDraft}>
               <MaterialIcons name="save" size={20} color={colors.text} />

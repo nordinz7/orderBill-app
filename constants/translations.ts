@@ -62,7 +62,7 @@ const en = {
   save: 'Save Customer',
   saveOrder: 'Save Order',
   duplicateOrderTitle: 'Order Already Exists',
-  duplicateOrderMsg: (name: string, qty: number) => `${name} already has an order for today (${qty} pkt). Do you want to edit the existing order?`,
+  duplicateOrderMsg: (name: string, qty: number) => `${name} already has an order for today (${qty} pcs). Do you want to edit the existing order?`,
   editExisting: 'Edit Existing',
   addNew: 'Add New',
   saving: 'Saving...',
@@ -180,7 +180,7 @@ const en = {
   // Quantity
   orderDate: 'Order Date',
   paymentDate: 'Payment Date',
-  quantity: 'Quantity (packets)',
+  quantity: 'Quantity (pieces)',
   quantityPlaceholder: 'e.g. 10',
   // Company
   companyDetails: 'Company Details',
@@ -251,7 +251,7 @@ const en = {
   ordersSummary: 'Orders',
   collectionsSummary: 'Collections',
   quantitySummary: 'Quantity',
-  packetsShort: 'pkt',
+  packetsShort: 'pcs',
   // Order defaults
   orderDefaults: 'Order Defaults',
   defaultOrderDesc: 'Default Item Name',
@@ -463,7 +463,7 @@ const ta: typeof en = {
   // Quantity
   orderDate: 'ஆர்டர் தேதி',
   paymentDate: 'பணம் செலுத்திய தேதி',
-  quantity: 'அளவு (பாக்கெட்)',
+  quantity: 'அளவு (பீஸ்)',
   quantityPlaceholder: 'எ.கா. 10',
   // Company
   companyDetails: 'நிறுவன விவரங்கள்',
@@ -534,7 +534,7 @@ const ta: typeof en = {
   ordersSummary: 'ஆர்டர்கள்',
   collectionsSummary: 'வசூல்',
   quantitySummary: 'அளவு',
-  packetsShort: 'பாக்கெட்',
+  packetsShort: 'பீஸ்',
   // Order defaults
   orderDefaults: 'ஆர்டர் இயல்புநிலைகள்',
   defaultOrderDesc: 'இயல்பு பொருள் பெயர்',

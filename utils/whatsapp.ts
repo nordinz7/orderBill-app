@@ -8,8 +8,8 @@ import { Alert, Linking } from 'react-native';
 export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en'): string {
   const tr = translations[lang];
   const dateStr    = format(new Date(order.date), 'dd MMM yyyy');
-  const amountStr  = `\u20B9${order.amount.toFixed(2)}`;
-  const qtyLine    = order.quantity > 0 ? `\n*${tr.quantity}:* ${order.quantity} pkt` : '';
+  const amountStr  = `\u20B9${order.billed_amount.toFixed(2)}`;
+  const qtyLine    = order.quantity > 0 ? `\n*${tr.quantity}:* ${order.quantity} pcs` : '';
 
   return (
     `*${tr.invoiceTitle}*\n` +
@@ -110,9 +110,43 @@ export async function sendWhatsAppStatement(
 }
 
 /**
- * Share an invoice image via the system share sheet (user picks WhatsApp).
- * @param imageUri - local file URI from ViewShot capture
- * @param customerName - used for the filename
+ * Prepare image file: copy to cache with a nice filename, return the file URI.
+ */
+function prepareImageFile(imageUri: string, prefix: string, customerName: string): string {
+  const safeName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
+  const dateTag = format(new Date(), 'yyyyMMdd');
+  const fileName = `${prefix}_${safeName}_${dateTag}.png`;
+
+  const source = new File(imageUri);
+  const dest = new File(Paths.cache, fileName);
+
+  try { dest.delete(); } catch { /* doesn't exist yet */ }
+  source.copy(dest);
+
+  return dest.uri;
+}
+
+/**
+ * Share an image directly to WhatsApp. Falls back to system share sheet if WhatsApp is unavailable.
+ */
+async function shareImage(
+  imageUri: string,
+  dialogTitle: string,
+): Promise<void> {
+  const available = await Sharing.isAvailableAsync();
+  if (!available) {
+    Alert.alert('Error', 'Sharing is not available on this device.');
+    return;
+  }
+  await Sharing.shareAsync(imageUri, {
+    mimeType: 'image/png',
+    dialogTitle,
+    UTI: 'public.png',
+  });
+}
+
+/**
+ * Share an invoice image directly to WhatsApp.
  */
 export async function shareInvoiceImage(
   imageUri: string,
@@ -121,27 +155,8 @@ export async function shareInvoiceImage(
 ): Promise<void> {
   const tr = translations[lang];
   try {
-    const available = await Sharing.isAvailableAsync();
-    if (!available) {
-      Alert.alert('Error', 'Sharing is not available on this device.');
-      return;
-    }
-
-    const safeName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
-    const dateTag = format(new Date(), 'yyyyMMdd');
-    const fileName = `MFC_Invoice_${safeName}_${dateTag}.png`;
-
-    const source = new File(imageUri);
-    const dest = new File(Paths.cache, fileName);
-
-    try { dest.delete(); } catch { /* doesn't exist yet */ }
-    source.copy(dest);
-
-    await Sharing.shareAsync(dest.uri, {
-      mimeType: 'image/png',
-      dialogTitle: tr.sendInvoice,
-      UTI: 'public.png',
-    });
+    const fileUri = prepareImageFile(imageUri, 'MFC_Invoice', customerName);
+    await shareImage(fileUri, tr.sendInvoice);
   } catch (error) {
     console.error('Share invoice error:', error);
     Alert.alert('Error', 'Could not share the invoice image. Please try again.');
@@ -149,9 +164,7 @@ export async function shareInvoiceImage(
 }
 
 /**
- * Share a statement image via the system share sheet (user picks WhatsApp).
- * @param imageUri - local file URI from ViewShot capture
- * @param customerName - used for the filename
+ * Share a statement image directly to WhatsApp.
  */
 export async function shareStatementImage(
   imageUri: string,
@@ -160,29 +173,8 @@ export async function shareStatementImage(
 ): Promise<void> {
   const tr = translations[lang];
   try {
-    const available = await Sharing.isAvailableAsync();
-    if (!available) {
-      Alert.alert('Error', 'Sharing is not available on this device.');
-      return;
-    }
-
-    // Copy captured image to a nicely-named file
-    const safeName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
-    const dateTag = format(new Date(), 'yyyyMMdd');
-    const fileName = `MFC_Statement_${safeName}_${dateTag}.png`;
-
-    const source = new File(imageUri);
-    const dest = new File(Paths.cache, fileName);
-
-    // Remove destination if it already exists, then copy
-    try { dest.delete(); } catch { /* doesn't exist yet */ }
-    source.copy(dest);
-
-    await Sharing.shareAsync(dest.uri, {
-      mimeType: 'image/png',
-      dialogTitle: tr.shareStatement,
-      UTI: 'public.png',
-    });
+    const fileUri = prepareImageFile(imageUri, 'MFC_Statement', customerName);
+    await shareImage(fileUri, tr.shareStatement);
   } catch (error) {
     console.error('Share statement error:', error);
     Alert.alert('Error', 'Could not share the statement image. Please try again.');
@@ -190,9 +182,7 @@ export async function shareStatementImage(
 }
 
 /**
- * Share a payment receipt image via the system share sheet.
- * @param imageUri - local file URI from ViewShot capture
- * @param customerName - used for the filename
+ * Share a payment receipt image directly to WhatsApp.
  */
 export async function sharePaymentReceiptImage(
   imageUri: string,
@@ -201,27 +191,8 @@ export async function sharePaymentReceiptImage(
 ): Promise<void> {
   const tr = translations[lang];
   try {
-    const available = await Sharing.isAvailableAsync();
-    if (!available) {
-      Alert.alert('Error', 'Sharing is not available on this device.');
-      return;
-    }
-
-    const safeName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
-    const dateTag = format(new Date(), 'yyyyMMdd');
-    const fileName = `MFC_Receipt_${safeName}_${dateTag}.png`;
-
-    const source = new File(imageUri);
-    const dest = new File(Paths.cache, fileName);
-
-    try { dest.delete(); } catch { /* doesn't exist yet */ }
-    source.copy(dest);
-
-    await Sharing.shareAsync(dest.uri, {
-      mimeType: 'image/png',
-      dialogTitle: tr.sendPaymentReceipt,
-      UTI: 'public.png',
-    });
+    const fileUri = prepareImageFile(imageUri, 'MFC_Receipt', customerName);
+    await shareImage(fileUri, tr.sendPaymentReceipt);
   } catch (error) {
     console.error('Share payment receipt error:', error);
     Alert.alert('Error', 'Could not share the payment receipt. Please try again.');

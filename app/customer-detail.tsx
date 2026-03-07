@@ -231,7 +231,7 @@ export default function CustomerDetailScreen() {
         <View style={S.txnContent}>
           <Text style={S.txnDesc} numberOfLines={1}>
             {item.description}
-            {isDebit && item.quantity > 0 ? ` · ${item.quantity} pkt` : ''}
+            {isDebit && item.quantity > 0 ? ` · ${item.quantity} pcs` : ''}
           </Text>
           <Text style={S.txnDate}>{format(new Date(item.date), 'dd MMM yyyy, hh:mm a')}</Text>
         </View>

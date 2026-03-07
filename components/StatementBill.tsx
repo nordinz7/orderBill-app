@@ -113,54 +113,35 @@ const StatementBill = forwardRef<View, StatementBillProps>(
           <Text style={[S.thText, S.colDate]}>{L.dateCol}</Text>
           <Text style={[S.thText, S.colDesc]}>{L.particulars}</Text>
           <Text style={[S.thText, S.colAmt]}>{L.amount}</Text>
-          <Text style={[S.thText, S.colBal]}>{L.balanceCol}</Text>
         </View>
 
-        {/* ─── Table Rows with running balance ──── */}
-        {(() => {
-          let runningBalance = 0;
-          return sorted.map((txn, idx) => {
-            const isDebit = txn.type === 'debit';
-            runningBalance += isDebit ? txn.amount : -txn.amount;
-            return (
-              <View
-                key={txn.id}
-                style={[S.tableRow, idx % 2 === 0 ? S.rowEven : S.rowOdd]}
-              >
-                <Text style={[S.tdText, S.colDate]}>
-                  {format(new Date(txn.date), 'dd/MM')}
-                </Text>
-                <Text style={[S.tdText, S.colDesc]} numberOfLines={1}>
-                  {isDebit
-                    ? `${txn.description}${txn.quantity > 0 ? ` x${Math.round(txn.quantity)}` : ''}`
-                    : txn.description}
-                </Text>
-                <Text style={[S.tdText, S.colAmt]}>
-                  {isDebit ? '' : '-'}{Math.round(txn.amount)}
-                </Text>
-                <Text style={[S.tdText, S.colBal, S.balText]}>
-                  {Math.round(runningBalance)}
-                </Text>
-              </View>
-            );
-          });
-        })()}
+        {/* ─── Table Rows ──────────────────────── */}
+        {sorted.map((txn, idx) => {
+          const isDebit = txn.type === 'debit';
+          return (
+            <View
+              key={txn.id}
+              style={[S.tableRow, idx % 2 === 0 ? S.rowEven : S.rowOdd]}
+            >
+              <Text style={[S.tdText, S.colDate]}>
+                {format(new Date(txn.date), 'dd/MM')}
+              </Text>
+              <Text style={[S.tdText, S.colDesc]} numberOfLines={1}>
+                {isDebit
+                  ? `${txn.description}${txn.quantity > 0 ? ` x${Math.round(txn.quantity)}` : ''}`
+                  : txn.description}
+              </Text>
+              <Text style={[S.tdText, S.colAmt]}>
+                {isDebit ? '' : '-'}{Math.round(txn.amount)}
+              </Text>
+            </View>
+          );
+        })}
 
         {sorted.length < 3 && <View style={{ height: 16 }} />}
 
-        {/* ─── Summary ───────────────────────────── */}
+        {/* ─── Balance ──────────────────────────── */}
         <View style={S.summaryDivider} />
-
-        <View style={S.summaryBlock}>
-          <View style={S.summaryRow}>
-            <Text style={S.summaryLabel}>{L.totalOrders}</Text>
-            <Text style={S.summaryValue}>{Math.round(totalOrders)}</Text>
-          </View>
-          <View style={S.summaryRow}>
-            <Text style={S.summaryLabel}>{L.totalPaid}</Text>
-            <Text style={S.summaryValue}>{Math.round(totalPaid)}</Text>
-          </View>
-        </View>
 
         {balance !== 0 ? (
           <View style={[S.balanceBar, balance < 0 && S.balanceBarCredit]}>
@@ -315,38 +296,13 @@ const S = StyleSheet.create({
     color: TEXT,
     fontWeight: '500',
   },
-  balText: {
-    fontWeight: '600',
-    color: TEXT,
-  },
   colDate: { width: 44 },
   colDesc: { flex: 1, paddingHorizontal: 6 },
-  colAmt: { width: 54, textAlign: 'right' },
-  colBal: { width: 54, textAlign: 'right' },
+  colAmt: { width: 64, textAlign: 'right' },
   // Summary
   summaryDivider: {
     borderTopWidth: 1.5,
     borderTopColor: BORDER,
-  },
-  summaryBlock: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 3,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: TEXT_LIGHT,
-    fontWeight: '600',
-  },
-  summaryValue: {
-    fontSize: 12,
-    color: TEXT,
-    fontWeight: '600',
   },
   // Balance
   balanceBar: {
@@ -355,6 +311,7 @@ const S = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFEBEE',
     marginHorizontal: 16,
+    marginTop: 12,
     marginBottom: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -386,6 +343,7 @@ const S = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: SUCCESS_BG,
     marginHorizontal: 16,
+    marginTop: 12,
     marginBottom: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
