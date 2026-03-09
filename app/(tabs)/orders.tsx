@@ -195,7 +195,7 @@ export default function OrdersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const params = useLocalSearchParams<{ filterDate?: string }>();
-  const { colors, tr } = useSettings();
+  const { colors, tr, defaultOrderDescription } = useSettings();
   const S = makeStyles(colors);
 
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
@@ -346,7 +346,7 @@ export default function OrdersScreen() {
           </View>
           <Text style={S.cardSub} numberOfLines={1}>
             {format(new Date(item.date), 'dd MMM')}
-            {item.description !== 'Kuboos' ? ` · ${item.description}` : ''}
+            {item.description !== defaultOrderDescription ? ` · ${item.description}` : ''}
           </Text>
         </View>
       </TouchableOpacity>

@@ -37,10 +37,10 @@ const COMPANY_PLACE_KEY = '@mfc_company_place';
 const COMPANY_PHONE_KEY = '@mfc_company_phone';
 const DEFAULT_ORDER_DESC_KEY = '@mfc_default_order_desc';
 
-const DEFAULT_COMPANY_NAME  = 'MFC FOOD PRODUCT';
-const DEFAULT_COMPANY_PLACE = 'ADIRAMPATTINAM';
+const DEFAULT_COMPANY_NAME  = 'My Company';
+const DEFAULT_COMPANY_PLACE = 'My City';
 const DEFAULT_COMPANY_PHONE = '';
-const DEFAULT_ORDER_DESC = 'Kuboos';
+const DEFAULT_ORDER_DESC = 'Order';
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();

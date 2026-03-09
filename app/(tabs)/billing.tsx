@@ -316,7 +316,7 @@ function makeStyles(c: AppColors) {
 export default function BillingScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr } = useSettings();
+  const { colors, tr, defaultOrderDescription } = useSettings();
   const insets = useSafeAreaInsets();
   const S = makeStyles(colors);
 
@@ -699,7 +699,7 @@ export default function BillingScreen() {
           <Text style={S.cardSub} numberOfLines={1}>
             {format(new Date(item.date), 'dd MMM')} · {isCredit ? tr.credit : tr.debit}
             {!isCredit && item.quantity > 0 ? ` · ${Math.round(item.quantity)} pcs` : ''}
-            {item.description && item.description !== 'Kuboos' && item.description !== 'Payment received'
+            {item.description && item.description !== defaultOrderDescription && item.description !== 'Payment received'
               ? ` · ${item.description}` : ''}
           </Text>
         </View>

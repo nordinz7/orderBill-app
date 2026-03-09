@@ -84,7 +84,7 @@ export default function AddOrderScreen() {
   const [showPicker, setShowPicker]         = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [quantity, setQuantity]             = useState('');
-  const [description, setDescription]       = useState(defaultOrderDescription || 'Kuboos');
+  const [description, setDescription]       = useState(defaultOrderDescription);
   const [saving, setSaving]                 = useState(false);
 
   const [orderDate, setOrderDate]           = useState<Date>(() => {

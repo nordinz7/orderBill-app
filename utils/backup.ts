@@ -161,7 +161,7 @@ export async function createBackupFile(
 
   const json = JSON.stringify(payload, null, 2);
   const dateStamp = format(new Date(), 'yyyy-MM-dd_HHmm');
-  const fileName = `mfc-backup-${dateStamp}.json`;
+  const fileName = `backup-${dateStamp}.json`;
 
   const file = new File(Paths.cache, fileName);
   file.write(json);
@@ -189,7 +189,7 @@ export async function createAndShareBackup(db: SQLiteDatabase): Promise<void> {
 
     await Sharing.shareAsync(uri, {
       mimeType: 'application/json',
-      dialogTitle: 'Save MFC Backup',
+      dialogTitle: 'Save Backup',
       UTI: 'public.json',
     });
 

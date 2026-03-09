@@ -118,11 +118,11 @@ const SAMPLE_CUSTOMERS = [
   { name: 'MM Store', phone: '9363485557', place: 'Pattukkottai' },
 ];
 
-const ITEMS = ['Kuboos'];
+const DEFAULT_ITEMS = ['Order'];
 
 export default function DeveloperScreen() {
   const db = useSQLiteContext();
-  const { colors } = useSettings();
+  const { colors, defaultOrderDescription } = useSettings();
   const S = makeStyles(colors);
 
   const [tableStats, setTableStats] = useState<TableStats[]>([]);
@@ -197,7 +197,8 @@ export default function DeveloperScreen() {
                   const daysAgo = Math.floor(Math.random() * 30);
                   const date = new Date();
                   date.setDate(date.getDate() - daysAgo);
-                  const item = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+                  const items = defaultOrderDescription ? [defaultOrderDescription] : DEFAULT_ITEMS;
+                  const item = items[Math.floor(Math.random() * items.length)];
                   const qty = 1 + Math.floor(Math.random() * 5);
                   await addOrder(db, customerId, item, qty, date.toISOString());
                 }

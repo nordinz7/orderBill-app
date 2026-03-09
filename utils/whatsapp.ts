@@ -5,14 +5,14 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Alert, Linking } from 'react-native';
 
-export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en'): string {
+export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en', companyName: string = ''): string {
   const tr = translations[lang];
   const dateStr    = format(new Date(order.date), 'dd MMM yyyy');
   const amountStr  = `\u20B9${order.billed_amount.toFixed(2)}`;
   const qtyLine    = order.quantity > 0 ? `\n*${tr.quantity}:* ${order.quantity} pcs` : '';
 
   return (
-    `*${tr.invoiceTitle}*\n` +
+    `*${tr.invoiceTitle(companyName)}*\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `*${tr.invoiceCustomer}:* ${order.customer_name}\n` +
     `*${tr.invoicePlace}:* ${order.customer_place}\n` +
@@ -31,6 +31,7 @@ export function formatStatement(
   transactions: Transaction[],
   balance: { totalDebit: number; totalCredit: number; balance: number },
   lang: Lang = 'en',
+  companyName: string = '',
 ): string {
   const tr = translations[lang];
   const dateStr = format(new Date(), 'dd MMM yyyy');
@@ -45,7 +46,7 @@ export function formatStatement(
   }).join('\n');
 
   return (
-    `*${tr.statementTitle}*\n` +
+    `*${tr.statementTitle(companyName)}*\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `*${tr.invoiceCustomer}:* ${customer.name}\n` +
     `*${tr.invoicePlace}:* ${customer.place}\n` +
@@ -66,10 +67,11 @@ export function formatStatement(
 export async function sendWhatsAppInvoice(
   order: OrderWithCustomer,
   lang: Lang = 'en',
+  companyName: string = '',
 ): Promise<void> {
   const tr          = translations[lang];
   const phone       = order.customer_phone.replace(/\D/g, '');
-  const text        = formatInvoice(order, lang);
+  const text        = formatInvoice(order, lang, companyName);
   const encodedText = encodeURIComponent(text);
   const url         = `whatsapp://send?phone=${phone}&text=${encodedText}`;
 
@@ -91,10 +93,11 @@ export async function sendWhatsAppStatement(
   transactions: Transaction[],
   balance: { totalDebit: number; totalCredit: number; balance: number },
   lang: Lang = 'en',
+  companyName: string = '',
 ): Promise<void> {
   const tr = translations[lang];
   const cleanPhone = phone.replace(/\D/g, '');
-  const text = formatStatement(customer, transactions, balance, lang);
+  const text = formatStatement(customer, transactions, balance, lang, companyName);
   const url = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
 
   try {
@@ -153,10 +156,12 @@ export async function shareInvoiceImage(
   imageUri: string,
   customerName: string,
   lang: Lang = 'en',
+  companyName: string = '',
 ): Promise<void> {
   const tr = translations[lang];
+  const prefix = companyName ? `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_Invoice` : 'Invoice';
   try {
-    const fileUri = prepareImageFile(imageUri, 'MFC_Invoice', customerName);
+    const fileUri = prepareImageFile(imageUri, prefix, customerName);
     await shareImage(fileUri, tr.sendInvoice);
   } catch (error) {
     console.error('Share invoice error:', error);
@@ -171,10 +176,12 @@ export async function shareStatementImage(
   imageUri: string,
   customerName: string,
   lang: Lang = 'en',
+  companyName: string = '',
 ): Promise<void> {
   const tr = translations[lang];
+  const prefix = companyName ? `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_Statement` : 'Statement';
   try {
-    const fileUri = prepareImageFile(imageUri, 'MFC_Statement', customerName);
+    const fileUri = prepareImageFile(imageUri, prefix, customerName);
     await shareImage(fileUri, tr.shareStatement);
   } catch (error) {
     console.error('Share statement error:', error);
@@ -189,10 +196,12 @@ export async function sharePaymentReceiptImage(
   imageUri: string,
   customerName: string,
   lang: Lang = 'en',
+  companyName: string = '',
 ): Promise<void> {
   const tr = translations[lang];
+  const prefix = companyName ? `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_Receipt` : 'Receipt';
   try {
-    const fileUri = prepareImageFile(imageUri, 'MFC_Receipt', customerName);
+    const fileUri = prepareImageFile(imageUri, prefix, customerName);
     await shareImage(fileUri, tr.sendPaymentReceipt);
   } catch (error) {
     console.error('Share payment receipt error:', error);

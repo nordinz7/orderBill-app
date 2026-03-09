@@ -20,8 +20,6 @@ export interface StatementBillProps {
 const LABELS = {
   en: {
     title: 'STATEMENT',
-    company: 'MFC FOOD PRODUCT',
-    place: 'ADIRAMPATTINAM',
     to: 'To',
     date: 'Date',
     dateCol: 'Date',
@@ -40,8 +38,6 @@ const LABELS = {
   },
   ta: {
     title: 'அறிக்கை',
-    company: 'MFC FOOD PRODUCT',
-    place: 'ADIRAMPATTINAM',
     to: 'பெறுநர்',
     date: 'தேதி',
     dateCol: 'தேதி',
@@ -86,8 +82,8 @@ const StatementBill = forwardRef<View, StatementBillProps>(
       <View ref={ref} style={S.container} collapsable={false}>
         {/* ─── Header ────────────────────────────── */}
         <View style={S.header}>
-          <Text style={S.companyName}>{companyName || L.company}</Text>
-          <Text style={S.companyPlace}>{companyPlace || L.place}</Text>
+          {companyName ? <Text style={S.companyName}>{companyName}</Text> : null}
+          {companyPlace ? <Text style={S.companyPlace}>{companyPlace}</Text> : null}
           {companyPhone ? <Text style={S.companyPhone}>{companyPhone}</Text> : null}
         </View>
 

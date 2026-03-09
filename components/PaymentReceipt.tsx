@@ -17,8 +17,6 @@ export interface PaymentReceiptProps {
 const LABELS = {
   en: {
     title: 'PAYMENT RECEIPT',
-    company: 'MFC FOOD PRODUCT',
-    place: 'ADIRAMPATTINAM',
     receivedFrom: 'Received From',
     date: 'Date',
     amount: 'Amount Received',
@@ -29,8 +27,6 @@ const LABELS = {
   },
   ta: {
     title: 'பணம் பெற்ற ரசீது',
-    company: 'MFC FOOD PRODUCT',
-    place: 'ADIRAMPATTINAM',
     receivedFrom: 'பெறப்பட்டவர்',
     date: 'தேதி',
     amount: 'பெற்ற தொகை',
@@ -54,8 +50,8 @@ const PaymentReceipt = forwardRef<View, PaymentReceiptProps>(
         </View>
 
         <View style={S.companyBlock}>
-          <Text style={S.companyName}>{companyName || L.company}</Text>
-          <Text style={S.companyPlace}>{companyPlace || L.place}</Text>
+          {companyName ? <Text style={S.companyName}>{companyName}</Text> : null}
+          {companyPlace ? <Text style={S.companyPlace}>{companyPlace}</Text> : null}
           {companyPhone ? <Text style={S.companyPhone}>{companyPhone}</Text> : null}
         </View>
 

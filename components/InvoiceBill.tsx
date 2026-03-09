@@ -16,8 +16,6 @@ export interface InvoiceBillProps {
 const LABELS = {
   en: {
     title: 'INVOICE / BILL',
-    company: 'MFC FOOD PRODUCT',
-    place: 'ADIRAMPATTINAM',
     to: 'To',
     date: 'Date',
     slNo: '#',
@@ -31,8 +29,6 @@ const LABELS = {
   },
   ta: {
     title: 'விலைப்பட்டியல் / பில்',
-    company: 'MFC FOOD PRODUCT',
-    place: 'ADIRAMPATTINAM',
     to: 'பெறுநர்',
     date: 'தேதி',
     slNo: '#',
@@ -64,8 +60,8 @@ const InvoiceBill = forwardRef<View, InvoiceBillProps>(
         </View>
 
         <View style={S.companyBlock}>
-          <Text style={S.companyName}>{companyName || L.company}</Text>
-          <Text style={S.companyPlace}>{companyPlace || L.place}</Text>
+          {companyName ? <Text style={S.companyName}>{companyName}</Text> : null}
+          {companyPlace ? <Text style={S.companyPlace}>{companyPlace}</Text> : null}
           {companyPhone ? <Text style={S.companyPhone}>☎ {companyPhone}</Text> : null}
         </View>
 
