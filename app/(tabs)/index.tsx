@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { bulkDeleteCustomers, bulkImportContacts, canDeleteCustomer, CustomerWithBalance, deleteCustomer, getCustomersWithBalance } from '@/services/database';
+import { bulkDeleteCustomers, bulkImportContacts, CustomerWithBalance, deleteCustomer, getCustomersWithBalance } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Contacts from 'expo-contacts';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -276,11 +276,6 @@ export default function CustomersScreen() {
   // ── Single delete ─────────────────────────────────────────────────────────
 
   const handleDelete = async (item: CustomerWithBalance) => {
-    const canDel = await canDeleteCustomer(db, item.id);
-    if (!canDel) {
-      Alert.alert(tr.cannotDeleteCustomer, tr.cannotDeleteCustomerMsg(item.name));
-      return;
-    }
     Alert.alert(tr.removeCustomer, tr.removeCustomerMsg(item.name), [
       { text: tr.cancel, style: 'cancel' },
       {

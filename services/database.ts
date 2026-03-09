@@ -321,34 +321,37 @@ export async function deleteCustomer(
   id: number,
 ): Promise<void> {
   await db.withTransactionAsync(async () => {
+    // Delete bill_items via bills for this customer
+    await db.runAsync(`DELETE FROM bill_items WHERE bill_id IN (SELECT id FROM bills WHERE customer_id = ?)`, [id]);
+    await db.runAsync(`DELETE FROM bills WHERE customer_id = ?`, [id]);
+    // Delete statement_transactions via statements for this customer
+    await db.runAsync(`DELETE FROM statement_transactions WHERE statement_id IN (SELECT id FROM statements WHERE customer_id = ?)`, [id]);
+    await db.runAsync(`DELETE FROM statements WHERE customer_id = ?`, [id]);
     await db.runAsync(`DELETE FROM transactions WHERE customer_id = ?`, [id]);
+    await db.runAsync(`DELETE FROM orders WHERE customer_id = ?`, [id]);
     await db.runAsync(`DELETE FROM customers WHERE id = ?`, [id]);
   });
 }
 
-/** Bulk delete customers, skipping those with orders. Returns { deleted, skipped }. */
+/** Bulk delete customers and all their related data. */
 export async function bulkDeleteCustomers(
   db: SQLite.SQLiteDatabase,
   ids: number[],
 ): Promise<{ deleted: number; skipped: number }> {
   let deleted = 0;
-  let skipped = 0;
   await db.withTransactionAsync(async () => {
     for (const id of ids) {
-      const row = await db.getFirstAsync<{ cnt: number }>(
-        `SELECT COUNT(*) as cnt FROM orders WHERE customer_id = ?`,
-        [id]
-      );
-      if ((row?.cnt ?? 0) > 0) {
-        skipped++;
-        continue;
-      }
+      await db.runAsync(`DELETE FROM bill_items WHERE bill_id IN (SELECT id FROM bills WHERE customer_id = ?)`, [id]);
+      await db.runAsync(`DELETE FROM bills WHERE customer_id = ?`, [id]);
+      await db.runAsync(`DELETE FROM statement_transactions WHERE statement_id IN (SELECT id FROM statements WHERE customer_id = ?)`, [id]);
+      await db.runAsync(`DELETE FROM statements WHERE customer_id = ?`, [id]);
       await db.runAsync(`DELETE FROM transactions WHERE customer_id = ?`, [id]);
+      await db.runAsync(`DELETE FROM orders WHERE customer_id = ?`, [id]);
       await db.runAsync(`DELETE FROM customers WHERE id = ?`, [id]);
       deleted++;
     }
   });
-  return { deleted, skipped };
+  return { deleted, skipped: 0 };
 }
 
 // ─── Orders ───────────────────────────────────────────────────────────────────
