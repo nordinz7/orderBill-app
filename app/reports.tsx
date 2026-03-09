@@ -193,7 +193,7 @@ function makeStyles(c: AppColors) {
 export default function ReportsScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr } = useSettings();
+  const { colors, tr, currencySymbol } = useSettings();
   const S = makeStyles(colors);
 
   const [outstanding, setOutstanding] = useState<CustomerOutstanding[]>([]);
@@ -244,7 +244,7 @@ export default function ReportsScreen() {
         </Text>
       </View>
       <View style={S.customerBalance}>
-        <Text style={S.balanceAmount}>₹{item.balance.toLocaleString()}</Text>
+        <Text style={S.balanceAmount}>{currencySymbol}{item.balance.toLocaleString()}</Text>
       </View>
       <TouchableOpacity
         style={S.callBtn}
@@ -280,11 +280,11 @@ export default function ReportsScreen() {
           {summary && (
             <View style={S.summaryGrid}>
               <View style={S.summaryCard}>
-                <Text style={S.summaryValue}>₹{summary.total_sales.toLocaleString()}</Text>
+                <Text style={S.summaryValue}>{currencySymbol}{summary.total_sales.toLocaleString()}</Text>
                 <Text style={S.summaryLabel}>{tr.salesSummary}</Text>
               </View>
               <View style={[S.summaryCard, S.summaryCardAlt]}>
-                <Text style={[S.summaryValue, S.summaryValueAlt]}>₹{summary.total_collected.toLocaleString()}</Text>
+                <Text style={[S.summaryValue, S.summaryValueAlt]}>{currencySymbol}{summary.total_collected.toLocaleString()}</Text>
                 <Text style={S.summaryLabel}>{tr.collectionsSummary}</Text>
               </View>
               <View style={S.summaryCard}>
@@ -312,7 +312,7 @@ export default function ReportsScreen() {
           {totalOutstanding > 0 && (
             <View style={S.totalBanner}>
               <Text style={S.totalBannerLabel}>{tr.totalOutstanding}</Text>
-              <Text style={S.totalBannerValue}>₹{totalOutstanding.toLocaleString()}</Text>
+              <Text style={S.totalBannerValue}>{currencySymbol}{totalOutstanding.toLocaleString()}</Text>
             </View>
           )}
           {outstanding.length === 0 ? (

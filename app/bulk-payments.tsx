@@ -260,7 +260,7 @@ const CustomerRow = React.memo(function CustomerRow({
           style={[S.amtInput, hasFill && S.amtInputFilled]}
           value={amt}
           onChangeText={v => onAmtChange(item.id, v.replace(/[^0-9.]/g, ''))}
-          placeholder="₹0"
+          placeholder={`${currencySymbol}0`}
           placeholderTextColor={colors.textMuted}
           keyboardType="decimal-pad"
           returnKeyType="next"
@@ -296,7 +296,7 @@ const CustomerRow = React.memo(function CustomerRow({
 export default function BulkPaymentsScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr } = useSettings();
+  const { colors, tr, currencySymbol } = useSettings();
   const insets = useSafeAreaInsets();
   const S = makeStyles(colors);
 
@@ -545,7 +545,7 @@ export default function BulkPaymentsScreen() {
               {filledCount} {filledCount === 1 ? tr.payment_singular : tr.payments_plural}
             </Text>
             <Text style={S.summaryText}>
-              {tr.total}: ₹{Math.round(totalAmt).toLocaleString()}
+              {tr.total}: {currencySymbol}{Math.round(totalAmt).toLocaleString()}
             </Text>
           </View>
         )}

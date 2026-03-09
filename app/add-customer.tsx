@@ -58,7 +58,7 @@ function makeStyles(c: AppColors) {
 export default function AddCustomerScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr } = useSettings();
+  const { colors, tr, countryCode } = useSettings();
   const S = makeStyles(colors);
 
   const [name, setName]     = useState('');
@@ -66,7 +66,7 @@ export default function AddCustomerScreen() {
   const [phone, setPhone]   = useState('');
   const [saving, setSaving] = useState(false);
 
-  const fullPhone = () => '91' + phone.replace(/\D/g, '');
+  const fullPhone = () => countryCode.replace(/\D/g, '') + phone.replace(/\D/g, '');
 
   const handleSave = async () => {
     if (!name.trim()) { Alert.alert(tr.required, tr.enterName); return; }
@@ -93,8 +93,8 @@ export default function AddCustomerScreen() {
         <View style={S.field}>
           <Text style={S.label}><MaterialCommunityIcons name="whatsapp" size={16} color={colors.text} /> {tr.whatsappNumber}</Text>
           <View style={S.phoneRow}>
-            <Text style={S.phonePrefix}>+91</Text>
-            <TextInput style={S.phoneInput} value={phone} onChangeText={setPhone} placeholder={tr.phonePlaceholder} placeholderTextColor={colors.textMuted} keyboardType="phone-pad" returnKeyType="done" maxLength={10} />
+            <Text style={S.phonePrefix}>{countryCode}</Text>
+            <TextInput style={S.phoneInput} value={phone} onChangeText={setPhone} placeholder={tr.phonePlaceholder} placeholderTextColor={colors.textMuted} keyboardType="phone-pad" returnKeyType="done" maxLength={15} />
           </View>
           <Text style={S.hint}>{tr.includeCountryCode}</Text>
         </View>

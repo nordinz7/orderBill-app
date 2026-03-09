@@ -8,6 +8,7 @@ export interface InvoiceBillProps {
   companyPlace?: string;
   companyPhone?: string;
   billNumber?: string;
+  currencySymbol?: string;
   order?: OrderWithCustomer;
   orders?: OrderWithCustomer[];
   lang?: 'en' | 'ta';
@@ -21,7 +22,7 @@ const LABELS = {
     slNo: '#',
     item: 'Item / Description',
     qty: 'Qty',
-    amount: 'Amount (₹)',
+    amount: 'Amount',
     totalAmount: 'Total Amount',
     thankYou: 'THANK YOU!',
     eoe: 'E. & O.E.',
@@ -34,7 +35,7 @@ const LABELS = {
     slNo: '#',
     item: 'பொருள் / விவரம்',
     qty: 'அளவு',
-    amount: 'தொகை (₹)',
+    amount: 'தொகை',
     totalAmount: 'மொத்த தொகை',
     thankYou: 'நன்றி!',
     eoe: 'E. & O.E.',
@@ -43,7 +44,7 @@ const LABELS = {
 };
 
 const InvoiceBill = forwardRef<View, InvoiceBillProps>(
-  ({ companyName, companyPlace, companyPhone, billNumber, order, orders, lang = 'en' }, ref) => {
+  ({ companyName, companyPlace, companyPhone, billNumber, currencySymbol = '₹', order, orders, lang = 'en' }, ref) => {
     const L = LABELS[lang];
     const allOrders = orders ?? (order ? [order] : []);
     const firstOrder = allOrders[0];
@@ -112,7 +113,7 @@ const InvoiceBill = forwardRef<View, InvoiceBillProps>(
               {o.quantity > 0 ? Math.round(o.quantity) : '-'}
             </Text>
             <Text style={[S.tdText, S.colAmt, { textAlign: 'right', fontWeight: '700' }]}>
-              ₹{Math.round(o.billed_amount)}
+              {currencySymbol}{Math.round(o.billed_amount)}
             </Text>
           </View>
         ))}
@@ -125,7 +126,7 @@ const InvoiceBill = forwardRef<View, InvoiceBillProps>(
         {/* ─── Total ─────────────────────────────── */}
         <View style={S.totalBlock}>
           <Text style={S.totalLabel}>{L.totalAmount}</Text>
-          <Text style={S.totalValue}>₹{Math.round(totalAmount)}</Text>
+          <Text style={S.totalValue}>{currencySymbol}{Math.round(totalAmount)}</Text>
         </View>
 
         <View style={S.dividerThick} />

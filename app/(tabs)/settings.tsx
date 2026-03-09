@@ -64,7 +64,7 @@ function makeStyles(c: AppColors) {
 export default function SettingsScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr, isDark, toggleTheme, lang, setLang, companyName, setCompanyName, companyPlace, setCompanyPlace, companyPhone, setCompanyPhone, defaultOrderDescription, setDefaultOrderDescription } = useSettings();
+  const { colors, tr, isDark, toggleTheme, lang, setLang, companyName, setCompanyName, companyPlace, setCompanyPlace, companyPhone, setCompanyPhone, defaultOrderDescription, setDefaultOrderDescription, currencySymbol, setCurrencySymbol, countryCode, setCountryCode } = useSettings();
   const S = makeStyles(colors);
 
   const [backupLoading, setBackupLoading] = useState(false);
@@ -238,6 +238,36 @@ export default function SettingsScreen() {
               onChangeText={setDefaultOrderDescription}
               placeholder={tr.defaultOrderDescPlaceholder}
               placeholderTextColor={colors.textMuted}
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Regional Settings */}
+      <View style={S.section}>
+        <Text style={S.sectionTitle}>{tr.regionalSettings}</Text>
+        <View style={S.card}>
+          <View style={S.row}>
+            <MaterialIcons name="attach-money" size={24} color={colors.primary} style={S.rowIcon} />
+            <TextInput
+              style={S.companyInputFull}
+              value={currencySymbol}
+              onChangeText={setCurrencySymbol}
+              placeholder={tr.currencySymbolPlaceholder}
+              placeholderTextColor={colors.textMuted}
+              maxLength={5}
+            />
+          </View>
+          <View style={[S.row, S.rowLast]}>
+            <MaterialIcons name="phone" size={24} color={colors.primary} style={S.rowIcon} />
+            <TextInput
+              style={S.companyInputFull}
+              value={countryCode}
+              onChangeText={setCountryCode}
+              placeholder={tr.countryCodePlaceholder}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="phone-pad"
+              maxLength={5}
             />
           </View>
         </View>

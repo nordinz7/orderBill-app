@@ -7,6 +7,7 @@ export interface StatementBillProps {
   companyName?: string;
   companyPlace?: string;
   companyPhone?: string;
+  currencySymbol?: string;
   customerName: string;
   customerPlace: string;
   date: string;
@@ -62,6 +63,7 @@ const StatementBill = forwardRef<View, StatementBillProps>(
       companyName,
       companyPlace,
       companyPhone,
+      currencySymbol = '₹',
       customerName,
       customerPlace,
       date,
@@ -145,7 +147,7 @@ const StatementBill = forwardRef<View, StatementBillProps>(
             {balance > 0 ? L.balanceDue : balance < 0 ? L.balanceCredit : `✓ ${L.allSettled}`}
           </Text>
           <Text style={[S.balanceRowValue, balance > 0 ? S.balanceTextDue : balance < 0 ? S.balanceTextCredit : S.balanceTextSettled]}>
-            ₹{Math.round(Math.abs(balance))}
+            {currencySymbol}{Math.round(Math.abs(balance))}
           </Text>
         </View>
 

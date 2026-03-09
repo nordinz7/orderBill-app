@@ -316,7 +316,7 @@ function makeStyles(c: AppColors) {
 export default function BillingScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr, defaultOrderDescription } = useSettings();
+  const { colors, tr, defaultOrderDescription, currencySymbol } = useSettings();
   const insets = useSafeAreaInsets();
   const S = makeStyles(colors);
 
@@ -524,7 +524,7 @@ export default function BillingScreen() {
   // ── History helpers ──
   const handleDeleteTransaction = (txn: TransactionWithCustomer) => {
     if (txn.type === 'debit') return;
-    Alert.alert(tr.delete, `${tr.delete} ₹${txn.amount} ${tr.payment.toLowerCase()} — ${txn.customer_name}?`, [
+    Alert.alert(tr.delete, `${tr.delete} ${currencySymbol}${txn.amount} ${tr.payment.toLowerCase()} — ${txn.customer_name}?`, [
       { text: tr.cancel, style: 'cancel' },
       {
         text: tr.delete, style: 'destructive', onPress: async () => {
@@ -566,7 +566,7 @@ export default function BillingScreen() {
         <View style={S.orderInfo}>
           <View style={S.orderRow1}>
             <Text style={S.orderDesc} numberOfLines={1}>{item.description}</Text>
-            {item.quantity > 0 && <Text style={S.orderQty}>{item.quantity} pcs</Text>}
+            {item.quantity > 0 && <Text style={S.orderQty}>x{item.quantity}</Text>}
           </View>
           <Text style={S.orderDate}>{format(new Date(item.date), 'dd MMM yyyy')}</Text>
         </View>
@@ -575,7 +575,7 @@ export default function BillingScreen() {
             style={[S.amountInput, amounts[item.id] ? S.amountInputActive : undefined]}
             value={amounts[item.id] || ''}
             onChangeText={(v) => setAmount(item.id, v)}
-            placeholder="₹"
+            placeholder={currencySymbol}
             placeholderTextColor={colors.textMuted}
             keyboardType="decimal-pad"
           />
@@ -634,7 +634,7 @@ export default function BillingScreen() {
     // Debit (billed order) — confirm before editing
     Alert.alert(
       tr.editAmount,
-      `${item.customer_name}${item.quantity > 0 ? ` · ${Math.round(item.quantity)} pcs` : ''} · ₹${item.amount}`,
+      `${item.customer_name}${item.quantity > 0 ? ` · x${Math.round(item.quantity)}` : ''} · ${currencySymbol}${item.amount}`,
       [
         { text: tr.cancel, style: 'cancel' },
         { text: tr.edit, onPress: () => handleEditBilledAmount(item) },
@@ -698,7 +698,7 @@ export default function BillingScreen() {
           </View>
           <Text style={S.cardSub} numberOfLines={1}>
             {format(new Date(item.date), 'dd MMM')} · {isCredit ? tr.credit : tr.debit}
-            {!isCredit && item.quantity > 0 ? ` · ${Math.round(item.quantity)} pcs` : ''}
+            {!isCredit && item.quantity > 0 ? ` · x${Math.round(item.quantity)}` : ''}
             {item.description && item.description !== defaultOrderDescription && item.description !== 'Payment received'
               ? ` · ${item.description}` : ''}
           </Text>
@@ -847,7 +847,7 @@ export default function BillingScreen() {
                 {unbilledOrders.length} {unbilledOrders.length === 1 ? tr.order : tr.orders_plural}
               </Text>
               <Text style={S.summaryText}>
-                {unbilledOrders.reduce((s, o) => s + (o.quantity || 0), 0)} pcs
+                x{unbilledOrders.reduce((s, o) => s + (o.quantity || 0), 0)}
               </Text>
             </View>
           )}
@@ -1019,7 +1019,7 @@ export default function BillingScreen() {
                 value={editAmountValue}
                 onChangeText={setEditAmountValue}
                 keyboardType="decimal-pad"
-                placeholder="₹"
+                placeholder={currencySymbol}
                 placeholderTextColor={colors.textMuted}
                 autoFocus
               />

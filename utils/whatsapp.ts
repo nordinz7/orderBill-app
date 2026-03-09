@@ -5,11 +5,11 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Alert, Linking } from 'react-native';
 
-export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en', companyName: string = ''): string {
+export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en', companyName: string = '', currencySymbol: string = '₹'): string {
   const tr = translations[lang];
   const dateStr    = format(new Date(order.date), 'dd MMM yyyy');
-  const amountStr  = `\u20B9${order.billed_amount.toFixed(2)}`;
-  const qtyLine    = order.quantity > 0 ? `\n*${tr.quantity}:* ${order.quantity} pcs` : '';
+  const amountStr  = `${currencySymbol}${order.billed_amount.toFixed(2)}`;
+  const qtyLine    = order.quantity > 0 ? `\n*${tr.quantity}:* x${order.quantity}` : '';
 
   return (
     `*${tr.invoiceTitle(companyName)}*\n` +
@@ -32,6 +32,7 @@ export function formatStatement(
   balance: { totalDebit: number; totalCredit: number; balance: number },
   lang: Lang = 'en',
   companyName: string = '',
+  currencySymbol: string = '₹',
 ): string {
   const tr = translations[lang];
   const dateStr = format(new Date(), 'dd MMM yyyy');
@@ -41,7 +42,7 @@ export function formatStatement(
   const historyLines = sorted.map(t => {
     const d = format(new Date(t.date), 'dd MMM');
     const icon = t.type === 'debit' ? '📦' : '💰';
-    const amt = `\u20B9${t.amount.toFixed(2)}`;
+    const amt = `${currencySymbol}${t.amount.toFixed(2)}`;
     return `${icon} ${d} — ${t.description} — ${amt}`;
   }).join('\n');
 
@@ -55,10 +56,10 @@ export function formatStatement(
     `*${tr.transactionHistory}:*\n\n` +
     `${historyLines}\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `${tr.totalOrders}: \u20B9${balance.totalDebit.toFixed(2)}\n` +
-    `${tr.totalPaid}:   \u20B9${balance.totalCredit.toFixed(2)}\n` +
+    `${tr.totalOrders}: ${currencySymbol}${balance.totalDebit.toFixed(2)}\n` +
+    `${tr.totalPaid}:   ${currencySymbol}${balance.totalCredit.toFixed(2)}\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `*${tr.statementBalance}: \u20B9${balance.balance.toFixed(2)}*\n` +
+    `*${tr.statementBalance}: ${currencySymbol}${balance.balance.toFixed(2)}*\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `${tr.statementThanks}`
   );
@@ -68,10 +69,11 @@ export async function sendWhatsAppInvoice(
   order: OrderWithCustomer,
   lang: Lang = 'en',
   companyName: string = '',
+  currencySymbol: string = '₹',
 ): Promise<void> {
   const tr          = translations[lang];
   const phone       = order.customer_phone.replace(/\D/g, '');
-  const text        = formatInvoice(order, lang, companyName);
+  const text        = formatInvoice(order, lang, companyName, currencySymbol);
   const encodedText = encodeURIComponent(text);
   const url         = `whatsapp://send?phone=${phone}&text=${encodedText}`;
 
@@ -94,10 +96,11 @@ export async function sendWhatsAppStatement(
   balance: { totalDebit: number; totalCredit: number; balance: number },
   lang: Lang = 'en',
   companyName: string = '',
+  currencySymbol: string = '₹',
 ): Promise<void> {
   const tr = translations[lang];
   const cleanPhone = phone.replace(/\D/g, '');
-  const text = formatStatement(customer, transactions, balance, lang, companyName);
+  const text = formatStatement(customer, transactions, balance, lang, companyName, currencySymbol);
   const url = `whatsapp://send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
 
   try {

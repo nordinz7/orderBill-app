@@ -435,7 +435,7 @@ export default function BulkOrdersScreen() {
               {filledCount} {filledCount === 1 ? tr.order : tr.orders_plural}
             </Text>
             <Text style={S.summaryText}>
-              {tr.total}: {totalQty} pcs
+              {tr.total}: {totalQty}
             </Text>
           </View>
         )}

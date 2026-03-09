@@ -26,6 +26,10 @@ interface SettingsContextValue {
   setCompanyPhone: (v: string) => void;
   defaultOrderDescription: string;
   setDefaultOrderDescription: (v: string) => void;
+  currencySymbol: string;
+  setCurrencySymbol: (v: string) => void;
+  countryCode: string;
+  setCountryCode: (v: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
@@ -36,11 +40,15 @@ const COMPANY_NAME_KEY  = '@mfc_company_name';
 const COMPANY_PLACE_KEY = '@mfc_company_place';
 const COMPANY_PHONE_KEY = '@mfc_company_phone';
 const DEFAULT_ORDER_DESC_KEY = '@mfc_default_order_desc';
+const CURRENCY_SYMBOL_KEY = '@mfc_currency_symbol';
+const COUNTRY_CODE_KEY = '@mfc_country_code';
 
 const DEFAULT_COMPANY_NAME  = 'My Company';
 const DEFAULT_COMPANY_PLACE = 'My City';
 const DEFAULT_COMPANY_PHONE = '';
 const DEFAULT_ORDER_DESC = 'Order';
+const DEFAULT_CURRENCY_SYMBOL = '₹';
+const DEFAULT_COUNTRY_CODE = '+91';
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
@@ -50,17 +58,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [companyPlace, setCompanyPlaceState] = useState(DEFAULT_COMPANY_PLACE);
   const [companyPhone, setCompanyPhoneState] = useState(DEFAULT_COMPANY_PHONE);
   const [defaultOrderDescription, setDefaultOrderDescriptionState] = useState(DEFAULT_ORDER_DESC);
+  const [currencySymbol, setCurrencySymbolState] = useState(DEFAULT_CURRENCY_SYMBOL);
+  const [countryCode, setCountryCodeState] = useState(DEFAULT_COUNTRY_CODE);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [storedTheme, storedLang, storedCName, storedCPlace, storedCPhone, storedOrderDesc] = await Promise.all([
+      const [storedTheme, storedLang, storedCName, storedCPlace, storedCPhone, storedOrderDesc, storedCurrency, storedCountry] = await Promise.all([
         AsyncStorage.getItem(THEME_KEY),
         AsyncStorage.getItem(LANG_KEY),
         AsyncStorage.getItem(COMPANY_NAME_KEY),
         AsyncStorage.getItem(COMPANY_PLACE_KEY),
         AsyncStorage.getItem(COMPANY_PHONE_KEY),
         AsyncStorage.getItem(DEFAULT_ORDER_DESC_KEY),
+        AsyncStorage.getItem(CURRENCY_SYMBOL_KEY),
+        AsyncStorage.getItem(COUNTRY_CODE_KEY),
       ]);
       if (storedTheme !== null) {
         setIsDark(storedTheme === 'dark');
@@ -74,6 +86,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (storedCPlace !== null) setCompanyPlaceState(storedCPlace);
       if (storedCPhone !== null) setCompanyPhoneState(storedCPhone);
       if (storedOrderDesc !== null) setDefaultOrderDescriptionState(storedOrderDesc);
+      if (storedCurrency !== null) setCurrencySymbolState(storedCurrency);
+      if (storedCountry !== null) setCountryCodeState(storedCountry);
       setReady(true);
     })();
   }, []);
@@ -111,13 +125,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(DEFAULT_ORDER_DESC_KEY, v);
   }, []);
 
+  const setCurrencySymbol = useCallback((v: string) => {
+    setCurrencySymbolState(v);
+    AsyncStorage.setItem(CURRENCY_SYMBOL_KEY, v);
+  }, []);
+
+  const setCountryCode = useCallback((v: string) => {
+    setCountryCodeState(v);
+    AsyncStorage.setItem(COUNTRY_CODE_KEY, v);
+  }, []);
+
   const colors = isDark ? DarkColors : LightColors;
   const tr = translations[lang];
 
   if (!ready) return null;
 
   return (
-    <SettingsContext.Provider value={{ isDark, toggleTheme, lang, setLang, colors, tr, companyName, setCompanyName, companyPlace, setCompanyPlace, companyPhone, setCompanyPhone, defaultOrderDescription, setDefaultOrderDescription }}>
+    <SettingsContext.Provider value={{ isDark, toggleTheme, lang, setLang, colors, tr, companyName, setCompanyName, companyPlace, setCompanyPlace, companyPhone, setCompanyPhone, defaultOrderDescription, setDefaultOrderDescription, currencySymbol, setCurrencySymbol, countryCode, setCountryCode }}>
       {children}
     </SettingsContext.Provider>
   );

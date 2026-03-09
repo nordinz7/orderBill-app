@@ -195,7 +195,7 @@ function makeStyles(c: AppColors) {
 export default function CustomersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr } = useSettings();
+  const { colors, tr, currencySymbol } = useSettings();
   const S = makeStyles(colors);
 
   const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
@@ -414,7 +414,7 @@ export default function CustomersScreen() {
           )}
           {item.balance > 0 && (
             <Text style={{ fontSize: FontSizes.sm, color: colors.danger, fontWeight: '700', marginTop: 2 }}>
-              ₹{item.balance.toFixed(2)} {tr.due}
+              {currencySymbol}{item.balance.toFixed(2)} {tr.due}
             </Text>
           )}
         </View>
@@ -493,7 +493,7 @@ export default function CustomersScreen() {
         <View style={S.summaryBar}>
           <Text style={S.summaryText}>{tr.totalCustomers(customers.length)}</Text>
           {overdueCount > 0 && (
-            <Text style={S.summaryOverdue}>{tr.totalOverdue(overdueCount)} · {tr.totalOverdueAmount(overdueAmount)}</Text>
+            <Text style={S.summaryOverdue}>{tr.totalOverdue(overdueCount)} · {tr.totalOverdueAmount(overdueAmount, currencySymbol)}</Text>
           )}
         </View>
       )}

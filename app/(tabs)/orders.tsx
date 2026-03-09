@@ -326,7 +326,7 @@ export default function OrdersScreen() {
           <View style={S.cardRow1}>
             <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
             <View style={S.cardRight}>
-              {item.quantity > 0 && <Text style={S.qtyText}>{item.quantity} pcs</Text>}
+              {item.quantity > 0 && <Text style={S.qtyText}>x{item.quantity}</Text>}
               {isBilled
                 ? (
                   <>

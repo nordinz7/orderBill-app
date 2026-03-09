@@ -143,7 +143,7 @@ export default function CustomerDetailScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors, tr } = useSettings();
+  const { colors, tr, currencySymbol } = useSettings();
   const S = makeStyles(colors);
 
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -191,7 +191,7 @@ export default function CustomerDetailScreen() {
 
   const handleDeleteTransaction = (txn: TransactionWithQuantity) => {
     if (txn.type === 'debit') return; // Debit transactions are deleted via order deletion
-    Alert.alert(tr.delete, `Delete this payment of \u20B9${txn.amount.toFixed(2)}?`, [
+    Alert.alert(tr.delete, `Delete this payment of ${currencySymbol}${txn.amount.toFixed(2)}?`, [
       { text: tr.cancel, style: 'cancel' },
       {
         text: tr.delete, style: 'destructive', onPress: async () => {
@@ -233,15 +233,15 @@ export default function CustomerDetailScreen() {
         <View style={S.txnContent}>
           <Text style={S.txnDesc} numberOfLines={1}>
             {item.description}
-            {isDebit && item.quantity > 0 ? ` · ${item.quantity} pcs` : ''}
+            {isDebit && item.quantity > 0 ? ` · x${item.quantity}` : ''}
           </Text>
           <Text style={S.txnDate}>{format(new Date(item.date), 'dd MMM yyyy, hh:mm a')}</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={[S.txnAmount, isDebit ? S.txnDebit : S.txnCredit]}>
-            {isDebit ? '-' : '+'}₹{item.amount.toFixed(2)}
+            {isDebit ? '-' : '+'}{currencySymbol}{item.amount.toFixed(2)}
           </Text>
-          <Text style={S.txnRunningBal}>₹{item.runningBalance.toFixed(2)}</Text>
+          <Text style={S.txnRunningBal}>{currencySymbol}{item.runningBalance.toFixed(2)}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -275,7 +275,7 @@ export default function CustomerDetailScreen() {
             : balance.balance < 0 ? S.balanceCredit
             : S.balancePaid,
         ]}>
-          {balance.balance < 0 ? '+' : ''}₹{Math.abs(balance.balance).toFixed(2)}
+          {balance.balance < 0 ? '+' : ''}{currencySymbol}{Math.abs(balance.balance).toFixed(2)}
         </Text>
         {/* Status badge */}
         {balance.balance > 0 && (
@@ -299,11 +299,11 @@ export default function CustomerDetailScreen() {
         <View style={S.balanceRow}>
           <View style={S.balanceDetail}>
             <Text style={S.detailLabel}>{tr.totalOrders}</Text>
-            <Text style={S.detailValue}>₹{balance.totalDebit.toFixed(2)}</Text>
+            <Text style={S.detailValue}>{currencySymbol}{balance.totalDebit.toFixed(2)}</Text>
           </View>
           <View style={S.balanceDetail}>
             <Text style={S.detailLabel}>{tr.totalPaid}</Text>
-            <Text style={S.detailValue}>₹{balance.totalCredit.toFixed(2)}</Text>
+            <Text style={S.detailValue}>{currencySymbol}{balance.totalCredit.toFixed(2)}</Text>
           </View>
         </View>
       </View>

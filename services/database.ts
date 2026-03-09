@@ -251,10 +251,9 @@ export async function addCustomer(
   return result.lastInsertRowId;
 }
 
-/** Normalize phone to last 10 digits (strips country code / non-digits). */
+/** Normalize phone to digits only for comparison. */
 function normalizePhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
-  return digits.length >= 10 ? digits.slice(-10) : digits;
+  return raw.replace(/\D/g, '');
 }
 
 /**
@@ -266,7 +265,7 @@ export async function bulkImportContacts(
   db: SQLite.SQLiteDatabase,
   contacts: { name: string; phone: string }[],
 ): Promise<number> {
-  // Get all existing phone numbers (last 10 digits)
+  // Get all existing phone numbers (digits only)
   const existing = await db.getAllAsync<{ phone_number: string }>(
     `SELECT phone_number FROM customers`
   );

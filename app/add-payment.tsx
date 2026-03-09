@@ -199,7 +199,7 @@ export default function AddPaymentScreen() {
           )}
         </View>
         <View style={S.field}>
-          <Text style={S.label}><MaterialIcons name="currency-rupee" size={16} color={colors.text} /> {tr.amount} *</Text>
+          <Text style={S.label}><MaterialIcons name="payments" size={16} color={colors.text} /> {tr.amount} *</Text>
           <TextInput style={S.input} value={amount} onChangeText={setAmount} placeholder={tr.amountPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" returnKeyType="next" />
         </View>
         <View style={S.field}>
