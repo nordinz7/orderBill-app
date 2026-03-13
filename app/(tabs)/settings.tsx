@@ -1,11 +1,10 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
-import Constants from 'expo-constants';
 import { Lang } from '@/constants/translations';
 import { useSettings } from '@/contexts/SettingsContext';
-import { createAndShareBackup, getLastLocalBackupDate, pickAndRestoreBackup } from '@/utils/backup';
+import { createAndShareBackup } from '@/utils/backup';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { format } from 'date-fns';
+import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
@@ -25,7 +24,6 @@ function makeStyles(c: AppColors) {
     rowLast:     { borderBottomWidth: 0 },
     rowIcon:     { marginRight: Spacing.lg },
     rowLabel:    { flex: 1, fontSize: FontSizes.lg, color: c.text, fontWeight: '500' },
-    rowValue:    { fontSize: FontSizes.md, color: c.textMuted },
     langBtnRow:  { flexDirection: 'row', gap: Spacing.sm },
     langBtn: {
       paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm,
@@ -41,16 +39,6 @@ function makeStyles(c: AppColors) {
       fontWeight: '600',
       paddingVertical: 0,
     },
-    // Backup section
-    backupMetaText: { fontSize: FontSizes.xs, color: c.textMuted, marginTop: 2 },
-    overdueTag: {
-      flexDirection: 'row', alignItems: 'center', gap: 4,
-      paddingHorizontal: Spacing.sm, paddingVertical: 2,
-      borderRadius: Radius.sm,
-    },
-    overdueTagText: { fontSize: FontSizes.xs, fontWeight: '700' },
-    // Sample statement
-    sampleDesc: { fontSize: FontSizes.sm, color: c.textSecondary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.sm },
     // App info
     appInfoCard: {
       margin: Spacing.lg, backgroundColor: c.card,
@@ -70,31 +58,17 @@ export default function SettingsScreen() {
   const S = makeStyles(colors);
 
   const [backupLoading, setBackupLoading] = useState(false);
-  const [restoring, setRestoring] = useState(false);
-  const [lastLocalBackup, setLastLocalBackup] = useState<Date | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [devTapCount, setDevTapCount] = useState(0);
 
   useEffect(() => {
     AsyncStorage.getItem('@orderbill_dev_mode').then(v => { if (v === 'true') setDevMode(true); });
-    getLastLocalBackupDate().then(setLastLocalBackup);
   }, []);
-
-  useEffect(() => {
-    (async () => {
-      setLastLocalBackup(await getLastLocalBackupDate());
-    })();
-  }, []);
-
-  const refreshBackupState = async () => {
-    setLastLocalBackup(await getLastLocalBackupDate());
-  };
 
   const handleSaveBackup = async () => {
     setBackupLoading(true);
     try {
       await createAndShareBackup(db);
-      await refreshBackupState();
     } catch {
       Alert.alert(tr.backupFailed, tr.backupFailedMsg);
     } finally {
@@ -102,30 +76,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleRestore = () => {
-    Alert.alert(tr.restoreConfirm, tr.restoreConfirmMsg, [
-      { text: tr.cancel, style: 'cancel' },
-      {
-        text: tr.proceed,
-        style: 'destructive',
-        onPress: async () => {
-          setRestoring(true);
-          try {
-            const result = await pickAndRestoreBackup(db);
-            if (result) {
-              Alert.alert(tr.restoreSuccess, tr.restoreSuccessMsg(result.customers, result.orders));
-            }
-          } catch {
-            Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
-          } finally {
-            setRestoring(false);
-          }
-        },
-      },
-    ]);
-  };
 
-  const busy = backupLoading || restoring;
 
   const handleDevTap = useCallback(() => {
     setDevTapCount(prev => {
@@ -150,27 +101,20 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={S.container} contentContainerStyle={{ paddingBottom: 40 }}>
-      {/* Appearance */}
+      {/* General — theme + language */}
       <View style={S.section}>
-        <Text style={S.sectionTitle}>{tr.theme}</Text>
+        <Text style={S.sectionTitle}>{tr.appSettings}</Text>
         <View style={S.card}>
-          <View style={[S.row, S.rowLast]}>
+          <View style={S.row}>
             <MaterialIcons name="brightness-6" size={24} color={colors.primary} style={S.rowIcon} />
             <Text style={S.rowLabel}>{tr.darkMode}</Text>
             <Switch
               value={isDark}
               onValueChange={toggleTheme}
               trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={isDark ? '#FFFFFF' : '#FFFFFF'}
+              thumbColor="#FFFFFF"
             />
           </View>
-        </View>
-      </View>
-
-      {/* Language */}
-      <View style={S.section}>
-        <Text style={S.sectionTitle}>{tr.language}</Text>
-        <View style={S.card}>
           <View style={[S.row, S.rowLast]}>
             <MaterialIcons name="language" size={24} color={colors.primary} style={S.rowIcon} />
             <View style={S.langBtnRow}>
@@ -190,7 +134,7 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Company Details */}
+      {/* Business — company + defaults + regional */}
       <View style={S.section}>
         <Text style={S.sectionTitle}>{tr.companyDetails}</Text>
         <View style={S.card}>
@@ -214,7 +158,7 @@ export default function SettingsScreen() {
               placeholderTextColor={colors.textMuted}
             />
           </View>
-          <View style={[S.row, S.rowLast]}>
+          <View style={S.row}>
             <MaterialIcons name="phone" size={24} color={colors.primary} style={S.rowIcon} />
             <TextInput
               style={S.companyInputFull}
@@ -225,14 +169,7 @@ export default function SettingsScreen() {
               keyboardType="phone-pad"
             />
           </View>
-        </View>
-      </View>
-
-      {/* Order Defaults */}
-      <View style={S.section}>
-        <Text style={S.sectionTitle}>{tr.orderDefaults}</Text>
-        <View style={S.card}>
-          <View style={[S.row, S.rowLast]}>
+          <View style={S.row}>
             <MaterialIcons name="edit" size={24} color={colors.primary} style={S.rowIcon} />
             <TextInput
               style={S.companyInputFull}
@@ -242,13 +179,6 @@ export default function SettingsScreen() {
               placeholderTextColor={colors.textMuted}
             />
           </View>
-        </View>
-      </View>
-
-      {/* Regional Settings */}
-      <View style={S.section}>
-        <Text style={S.sectionTitle}>{tr.regionalSettings}</Text>
-        <View style={S.card}>
           <View style={S.row}>
             <MaterialIcons name="attach-money" size={24} color={colors.primary} style={S.rowIcon} />
             <TextInput
@@ -260,8 +190,8 @@ export default function SettingsScreen() {
               maxLength={5}
             />
           </View>
-          <View style={[S.row, S.rowLast]}>
-            <MaterialIcons name="phone" size={24} color={colors.primary} style={S.rowIcon} />
+          <View style={S.row}>
+            <MaterialIcons name="public" size={24} color={colors.primary} style={S.rowIcon} />
             <TextInput
               style={S.companyInputFull}
               value={countryCode}
@@ -272,14 +202,6 @@ export default function SettingsScreen() {
               maxLength={5}
             />
           </View>
-        </View>
-      </View>
-
-      {/* Sample Statement Preview */}
-      <View style={S.section}>
-        <Text style={S.sectionTitle}>{tr.sampleStatement}</Text>
-        <View style={S.card}>
-          <Text style={S.sampleDesc}>{tr.sampleStatementDesc}</Text>
           <TouchableOpacity
             style={[S.row, S.rowLast]}
             onPress={() => router.push('/preview-statement')}
@@ -291,38 +213,14 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Backup & Restore */}
+      {/* Backup */}
       <View style={S.section}>
         <Text style={S.sectionTitle}>{tr.backup}</Text>
         <View style={S.card}>
-          {/* Auto-backup status */}
-          <View style={S.row}>
-            <MaterialIcons name="autorenew" size={24} color={colors.success} style={S.rowIcon} />
-            <View style={{ flex: 1 }}>
-              <Text style={S.rowLabel}>{tr.autoBackup}</Text>
-              {lastLocalBackup && (
-                <Text style={S.backupMetaText}>{tr.lastSaved}: {format(lastLocalBackup, 'dd MMM yyyy, hh:mm a')}</Text>
-              )}
-            </View>
-            <View style={[S.overdueTag, { backgroundColor: colors.successLight }]}>
-              <MaterialIcons name="check-circle" size={12} color={colors.success} />
-              <Text style={[S.overdueTagText, { color: colors.success }]}>{tr.autoBackupActive}</Text>
-            </View>
-          </View>
-          {/* Save Backup */}
-          <TouchableOpacity style={S.row} onPress={handleSaveBackup} disabled={busy}>
+          <TouchableOpacity style={[S.row, S.rowLast]} onPress={handleSaveBackup} disabled={backupLoading}>
             <MaterialIcons name="save" size={24} color={colors.primary} style={S.rowIcon} />
             <Text style={S.rowLabel}>{tr.saveBackup}</Text>
             {backupLoading
-              ? <ActivityIndicator color={colors.primary} size="small" />
-              : <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
-            }
-          </TouchableOpacity>
-          {/* Restore */}
-          <TouchableOpacity style={[S.row, S.rowLast]} onPress={handleRestore} disabled={busy}>
-            <MaterialIcons name="restore" size={24} color={colors.textSecondary} style={S.rowIcon} />
-            <Text style={S.rowLabel}>{tr.restoreButton}</Text>
-            {restoring
               ? <ActivityIndicator color={colors.primary} size="small" />
               : <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
             }
