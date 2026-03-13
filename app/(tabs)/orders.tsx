@@ -195,7 +195,7 @@ export default function OrdersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const params = useLocalSearchParams<{ filterDate?: string }>();
-  const { colors, tr, defaultOrderDescription } = useSettings();
+  const { colors, tr, defaultOrderDescription, currencySymbol } = useSettings();
   const S = makeStyles(colors);
 
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
@@ -333,7 +333,7 @@ export default function OrdersScreen() {
                     <View style={S.billedTag}>
                       <Text style={S.billedTagText}>{tr.billedTag}</Text>
                     </View>
-                    <Text style={S.amount}>&#8377;{item.billed_amount}</Text>
+                    <Text style={S.amount}>{currencySymbol}{item.billed_amount}</Text>
                   </>
                 )
                 : (
@@ -425,7 +425,7 @@ export default function OrdersScreen() {
           <Text style={S.summaryText}>
             {displayed.length} {displayed.length === 1 ? tr.order : tr.orders_plural}
           </Text>
-          <Text style={S.summaryAmount}>&#8377;{totalAmount}</Text>
+          <Text style={S.summaryAmount}>{currencySymbol}{totalAmount}</Text>
         </View>
       )}
 

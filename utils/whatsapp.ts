@@ -5,7 +5,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { Alert, Linking } from 'react-native';
 
-export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en', companyName: string = '', currencySymbol: string = '₹'): string {
+export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en', companyName: string = '', currencySymbol: string = '$'): string {
   const tr = translations[lang];
   const dateStr    = format(new Date(order.date), 'dd MMM yyyy');
   const amountStr  = `${currencySymbol}${order.billed_amount.toFixed(2)}`;
@@ -32,7 +32,7 @@ export function formatStatement(
   balance: { totalDebit: number; totalCredit: number; balance: number },
   lang: Lang = 'en',
   companyName: string = '',
-  currencySymbol: string = '₹',
+  currencySymbol: string = '$',
 ): string {
   const tr = translations[lang];
   const dateStr = format(new Date(), 'dd MMM yyyy');
@@ -69,7 +69,7 @@ export async function sendWhatsAppInvoice(
   order: OrderWithCustomer,
   lang: Lang = 'en',
   companyName: string = '',
-  currencySymbol: string = '₹',
+  currencySymbol: string = '$',
 ): Promise<void> {
   const tr          = translations[lang];
   const phone       = order.customer_phone.replace(/\D/g, '');
@@ -96,7 +96,7 @@ export async function sendWhatsAppStatement(
   balance: { totalDebit: number; totalCredit: number; balance: number },
   lang: Lang = 'en',
   companyName: string = '',
-  currencySymbol: string = '₹',
+  currencySymbol: string = '$',
 ): Promise<void> {
   const tr = translations[lang];
   const cleanPhone = phone.replace(/\D/g, '');

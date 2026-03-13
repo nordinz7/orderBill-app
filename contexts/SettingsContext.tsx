@@ -47,7 +47,7 @@ const DEFAULT_COMPANY_NAME  = 'My Company';
 const DEFAULT_COMPANY_PLACE = 'My City';
 const DEFAULT_COMPANY_PHONE = '';
 const DEFAULT_ORDER_DESC = 'Order';
-const DEFAULT_CURRENCY_SYMBOL = '₹';
+const DEFAULT_CURRENCY_SYMBOL = '$';
 const DEFAULT_COUNTRY_CODE = '+91';
 
 export function SettingsProvider({ children }: { children: ReactNode }) {

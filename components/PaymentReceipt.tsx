@@ -1,3 +1,4 @@
+import { useSettings } from '@/contexts/SettingsContext';
 import { format } from 'date-fns';
 import React, { forwardRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -39,6 +40,7 @@ const LABELS = {
 
 const PaymentReceipt = forwardRef<View, PaymentReceiptProps>(
   ({ companyName, companyPlace, companyPhone, customerName, customerPlace, amount, date, description, lang = 'en' }, ref) => {
+    const { currencySymbol } = useSettings();
     const L = LABELS[lang];
     const dateStr = format(new Date(date), 'dd/MM/yyyy');
 
@@ -84,7 +86,7 @@ const PaymentReceipt = forwardRef<View, PaymentReceiptProps>(
         {/* Amount */}
         <View style={S.amountBlock}>
           <Text style={S.amountLabel}>{L.amount}</Text>
-          <Text style={S.amountValue}>{Math.round(amount)}</Text>
+          <Text style={S.amountValue}>{currencySymbol}{Math.round(amount)}</Text>
         </View>
 
         <View style={S.dividerThick} />

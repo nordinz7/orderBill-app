@@ -693,7 +693,7 @@ export default function BillingScreen() {
           <View style={S.cardRow1}>
             <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
             <Text style={isCredit ? S.amountCredit : S.amountDebit}>
-              {isCredit ? '+' : '-'}&#8377;{item.amount}
+              {isCredit ? '+' : '-'}{currencySymbol}{item.amount}
             </Text>
           </View>
           <Text style={S.cardSub} numberOfLines={1}>
@@ -873,7 +873,7 @@ export default function BillingScreen() {
             <View style={[S.bottomBar, { paddingBottom: Math.max(Spacing.md, insets.bottom) }]}>
               <View style={S.selectedSummary}>
                 <Text style={S.selectedSummaryText}>{selectedIds.size} {tr.selected}</Text>
-                {selectedTotal > 0 && <Text style={S.selectedSummaryAmount}>&#8377;{selectedTotal}</Text>}
+                {selectedTotal > 0 && <Text style={S.selectedSummaryAmount}>{currencySymbol}{selectedTotal}</Text>}
               </View>
               <TouchableOpacity
                 style={[S.billBtn, !canBill && S.billBtnDisabled]}
@@ -955,8 +955,8 @@ export default function BillingScreen() {
                 {displayedTransactions.length} {displayedTransactions.length === 1 ? tr.transaction : tr.transactions_plural}
               </Text>
               <View style={S.summaryRight}>
-                {totalCredit > 0 && <Text style={S.summaryCredit}>+&#8377;{totalCredit}</Text>}
-                {totalDebit > 0 && <Text style={S.summaryDebit}>-&#8377;{totalDebit}</Text>}
+                {totalCredit > 0 && <Text style={S.summaryCredit}>+{currencySymbol}{totalCredit}</Text>}
+                {totalDebit > 0 && <Text style={S.summaryDebit}>-{currencySymbol}{totalDebit}</Text>}
               </View>
             </View>
           )}

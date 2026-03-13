@@ -1,3 +1,4 @@
+import { useSettings } from '@/contexts/SettingsContext';
 import type { OrderWithCustomer } from '@/services/database';
 import { format } from 'date-fns';
 import React, { forwardRef } from 'react';
@@ -8,7 +9,6 @@ export interface InvoiceBillProps {
   companyPlace?: string;
   companyPhone?: string;
   billNumber?: string;
-  currencySymbol?: string;
   order?: OrderWithCustomer;
   orders?: OrderWithCustomer[];
   lang?: 'en' | 'ta';
@@ -44,7 +44,8 @@ const LABELS = {
 };
 
 const InvoiceBill = forwardRef<View, InvoiceBillProps>(
-  ({ companyName, companyPlace, companyPhone, billNumber, currencySymbol = '₹', order, orders, lang = 'en' }, ref) => {
+  ({ companyName, companyPlace, companyPhone, billNumber, order, orders, lang = 'en' }, ref) => {
+    const { currencySymbol } = useSettings();
     const L = LABELS[lang];
     const allOrders = orders ?? (order ? [order] : []);
     const firstOrder = allOrders[0];

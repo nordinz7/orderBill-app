@@ -246,6 +246,7 @@ const CustomerRow = React.memo(function CustomerRow({
   styles: S,
   colors,
 }: CustomerRowProps) {
+  const { currencySymbol } = useSettings();
   const hasFill = parseFloat(amt) > 0;
   return (
     <View style={[S.row, hasFill && S.rowFilled]}>

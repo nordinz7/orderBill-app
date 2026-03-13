@@ -1,3 +1,4 @@
+import { useSettings } from '@/contexts/SettingsContext';
 import { TransactionWithQuantity } from '@/services/database';
 import { format } from 'date-fns';
 import React, { forwardRef } from 'react';
@@ -7,7 +8,6 @@ export interface StatementBillProps {
   companyName?: string;
   companyPlace?: string;
   companyPhone?: string;
-  currencySymbol?: string;
   customerName: string;
   customerPlace: string;
   date: string;
@@ -63,7 +63,6 @@ const StatementBill = forwardRef<View, StatementBillProps>(
       companyName,
       companyPlace,
       companyPhone,
-      currencySymbol = '₹',
       customerName,
       customerPlace,
       date,
@@ -75,6 +74,7 @@ const StatementBill = forwardRef<View, StatementBillProps>(
     },
     ref,
   ) => {
+    const { currencySymbol } = useSettings();
     const L = LABELS[lang];
     const sorted = [...transactions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
