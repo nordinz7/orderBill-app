@@ -184,7 +184,7 @@ const en = {
   // Quantity
   orderDate: 'Order Date',
   paymentDate: 'Payment Date',
-  quantity: 'Quantity (pieces)',
+  quantity: 'Quantity',
   quantityPlaceholder: 'e.g. 10',
   // Company
   companyDetails: 'Company Details',
@@ -255,7 +255,7 @@ const en = {
   ordersSummary: 'Orders',
   collectionsSummary: 'Collections',
   quantitySummary: 'Quantity',
-  packetsShort: 'pcs',
+  packetsShort: '',
   // Order defaults
   orderDefaults: 'Order Defaults',
   defaultOrderDesc: 'Default Item Name',
@@ -487,7 +487,7 @@ const ta: typeof en = {
   // Quantity
   orderDate: 'ஆர்டர் தேதி',
   paymentDate: 'பணம் செலுத்திய தேதி',
-  quantity: 'அளவு (பீஸ்)',
+  quantity: 'அளவு',
   quantityPlaceholder: 'எ.கா. 10',
   // Company
   companyDetails: 'நிறுவன விவரங்கள்',
@@ -558,7 +558,7 @@ const ta: typeof en = {
   ordersSummary: 'ஆர்டர்கள்',
   collectionsSummary: 'வசூல்',
   quantitySummary: 'அளவு',
-  packetsShort: 'பீஸ்',
+  packetsShort: '',
   // Order defaults
   orderDefaults: 'ஆர்டர் இயல்புநிலைகள்',
   defaultOrderDesc: 'இயல்பு பொருள் பெயர்',

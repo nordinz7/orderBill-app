@@ -1,11 +1,11 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
-  CustomerOutstanding,
-  DailySummary,
-  getCustomersWithOutstandingBalance,
-  getDailySummary,
-  getTotalOutstanding,
+    CustomerOutstanding,
+    DailySummary,
+    getCustomersWithOutstandingBalance,
+    getDailySummary,
+    getTotalOutstanding,
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -14,15 +14,15 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import {
-  FlatList,
-  Linking,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    FlatList,
+    Linking,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 function makeStyles(c: AppColors) {
@@ -292,7 +292,7 @@ export default function ReportsScreen() {
                 <Text style={S.summaryLabel}>{tr.ordersSummary}</Text>
               </View>
               <View style={S.summaryCard}>
-                <Text style={S.summaryValue}>{summary.total_qty} {tr.packetsShort}</Text>
+                <Text style={S.summaryValue}>{summary.total_qty}</Text>
                 <Text style={S.summaryLabel}>{tr.quantitySummary}</Text>
               </View>
             </View>
