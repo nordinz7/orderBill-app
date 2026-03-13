@@ -9,15 +9,15 @@ import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -25,11 +25,10 @@ const DRAFT_KEY = '@orderbill_bulk_payment_draft';
 
 const PAYMENT_METHODS = [
   { key: 'cash', label: 'Cash', icon: 'cash' as const },
-  { key: 'gpay', label: 'GPay', icon: 'google' as const },
-  { key: 'phonepe', label: 'PhonePe', icon: 'cellphone' as const },
-  { key: 'paytm', label: 'Paytm', icon: 'wallet' as const },
-  { key: 'upi', label: 'UPI', icon: 'bank-transfer' as const },
-  { key: 'bank', label: 'Bank', icon: 'bank' as const },
+  { key: 'card', label: 'Card', icon: 'credit-card-outline' as const },
+  { key: 'bank', label: 'Bank', icon: 'bank-transfer' as const },
+  { key: 'digital', label: 'Digital', icon: 'cellphone' as const },
+  { key: 'cheque', label: 'Cheque', icon: 'checkbook' as const },
 ];
 
 interface BulkPaymentDraft {

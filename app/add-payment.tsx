@@ -8,24 +8,23 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text, TextInput, TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View,
 } from 'react-native';
 
 const PAYMENT_METHODS = [
-  { key: 'cash', label: 'Cash', icon: 'cash' as const, iconType: 'mci' as const },
-  { key: 'gpay', label: 'GPay', icon: 'google' as const, iconType: 'mci' as const },
-  { key: 'phonepe', label: 'PhonePe', icon: 'cellphone' as const, iconType: 'mci' as const },
-  { key: 'paytm', label: 'Paytm', icon: 'wallet' as const, iconType: 'mci' as const },
-  { key: 'upi', label: 'UPI', icon: 'bank-transfer' as const, iconType: 'mci' as const },
-  { key: 'bank', label: 'Bank', icon: 'bank' as const, iconType: 'mci' as const },
+  { key: 'cash', label: 'Cash', icon: 'cash' as const },
+  { key: 'card', label: 'Card', icon: 'credit-card-outline' as const },
+  { key: 'bank', label: 'Bank', icon: 'bank-transfer' as const },
+  { key: 'digital', label: 'Digital', icon: 'cellphone' as const },
+  { key: 'cheque', label: 'Cheque', icon: 'checkbook' as const },
 ];
 
 function makeStyles(c: AppColors) {
