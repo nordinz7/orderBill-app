@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "orderBill",
-    "slug": "orderbill",
+    "slug": "mfc-app",
     "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
