@@ -250,7 +250,7 @@ export default function SettingsScreen() {
       <TouchableOpacity style={S.appInfoCard} onPress={handleDevTap} activeOpacity={0.8}>
         <Image source={require('@/assets/images/icon.png')} style={S.appIcon} />
         <Text style={S.appName}>{companyName || 'orderBill'}</Text>
-        <Text style={S.appVersion}>v{Constants.expoConfig?.version ?? '1.0.1'}</Text>
+        <Text style={S.appVersion}>v{Constants.expoConfig?.version}</Text>
         {Constants.nativeBuildVersion ? (
           <Text style={S.appBuild}>Build {Constants.nativeBuildVersion}</Text>
         ) : null}
