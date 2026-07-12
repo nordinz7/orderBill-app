@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { LEDGER_BALANCE } from './helpers';
 
 export interface CustomerOutstanding {
   id: number;
@@ -15,10 +16,7 @@ export async function getCustomersWithOutstandingBalance(
   return db.getAllAsync<CustomerOutstanding>(`
     SELECT
       c.id, c.name, c.place, c.phone_number,
-      COALESCE((
-        SELECT SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE -t.amount END)
-        FROM transactions t WHERE t.customer_id = c.id
-      ), 0) as balance,
+      COALESCE((SELECT ${LEDGER_BALANCE} FROM transactions t WHERE t.customer_id = c.id), 0) as balance,
       (SELECT MAX(o.date) FROM orders o WHERE o.customer_id = c.id) as last_order_date
     FROM customers c
     WHERE c.status = 'active'
@@ -67,11 +65,8 @@ export async function getDailySummary(
 }
 
 export async function getTotalOutstanding(db: SQLite.SQLiteDatabase): Promise<number> {
-  const row = await db.getFirstAsync<{ total: number }>(`
-    SELECT COALESCE(SUM(
-      CASE WHEN type = 'debit' THEN amount ELSE -amount END
-    ), 0) as total
-    FROM transactions
-  `);
+  const row = await db.getFirstAsync<{ total: number }>(
+    `SELECT COALESCE(${LEDGER_BALANCE}, 0) as total FROM transactions t`
+  );
   return row?.total ?? 0;
 }

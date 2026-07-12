@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { nowISO, SQLParams } from './helpers';
 
 export interface Order {
   id: number;
@@ -18,7 +19,7 @@ export interface OrderWithCustomer extends Order {
   billed_amount: number;
 }
 
-export const ORDER_SELECT = `
+const ORDER_SELECT = `
   SELECT
     o.*,
     COALESCE(t.amount, 0) AS billed_amount,
@@ -30,60 +31,62 @@ export const ORDER_SELECT = `
   LEFT JOIN transactions t ON t.order_id = o.id AND t.type = 'debit'
 `;
 
+/**
+ * Query orders joined with customer + billed amount, newest first.
+ * `where` is appended to the shared select — tables are aliased o (orders),
+ * c (customers), t (debit transaction).
+ */
+export async function queryOrders(
+  db: SQLite.SQLiteDatabase,
+  where: string = '',
+  params: SQLParams = [],
+): Promise<OrderWithCustomer[]> {
+  return db.getAllAsync<OrderWithCustomer>(
+    `${ORDER_SELECT} ${where} ORDER BY o.date DESC`,
+    params
+  );
+}
+
 export async function getAllOrdersWithCustomer(
   db: SQLite.SQLiteDatabase,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} ORDER BY o.date DESC`
-  );
+  return queryOrders(db);
 }
 
 export async function getRecentOrdersWithCustomer(
   db: SQLite.SQLiteDatabase,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE o.date >= date('now', '-6 days') ORDER BY o.date DESC`
-  );
+  return queryOrders(db, `WHERE o.date >= date('now', '-6 days')`);
 }
 
 export async function getTomorrowOrdersWithCustomer(
   db: SQLite.SQLiteDatabase,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE date(o.date) = date('now','localtime','+1 day') ORDER BY o.date DESC`
-  );
+  return queryOrders(db, `WHERE date(o.date) = date('now','localtime','+1 day')`);
 }
 
 export async function getTodayOrdersWithCustomer(
   db: SQLite.SQLiteDatabase,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE date(o.date) = date('now','localtime') ORDER BY o.date DESC`
-  );
+  return queryOrders(db, `WHERE date(o.date) = date('now','localtime')`);
 }
 
 export async function getYesterdayOrdersWithCustomer(
   db: SQLite.SQLiteDatabase,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE date(o.date) = date('now','localtime','-1 day') ORDER BY o.date DESC`
-  );
+  return queryOrders(db, `WHERE date(o.date) = date('now','localtime','-1 day')`);
 }
 
 export async function getThisWeekOrdersWithCustomer(
   db: SQLite.SQLiteDatabase,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE o.date >= date('now','localtime','weekday 0','-7 days') ORDER BY o.date DESC`
-  );
+  return queryOrders(db, `WHERE o.date >= date('now','localtime','weekday 0','-7 days')`);
 }
 
 export async function getThisMonthOrdersWithCustomer(
   db: SQLite.SQLiteDatabase,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE strftime('%Y-%m', o.date) = strftime('%Y-%m', 'now','localtime') ORDER BY o.date DESC`
-  );
+  return queryOrders(db, `WHERE strftime('%Y-%m', o.date) = strftime('%Y-%m', 'now','localtime')`);
 }
 
 export async function getOrdersByDateRange(
@@ -91,10 +94,7 @@ export async function getOrdersByDateRange(
   fromDate: string,
   toDate: string,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE date(o.date) >= date(?) AND date(o.date) <= date(?) ORDER BY o.date DESC`,
-    [fromDate, toDate]
-  );
+  return queryOrders(db, `WHERE date(o.date) >= date(?) AND date(o.date) <= date(?)`, [fromDate, toDate]);
 }
 
 export async function findDuplicateOrder(
@@ -103,11 +103,12 @@ export async function findDuplicateOrder(
   date: string,
   description: string,
 ): Promise<OrderWithCustomer | null> {
-  const rows = await db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE o.customer_id = ? AND date(o.date) = date(?) AND LOWER(TRIM(o.description)) = LOWER(?) LIMIT 1`,
+  const rows = await queryOrders(
+    db,
+    `WHERE o.customer_id = ? AND date(o.date) = date(?) AND LOWER(TRIM(o.description)) = LOWER(?)`,
     [customerId, date, description.trim()]
   );
-  return rows.length > 0 ? rows[0] : null;
+  return rows[0] ?? null;
 }
 
 export async function getDistinctOrderDates(
@@ -136,12 +137,11 @@ export async function addOrder(
   quantity: number = 0,
   date?: string,
 ): Promise<number> {
-  const now = new Date().toISOString();
-  const orderDate = date ?? now;
+  const now = nowISO();
   const result = await db.runAsync(
     `INSERT INTO orders (customer_id, amount, description, quantity, date, updated_at)
      VALUES (?, 0, ?, ?, ?, ?)`,
-    [customer_id, description.trim(), quantity, orderDate, now]
+    [customer_id, description.trim(), quantity, date ?? now, now]
   );
   return result.lastInsertRowId;
 }
@@ -152,7 +152,7 @@ export async function bulkAddOrders(
   description: string,
   date: string,
 ): Promise<number> {
-  const now = new Date().toISOString();
+  const now = nowISO();
   let count = 0;
   await db.withTransactionAsync(async () => {
     for (const o of orders) {
@@ -186,14 +186,10 @@ export async function updateOrder(
   quantity: number = 0,
   date?: string,
 ): Promise<void> {
-  const now = new Date().toISOString();
+  const now = nowISO();
   await db.withTransactionAsync(async () => {
     // Block update if order is already billed
-    const order = await db.getFirstAsync<{ transaction_id: number | null }>(
-      `SELECT transaction_id FROM orders WHERE id = ?`,
-      [orderId]
-    );
-    if (order?.transaction_id !== null && order?.transaction_id !== undefined) {
+    if (await isOrderBilled(db, orderId)) {
       throw new Error('Cannot edit a billed order');
     }
     const params = date

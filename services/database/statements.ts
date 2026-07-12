@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { nowISO } from './helpers';
 
 export interface Statement {
   id: number;
@@ -25,7 +26,7 @@ export async function insertStatement(
   totalDebit: number, totalCredit: number, balance: number,
   fromDate: string, sentVia: string = 'whatsapp',
 ): Promise<number> {
-  const now = new Date().toISOString();
+  const now = nowISO();
   let statementId = 0;
   await db.withTransactionAsync(async () => {
     const result = await db.runAsync(

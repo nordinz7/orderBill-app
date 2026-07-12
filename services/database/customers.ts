@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { LEDGER_BALANCE, nowISO } from './helpers';
 
 export interface Customer {
   id: number;
@@ -13,15 +14,12 @@ export interface CustomerWithBalance extends Customer {
   balance: number;
 }
 
-export async function getActiveCustomers(db: SQLite.SQLiteDatabase): Promise<Customer[]> {
-  return db.getAllAsync<Customer>(
-    `SELECT * FROM customers ORDER BY name ASC`
-  );
-}
-
 export async function getAllCustomers(db: SQLite.SQLiteDatabase): Promise<Customer[]> {
   return db.getAllAsync<Customer>(`SELECT * FROM customers ORDER BY name ASC`);
 }
+
+/** Alias of getAllCustomers — soft-delete status is gone, so "active" means all. */
+export const getActiveCustomers = getAllCustomers;
 
 export async function getCustomerById(
   db: SQLite.SQLiteDatabase, id: number,
@@ -32,10 +30,7 @@ export async function getCustomerById(
 export async function getCustomersWithBalance(db: SQLite.SQLiteDatabase): Promise<CustomerWithBalance[]> {
   return db.getAllAsync<CustomerWithBalance>(`
     SELECT c.*,
-      COALESCE((
-        SELECT SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE -t.amount END)
-        FROM transactions t WHERE t.customer_id = c.id
-      ), 0) as balance
+      COALESCE((SELECT ${LEDGER_BALANCE} FROM transactions t WHERE t.customer_id = c.id), 0) as balance
     FROM customers c ORDER BY c.name ASC
   `);
 }
@@ -46,7 +41,7 @@ export async function addCustomer(
   place: string,
   phone_number: string,
 ): Promise<number> {
-  const now = new Date().toISOString();
+  const now = nowISO();
   const result = await db.runAsync(
     `INSERT INTO customers (name, place, phone_number, created_date, updated_at, status)
      VALUES (?, ?, ?, ?, ?, 'active')`,
@@ -69,14 +64,13 @@ export async function bulkImportContacts(
   db: SQLite.SQLiteDatabase,
   contacts: { name: string; phone: string }[],
 ): Promise<number> {
-  // Get all existing phone numbers (digits only)
   const existing = await db.getAllAsync<{ phone_number: string }>(
     `SELECT phone_number FROM customers`
   );
   const existingSet = new Set(existing.map(e => normalizePhone(e.phone_number)));
 
   let imported = 0;
-  const now = new Date().toISOString();
+  const now = nowISO();
   await db.withTransactionAsync(async () => {
     for (const c of contacts) {
       const phone = normalizePhone(c.phone);
@@ -103,7 +97,7 @@ export async function updateCustomer(
   await db.runAsync(
     `UPDATE customers SET name = ?, place = ?, phone_number = ?, updated_at = ?
      WHERE id = ?`,
-    [name.trim(), place.trim(), phone_number.trim(), new Date().toISOString(), id]
+    [name.trim(), place.trim(), phone_number.trim(), nowISO(), id]
   );
 }
 
@@ -119,21 +113,22 @@ export async function canDeleteCustomer(
   return (row?.cnt ?? 0) === 0;
 }
 
+/** Delete a customer and every row referencing them, in FK-safe order. Caller provides the transaction. */
+async function deleteCustomerData(db: SQLite.SQLiteDatabase, id: number): Promise<void> {
+  await db.runAsync(`DELETE FROM bill_items WHERE bill_id IN (SELECT id FROM bills WHERE customer_id = ?)`, [id]);
+  await db.runAsync(`DELETE FROM bills WHERE customer_id = ?`, [id]);
+  await db.runAsync(`DELETE FROM statement_transactions WHERE statement_id IN (SELECT id FROM statements WHERE customer_id = ?)`, [id]);
+  await db.runAsync(`DELETE FROM statements WHERE customer_id = ?`, [id]);
+  await db.runAsync(`DELETE FROM transactions WHERE customer_id = ?`, [id]);
+  await db.runAsync(`DELETE FROM orders WHERE customer_id = ?`, [id]);
+  await db.runAsync(`DELETE FROM customers WHERE id = ?`, [id]);
+}
+
 export async function deleteCustomer(
   db: SQLite.SQLiteDatabase,
   id: number,
 ): Promise<void> {
-  await db.withTransactionAsync(async () => {
-    // Delete bill_items via bills for this customer
-    await db.runAsync(`DELETE FROM bill_items WHERE bill_id IN (SELECT id FROM bills WHERE customer_id = ?)`, [id]);
-    await db.runAsync(`DELETE FROM bills WHERE customer_id = ?`, [id]);
-    // Delete statement_transactions via statements for this customer
-    await db.runAsync(`DELETE FROM statement_transactions WHERE statement_id IN (SELECT id FROM statements WHERE customer_id = ?)`, [id]);
-    await db.runAsync(`DELETE FROM statements WHERE customer_id = ?`, [id]);
-    await db.runAsync(`DELETE FROM transactions WHERE customer_id = ?`, [id]);
-    await db.runAsync(`DELETE FROM orders WHERE customer_id = ?`, [id]);
-    await db.runAsync(`DELETE FROM customers WHERE id = ?`, [id]);
-  });
+  await db.withTransactionAsync(() => deleteCustomerData(db, id));
 }
 
 /** Bulk delete customers and all their related data. */
@@ -141,18 +136,10 @@ export async function bulkDeleteCustomers(
   db: SQLite.SQLiteDatabase,
   ids: number[],
 ): Promise<{ deleted: number; skipped: number }> {
-  let deleted = 0;
   await db.withTransactionAsync(async () => {
     for (const id of ids) {
-      await db.runAsync(`DELETE FROM bill_items WHERE bill_id IN (SELECT id FROM bills WHERE customer_id = ?)`, [id]);
-      await db.runAsync(`DELETE FROM bills WHERE customer_id = ?`, [id]);
-      await db.runAsync(`DELETE FROM statement_transactions WHERE statement_id IN (SELECT id FROM statements WHERE customer_id = ?)`, [id]);
-      await db.runAsync(`DELETE FROM statements WHERE customer_id = ?`, [id]);
-      await db.runAsync(`DELETE FROM transactions WHERE customer_id = ?`, [id]);
-      await db.runAsync(`DELETE FROM orders WHERE customer_id = ?`, [id]);
-      await db.runAsync(`DELETE FROM customers WHERE id = ?`, [id]);
-      deleted++;
+      await deleteCustomerData(db, id);
     }
   });
-  return { deleted, skipped: 0 };
+  return { deleted: ids.length, skipped: 0 };
 }

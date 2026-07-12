@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
-import { ORDER_SELECT, Order, OrderWithCustomer } from './orders';
-import { TransactionWithQuantity } from './payments';
+import { LEDGER_BALANCE, nowISO } from './helpers';
+import { Order, OrderWithCustomer, queryOrders } from './orders';
+import { queryTransactions, TransactionWithQuantity } from './payments';
 
 export interface Bill {
   id: number;
@@ -21,9 +22,7 @@ export interface BillItem {
 export async function getUnbilledOrders(
   db: SQLite.SQLiteDatabase,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE o.transaction_id IS NULL ORDER BY o.date DESC`
-  );
+  return queryOrders(db, `WHERE o.transaction_id IS NULL`);
 }
 
 export async function getUnbilledOrdersByDate(
@@ -31,8 +30,9 @@ export async function getUnbilledOrdersByDate(
   fromDate: string,
   toDate: string,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE o.transaction_id IS NULL AND date(o.date) >= date(?) AND date(o.date) <= date(?) ORDER BY o.date DESC`,
+  return queryOrders(
+    db,
+    `WHERE o.transaction_id IS NULL AND date(o.date) >= date(?) AND date(o.date) <= date(?)`,
     [fromDate, toDate]
   );
 }
@@ -41,10 +41,7 @@ export async function getUnbilledOrdersByCustomer(
   db: SQLite.SQLiteDatabase,
   customerId: number,
 ): Promise<OrderWithCustomer[]> {
-  return db.getAllAsync<OrderWithCustomer>(
-    `${ORDER_SELECT} WHERE o.transaction_id IS NULL AND o.customer_id = ? ORDER BY o.date DESC`,
-    [customerId]
-  );
+  return queryOrders(db, `WHERE o.transaction_id IS NULL AND o.customer_id = ?`, [customerId]);
 }
 
 export async function getCustomersWithUnbilledOrders(
@@ -80,7 +77,7 @@ export async function billOrders(
   customerId: number,
   items: BillItem[],
 ): Promise<{ billId: number; transactionIds: number[] }> {
-  const now = new Date().toISOString();
+  const now = nowISO();
   const billDate = now.slice(0, 10);
   const transactionIds: number[] = [];
   let billId = 0;
@@ -139,7 +136,7 @@ export async function unbillOrder(
 export async function updateBilledAmount(
   db: SQLite.SQLiteDatabase, transactionId: number, newAmount: number,
 ): Promise<void> {
-  const now = new Date().toISOString();
+  const now = nowISO();
   await db.withTransactionAsync(async () => {
     await db.runAsync(
       `UPDATE transactions SET amount = ?, updated_at = ? WHERE id = ?`,
@@ -188,8 +185,7 @@ export async function getBillBalance(
   db: SQLite.SQLiteDatabase, billId: number,
 ): Promise<number> {
   const row = await db.getFirstAsync<{ balance: number }>(
-    `SELECT COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE -amount END), 0) as balance
-     FROM transactions WHERE bill_id = ?`,
+    `SELECT COALESCE(${LEDGER_BALANCE}, 0) as balance FROM transactions t WHERE t.bill_id = ?`,
     [billId]
   );
   return row?.balance ?? 0;
@@ -199,14 +195,7 @@ export async function getBillBalance(
 export async function getBillLedgerEntries(
   db: SQLite.SQLiteDatabase, billId: number,
 ): Promise<TransactionWithQuantity[]> {
-  return db.getAllAsync<TransactionWithQuantity>(
-    `SELECT t.*, COALESCE(o.quantity, 0) as quantity
-     FROM transactions t
-     LEFT JOIN orders o ON t.order_id = o.id
-     WHERE t.bill_id = ?
-     ORDER BY t.date ASC`,
-    [billId]
-  );
+  return queryTransactions(db, `WHERE t.bill_id = ?`, [billId], 't.date ASC');
 }
 
 /** Get outstanding (unpaid) bills for a customer, with balance derived from ledger. */
@@ -218,7 +207,7 @@ export async function getCustomerOutstandingBills(
       b.id, b.bill_number, b.bill_date,
       COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE 0 END), 0) as total,
       COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) as paid,
-      COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE -t.amount END), 0) as balance
+      COALESCE(${LEDGER_BALANCE}, 0) as balance
     FROM bills b
     LEFT JOIN transactions t ON t.bill_id = b.id
     WHERE b.customer_id = ?
