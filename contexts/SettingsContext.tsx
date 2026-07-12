@@ -2,12 +2,12 @@ import { AppColors, DarkColors, LightColors } from '@/constants/theme';
 import { Lang, translations } from '@/constants/translations';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
-    createContext,
-    ReactNode,
-    useCallback,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
 } from 'react';
 import { useColorScheme } from 'react-native';
 
