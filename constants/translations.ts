@@ -313,6 +313,13 @@ const en = {
   finalizePaymentsConfirmMsg: (count: number) => `This will record ${count} payment${count === 1 ? '' : 's'}. Continue?`,
   payment_singular: 'payment',
   payments_plural: 'payments',
+  // Debt transaction (add-payment)
+  debtTransaction: 'Debt',
+  recordDebt: 'Record Debt',
+  transactionType: 'Type',
+  debtDescPlaceholder: 'e.g. Goods on credit',
+  // Share orders
+  shareOrders: 'Share',
 };
 
 const ta: typeof en = {
@@ -616,6 +623,13 @@ const ta: typeof en = {
   finalizePaymentsConfirmMsg: (count: number) => `${count} பணம் பதிவு செய்யப்படும். தொடரவா?`,
   payment_singular: 'பணம்',
   payments_plural: 'பணங்கள்',
+  // Debt transaction (add-payment)
+  debtTransaction: 'கடன்',
+  recordDebt: 'கடன் பதிவு செய்',
+  transactionType: 'வகை',
+  debtDescPlaceholder: 'எ.கா. கடனில் பொருட்கள்',
+  // Share orders
+  shareOrders: 'பகிர்',
 };
 
 export const translations = { en, ta };

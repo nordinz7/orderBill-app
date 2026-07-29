@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { Customer, getActiveCustomers, getTransactionById, insertPayment, updatePayment } from '@/services/database';
+import { Customer, getActiveCustomers, getTransactionById, insertInitialDebt, insertPayment, updatePayment } from '@/services/database';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -8,15 +8,15 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text, TextInput, TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text, TextInput, TouchableOpacity,
+    View,
 } from 'react-native';
 
 const PAYMENT_METHODS = [
@@ -87,6 +87,24 @@ function makeStyles(c: AppColors) {
       alignItems: 'center', justifyContent: 'space-between',
     },
     dateButtonText:     { fontSize: FontSizes.lg, color: c.text },
+    // Type toggle
+    typeRow:             { flexDirection: 'row', gap: Spacing.sm },
+    typeChip: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 6, paddingVertical: Spacing.lg,
+      borderRadius: Radius.md, borderWidth: 1.5,
+      borderColor: c.border, backgroundColor: c.inputBg,
+    },
+    typeChipPayment:     { borderColor: c.success, backgroundColor: c.successLight },
+    typeChipDebt:        { borderColor: c.danger, backgroundColor: c.dangerLight },
+    typeChipText:        { fontSize: FontSizes.md, fontWeight: '700', color: c.textSecondary },
+    typeChipTextPayment: { color: c.success },
+    typeChipTextDebt:    { color: c.danger },
+    saveButtonDebt: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: Spacing.sm, backgroundColor: c.danger,
+      padding: Spacing.xl, borderRadius: Radius.lg, marginTop: Spacing.md,
+    },
   });
 }
 
@@ -103,6 +121,7 @@ export default function AddPaymentScreen() {
   const [selectedCustomer, setSelected]     = useState<Customer | null>(null);
   const [showPicker, setShowPicker]         = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
+  const [txnType, setTxnType]               = useState<'credit' | 'debit'>('credit');
   const [amount, setAmount]                 = useState('');
   const [description, setDescription]       = useState('Cash');
   const [selectedMethod, setSelectedMethod] = useState<string | null>('cash');
@@ -131,6 +150,7 @@ export default function AddPaymentScreen() {
           setAmount(String(txn.amount));
           setDescription(txn.description);
           setPaymentDate(new Date(txn.date));
+          setTxnType(txn.type as 'credit' | 'debit');
           const method = PAYMENT_METHODS.find(m => m.label === txn.description);
           setSelectedMethod(method ? method.key : null);
         }
@@ -159,6 +179,8 @@ export default function AddPaymentScreen() {
     try {
       if (isEdit) {
         await updatePayment(db, Number(params.transactionId), num, description || tr.paymentReceived, paymentDate.toISOString(), null);
+      } else if (txnType === 'debit') {
+        await insertInitialDebt(db, selectedCustomer.id, num, description || tr.debtTransaction, paymentDate.toISOString());
       } else {
         await insertPayment(db, selectedCustomer.id, num, description || tr.paymentReceived, paymentDate.toISOString(), null);
       }
@@ -197,40 +219,65 @@ export default function AddPaymentScreen() {
             />
           )}
         </View>
+        {!isEdit && (
+          <View style={S.field}>
+            <Text style={S.label}><MaterialIcons name="swap-horiz" size={16} color={colors.text} /> {tr.transactionType}</Text>
+            <View style={S.typeRow}>
+              <TouchableOpacity
+                style={[S.typeChip, txnType === 'credit' && S.typeChipPayment]}
+                onPress={() => { setTxnType('credit'); setSelectedMethod('cash'); setDescription('Cash'); }}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="payments" size={18} color={txnType === 'credit' ? colors.success : colors.textSecondary} />
+                <Text style={[S.typeChipText, txnType === 'credit' && S.typeChipTextPayment]}>{tr.payment}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[S.typeChip, txnType === 'debit' && S.typeChipDebt]}
+                onPress={() => { setTxnType('debit'); setSelectedMethod(null); setDescription(''); }}
+                activeOpacity={0.8}
+              >
+                <MaterialIcons name="money-off" size={18} color={txnType === 'debit' ? colors.danger : colors.textSecondary} />
+                <Text style={[S.typeChipText, txnType === 'debit' && S.typeChipTextDebt]}>{tr.debtTransaction}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="payments" size={16} color={colors.text} /> {tr.amount} *</Text>
           <TextInput style={S.input} value={amount} onChangeText={setAmount} placeholder={tr.amountPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" returnKeyType="next" />
         </View>
-        <View style={S.field}>
-          <Text style={S.label}><MaterialIcons name="payments" size={16} color={colors.text} /> {tr.payment}</Text>
-          <View style={S.methodRow}>
-            {PAYMENT_METHODS.map(m => {
-              const active = selectedMethod === m.key;
-              return (
-                <TouchableOpacity
-                  key={m.key}
-                  style={[S.methodChip, active && S.methodChipActive]}
-                  onPress={() => handleMethodSelect(m)}
-                  activeOpacity={0.7}
-                >
-                  <MaterialCommunityIcons
-                    name={m.icon}
-                    size={18}
-                    color={active ? colors.primary : colors.textSecondary}
-                  />
-                  <Text style={[S.methodChipText, active && S.methodChipTextActive]}>{m.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
+        {txnType === 'credit' && (
+          <View style={S.field}>
+            <Text style={S.label}><MaterialIcons name="payments" size={16} color={colors.text} /> {tr.payment}</Text>
+            <View style={S.methodRow}>
+              {PAYMENT_METHODS.map(m => {
+                const active = selectedMethod === m.key;
+                return (
+                  <TouchableOpacity
+                    key={m.key}
+                    style={[S.methodChip, active && S.methodChipActive]}
+                    onPress={() => handleMethodSelect(m)}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialCommunityIcons
+                      name={m.icon}
+                      size={18}
+                      color={active ? colors.primary : colors.textSecondary}
+                    />
+                    <Text style={[S.methodChipText, active && S.methodChipTextActive]}>{m.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description}</Text>
-          <TextInput style={S.input} value={description} onChangeText={(text) => { setDescription(text); if (selectedMethod && text !== PAYMENT_METHODS.find(m => m.key === selectedMethod)?.label) setSelectedMethod(null); }} placeholder={tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
+          <TextInput style={S.input} value={description} onChangeText={(text) => { setDescription(text); if (selectedMethod && text !== PAYMENT_METHODS.find(m => m.key === selectedMethod)?.label) setSelectedMethod(null); }} placeholder={txnType === 'debit' ? tr.debtDescPlaceholder : tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
         </View>
-        <TouchableOpacity style={[S.saveButton, saving && S.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
-          <MaterialIcons name="payments" size={24} color="#FFFFFF" />
-          <Text style={S.saveButtonText}>{saving ? tr.saving : isEdit ? tr.updatePayment : tr.recordPayment}</Text>
+        <TouchableOpacity style={[txnType === 'debit' ? S.saveButtonDebt : S.saveButton, saving && S.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
+          <MaterialIcons name={txnType === 'debit' ? 'money-off' : 'payments'} size={24} color="#FFFFFF" />
+          <Text style={S.saveButtonText}>{saving ? tr.saving : isEdit ? tr.saveChanges : txnType === 'debit' ? tr.recordDebt : tr.recordPayment}</Text>
         </TouchableOpacity>
       </ScrollView>
 

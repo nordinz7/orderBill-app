@@ -151,6 +151,21 @@ export async function deleteTransaction(
   await db.runAsync(`DELETE FROM transactions WHERE id = ?`, [id]);
 }
 
+export async function insertInitialDebt(
+  db: SQLite.SQLiteDatabase,
+  customerId: number,
+  amount: number,
+  description: string = 'Carried forward',
+  date?: string,
+): Promise<void> {
+  const now = nowISO();
+  await db.runAsync(
+    `INSERT INTO transactions (customer_id, order_id, bill_id, type, amount, description, date, created_date, updated_at)
+     VALUES (?, NULL, NULL, 'debit', ?, ?, ?, ?, ?)`,
+    [customerId, amount, description, date ?? now, now, now],
+  );
+}
+
 export async function updatePayment(
   db: SQLite.SQLiteDatabase, transactionId: number, amount: number, description: string, date: string, billId?: number | null,
 ): Promise<void> {
