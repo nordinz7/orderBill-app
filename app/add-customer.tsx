@@ -1,14 +1,17 @@
+import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
+import { useSettings } from '@/contexts/SettingsContext';
+import { addCustomer } from '@/services/database';
+import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform,
+    Alert, KeyboardAvoidingView, Platform,
+    ScrollView,
+    StyleSheet,
+    Text, TextInput, TouchableOpacity,
+    View,
 } from 'react-native';
-import { useSQLiteContext } from 'expo-sqlite';
-import { useRouter } from 'expo-router';
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { addCustomer } from '@/services/database';
-import { useSettings } from '@/contexts/SettingsContext';
-import { AppColors, FontSizes, Spacing, Radius } from '@/constants/theme';
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
