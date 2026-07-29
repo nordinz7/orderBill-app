@@ -81,7 +81,7 @@ export default function EditOrderScreen() {
         ]);
       }
     })();
-  }, [db, params.orderId]);
+  }, [db, params.orderId, router, tr.billing, tr.cannotEditBilled]);
 
   const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);

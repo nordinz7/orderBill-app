@@ -478,7 +478,7 @@ export default function BulkPaymentsScreen() {
         colors={colors}
       />
     );
-  }, [amounts, methods, filteredCustomers, handleAmtChange, handleMethodChange, getMethodForCustomer, S, colors]);
+  }, [amounts, filteredCustomers, handleAmtChange, handleMethodChange, getMethodForCustomer, S, colors]);
 
   return (
     <KeyboardAvoidingView

@@ -39,7 +39,7 @@ function makeStyles(c: AppColors) {
 
 export default function ViewBillScreen() {
   const db = useSQLiteContext();
-  const { colors, tr, lang, companyName, companyPlace, companyPhone } = useSettings();
+  const { colors, lang, companyName, companyPlace, companyPhone } = useSettings();
   const S = makeStyles(colors);
 
   const { customerId, orderIds, billId } = useLocalSearchParams<{

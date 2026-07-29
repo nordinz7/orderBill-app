@@ -42,14 +42,12 @@ export default function ViewPaymentReceiptScreen() {
   const {
     customerName,
     customerPlace,
-    customerPhone,
     amount,
     date,
     description,
   } = useLocalSearchParams<{
     customerName: string;
     customerPlace: string;
-    customerPhone: string;
     amount: string;
     date: string;
     description: string;

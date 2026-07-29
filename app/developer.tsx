@@ -219,7 +219,7 @@ export default function DeveloperScreen() {
         },
       },
     ]);
-  }, [db, loadStats]);
+  }, [db, defaultOrderDescription, loadStats]);
 
   const resetDatabase = useCallback(() => {
     Alert.alert('⚠️ Reset Database', 'This will DELETE ALL DATA permanently. This cannot be undone.', [

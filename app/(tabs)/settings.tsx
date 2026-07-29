@@ -59,7 +59,7 @@ export default function SettingsScreen() {
 
   const [backupLoading, setBackupLoading] = useState(false);
   const [devMode, setDevMode] = useState(false);
-  const [devTapCount, setDevTapCount] = useState(0);
+  const [, setDevTapCount] = useState(0);
 
   useEffect(() => {
     AsyncStorage.getItem('@orderbill_dev_mode').then(v => { if (v === 'true') setDevMode(true); });

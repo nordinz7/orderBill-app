@@ -183,9 +183,13 @@ export default function CustomerDetailScreen() {
     setBalance(bal);
   }, [db, customerId, getDateRange]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    void load();
+  }, [load]));
 
-  useEffect(() => { load(); }, [filterPeriod]);
+  useEffect(() => {
+    void load();
+  }, [filterPeriod, load]);
 
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
 

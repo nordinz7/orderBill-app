@@ -4,7 +4,7 @@ import { useSettings } from '@/contexts/SettingsContext';
 import type { OrderWithCustomer } from '@/services/database';
 import { shareInvoiceImage } from '@/utils/whatsapp';
 import { MaterialIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -36,9 +36,8 @@ function makeStyles(c: AppColors) {
 }
 
 export default function ViewInvoiceScreen() {
-  const { colors, tr, lang, companyName, companyPlace, companyPhone } = useSettings();
+  const { colors, lang, companyName, companyPlace, companyPhone } = useSettings();
   const S = makeStyles(colors);
-  const router = useRouter();
 
   const {
     customerName,

@@ -139,7 +139,7 @@ export default function AddPaymentScreen() {
         if (found) setSelected(found);
       }
     })();
-  }, [db]);
+  }, [db, isEdit, params.customerId, params.transactionId]);
 
   const handleMethodSelect = (method: typeof PAYMENT_METHODS[number]) => {
     if (selectedMethod === method.key) {

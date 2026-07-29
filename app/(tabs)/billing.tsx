@@ -2,21 +2,20 @@ import { getBulkPaymentDraftCount } from '@/app/bulk-payments';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
-  BillItem,
-  billOrders,
-  deleteTransaction,
-  getAllTransactionsWithCustomer,
-  getCustomerBalance,
-  getCustomersWithOrders,
-  getCustomersWithUnbilledOrders,
-  getOrderIdsByBillId,
-  getTransactionsByDateRange,
-  getUnbilledOrders,
-  getUnbilledOrdersByCustomer,
-  getUnbilledOrdersByDate,
-  OrderWithCustomer,
-  TransactionWithCustomer,
-  updateBilledAmount,
+    BillItem,
+    billOrders,
+    deleteTransaction,
+    getAllTransactionsWithCustomer,
+    getCustomerBalance,
+    getCustomersWithOrders,
+    getCustomersWithUnbilledOrders,
+    getTransactionsByDateRange,
+    getUnbilledOrders,
+    getUnbilledOrdersByCustomer,
+    getUnbilledOrdersByDate,
+    OrderWithCustomer,
+    TransactionWithCustomer,
+    updateBilledAmount
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -25,18 +24,18 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Modal,
-  Platform,
-  Pressable,
-  RefreshControl,
-  SectionList,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    Modal,
+    Platform,
+    Pressable,
+    RefreshControl,
+    SectionList,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -396,8 +395,10 @@ export default function BillingScreen() {
 
   // Also load history when switching from unbilled to null/billed/payments
   useEffect(() => {
-    if (mode !== 'unbilled') loadHistory();
-  }, [mode]);
+    if (mode !== 'unbilled') {
+      void loadHistory();
+    }
+  }, [loadHistory, mode]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -613,17 +614,6 @@ export default function BillingScreen() {
     setEditingTxn(null);
     setEditAmountValue('');
     loadHistory();
-  };
-
-  const handleViewBill = async (item: TransactionWithCustomer) => {
-    if (item.bill_id) {
-      const orderIds = await getOrderIdsByBillId(db, item.bill_id);
-      if (orderIds.length > 0) {
-        router.push({ pathname: '/view-bill', params: { customerId: String(item.customer_id), orderIds: orderIds.join(','), billId: String(item.bill_id) } });
-        return;
-      }
-    }
-    router.push({ pathname: '/customer-detail', params: { id: String(item.customer_id) } });
   };
 
   const handleHistoryItemPress = (item: TransactionWithCustomer) => {
