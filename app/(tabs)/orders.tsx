@@ -309,19 +309,24 @@ export default function OrdersScreen() {
 
   const handleShareOrders = async () => {
     if (!displayed.length) return;
-    const header = selectedDate ? format(selectedDate, 'dd MMM yyyy') : tr.allOrders;
-    const lines = displayed.map((o, i) => {
-      const qty = o.quantity > 0 ? ` x${Math.round(o.quantity)}` : '';
-      const amt = o.transaction_id !== null ? ` — ${currencySymbol}${o.billed_amount}` : '';
-      return `${i + 1}. ${o.customer_name}${qty}${amt}`;
-    });
-    const text = [
-      `*${header}*`,
-      '─────────────────────',
-      ...lines,
-      '─────────────────────',
-      `${displayed.length} ${displayed.length === 1 ? tr.order : tr.orders_plural}  |  ${tr.total}: ${currencySymbol}${totalAmount}`,
-    ].join('\n');
+    const ordersByDate = new Map<string, OrderWithCustomer[]>();
+    for (const order of displayed) {
+      const date = order.date.slice(0, 10);
+      const dateOrders = ordersByDate.get(date) ?? [];
+      dateOrders.push(order);
+      ordersByDate.set(date, dateOrders);
+    }
+    const text = Array.from(ordersByDate.entries())
+      .sort(([firstDate], [secondDate]) => firstDate.localeCompare(secondDate))
+      .flatMap(([date, dateOrders]) => [
+        `*${format(new Date(`${date}T00:00:00`), 'dd MMM yyyy')}*`,
+        ...dateOrders.map(order => {
+          const description = order.description !== defaultOrderDescription ? ` - ${order.description}` : '';
+          const quantity = order.quantity > 0 ? ` (x${Math.round(order.quantity)})` : '';
+          return `${order.customer_name}${description}${quantity}`;
+        }),
+      ])
+      .join('\n');
     try {
       await Share.share({ message: text });
     } catch { /* dismissed */ }
