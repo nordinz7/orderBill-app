@@ -82,19 +82,26 @@ const StatementBill = forwardRef<View, StatementBillProps>(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 
-    // Build display rows: insert a subtotal row before each payment when 2+ orders precede it
+    // Build display rows: each payment closes the preceding group of orders.
     const displayRows: Array<
       | { kind: 'subtotal'; count: number; total: number; key: string }
       | { kind: 'txn'; txn: TransactionWithQuantity; rowIdx: number }
     > = [];
     {
-      let pOrders = 0, pTotal = 0, rowIdx = 0;
-      for (const txn of sorted) {
+      let pOrders = 0, runningTotal = 0, rowIdx = 0;
+      for (const [index, txn] of sorted.entries()) {
         if (txn.type === 'credit') {
-          if (pOrders >= 2) displayRows.push({ kind: 'subtotal', count: pOrders, total: pTotal, key: `sub-${txn.id}` });
-          pOrders = 0; pTotal = 0;
-        } else { pOrders++; pTotal += txn.amount; }
-        displayRows.push({ kind: 'txn', txn, rowIdx: rowIdx++ });
+          displayRows.push({ kind: 'txn', txn, rowIdx: rowIdx++ });
+          runningTotal -= txn.amount;
+          if (pOrders > 0 && index < sorted.length - 1) {
+            displayRows.push({ kind: 'subtotal', count: pOrders, total: runningTotal, key: `sub-${txn.id}` });
+          }
+          pOrders = 0;
+        } else {
+          pOrders++;
+          runningTotal += txn.amount;
+          displayRows.push({ kind: 'txn', txn, rowIdx: rowIdx++ });
+        }
       }
     }
 
@@ -137,7 +144,7 @@ const StatementBill = forwardRef<View, StatementBillProps>(
             return (
               <View key={row.key} style={S.subtotalRow}>
                 <Text style={[S.subtotalText, S.colDate]} />
-                <Text style={[S.subtotalText, S.colDesc]}>{L.subtotal} ({row.count})</Text>
+                <Text style={[S.subtotalText, S.colDesc]} />
                 <Text style={[S.subtotalText, S.colAmt]}>{Math.round(row.total)}</Text>
               </View>
             );
@@ -314,15 +321,14 @@ const S = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 5,
     paddingHorizontal: 12,
-    backgroundColor: NAVY_LIGHT,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: BORDER,
+    backgroundColor: '#FFFCF5',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#F3E8D5',
   },
   subtotalText: {
     fontSize: 11,
-    color: NAVY,
-    fontWeight: '700',
+    color: '#806B4D',
+    fontWeight: '600',
   },
   tdText: {
     fontSize: 12,
