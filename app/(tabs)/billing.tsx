@@ -476,8 +476,8 @@ export default function BillingScreen() {
       await loadUnbilled();
 
       // Switch to billed tab mirroring the unbilled section's filters
-      setHistoryDate(unbilledDate ?? new Date());
-      setHistoryCustomerId(byCustomer.size === 1 ? String(byCustomer.keys().next().value!) : unbilledCustomerId);
+      setHistoryDate(unbilledDate);
+      setHistoryCustomerId(unbilledCustomerId);
       setMode('billed');
     } catch {
       Alert.alert(tr.couldNotSave);
