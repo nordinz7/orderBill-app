@@ -25,28 +25,29 @@ A local-first, offline-only Android app for food business owners to manage custo
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Expo SDK 54, React Native 0.81 |
-| Language | TypeScript (strict mode) |
-| Rendering | React 19 with React Compiler |
-| Routing | Expo Router (file-based) |
-| Database | expo-sqlite (WAL mode, foreign keys) |
-| State | React Context + AsyncStorage |
-| Styling | StyleSheet.create with theme tokens |
-| Sharing | ViewShot + expo-sharing + WhatsApp deep links |
+| Layer     | Technology                                    |
+| --------- | --------------------------------------------- |
+| Framework | Expo SDK 54, React Native 0.81                |
+| Language  | TypeScript (strict mode)                      |
+| Rendering | React 19 with React Compiler                  |
+| Routing   | Expo Router (file-based)                      |
+| Database  | expo-sqlite (WAL mode, foreign keys)          |
+| State     | React Context + AsyncStorage                  |
+| Styling   | StyleSheet.create with theme tokens           |
+| Sharing   | ViewShot + expo-sharing + WhatsApp deep links |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js >= 18
+- Node.js 20.19.4 (see [.nvmrc](.nvmrc))
 - Android Studio (for emulator/local builds)
 - EAS CLI (`npm install -g eas-cli`)
 
 ### Install & Run
 
 ```bash
+nvm use
 npm install
 npm run dev          # Start Expo dev server
 ```
@@ -111,27 +112,27 @@ utils/
 
 ## Database Schema
 
-| Table | Purpose |
-|-------|---------|
-| `customers` | Customer profiles (name, place, phone) |
-| `orders` | Order records (description, quantity, date) |
-| `transactions` | Double-entry ledger (debit/credit) |
-| `statements` | Generated statement snapshots |
-| `statement_transactions` | Statement-transaction junction |
-| `bills` | Invoice grouping with bill numbers |
+| Table                    | Purpose                                     |
+| ------------------------ | ------------------------------------------- |
+| `customers`              | Customer profiles (name, place, phone)      |
+| `orders`                 | Order records (description, quantity, date) |
+| `transactions`           | Double-entry ledger (debit/credit)          |
+| `statements`             | Generated statement snapshots               |
+| `statement_transactions` | Statement-transaction junction              |
+| `bills`                  | Invoice grouping with bill numbers          |
 
 ## Configuration
 
 All settings are persisted to AsyncStorage and accessible via `useSettings()`:
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| Theme | System | Light/dark mode |
-| Language | English | `en` or `ta` |
-| Currency Symbol | `$` | Configurable in settings |
-| Company Name | My Company | Shown on invoices/statements |
-| Country Code | +91 | Phone number prefix |
-| Default Order Desc | Order | Pre-filled order description |
+| Setting            | Default    | Description                  |
+| ------------------ | ---------- | ---------------------------- |
+| Theme              | System     | Light/dark mode              |
+| Language           | English    | `en` or `ta`                 |
+| Currency Symbol    | `$`        | Configurable in settings     |
+| Company Name       | My Company | Shown on invoices/statements |
+| Country Code       | +91        | Phone number prefix          |
+| Default Order Desc | Order      | Pre-filled order description |
 
 ## Release Workflow
 
