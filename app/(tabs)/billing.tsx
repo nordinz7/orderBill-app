@@ -6,7 +6,6 @@ import {
     billOrders,
     deleteTransaction,
     getAllTransactionsWithCustomer,
-    getCustomerBalance,
     getCustomersWithOrders,
     getCustomersWithUnbilledOrders,
     getTransactionsByDateRange,
@@ -459,7 +458,6 @@ export default function BillingScreen() {
     try {
       // Group by customer
       const byCustomer = new Map<number, BillItem[]>();
-      let lastBillId = 0;
       for (const id of selectedIds) {
         const order = unbilledOrders.find(o => o.id === id);
         if (!order) continue;
@@ -469,34 +467,18 @@ export default function BillingScreen() {
       }
 
       for (const [customerId, items] of byCustomer) {
-        const result = await billOrders(db, customerId, items);
-        lastBillId = result.billId;
+        await billOrders(db, customerId, items);
       }
 
-      // Navigate for single-customer billing
-      if (byCustomer.size === 1) {
-        const customerId = byCustomer.keys().next().value!;
-        const balance = await getCustomerBalance(db, customerId);
-        // Check if there are prior transactions (balance from before this billing)
-        const billedTotal = byCustomer.get(customerId)!.reduce((s, i) => s + i.amount, 0);
-        const priorBalance = balance.balance - billedTotal;
-        if (priorBalance !== 0) {
-          // Customer has previous history — consolidated statement
-          router.push({ pathname: '/view-statement', params: { id: String(customerId) } });
-        } else {
-          // No previous history — simple invoice for these orders
-          const orderIds = byCustomer.get(customerId)!.map(i => i.orderId).join(',');
-          router.push({ pathname: '/view-bill', params: { customerId: String(customerId), orderIds, billId: String(lastBillId) } });
-        }
-      } else {
-        const totalCount = selectedIds.size;
-        Alert.alert(tr.billGenerated, tr.billGeneratedMsg(totalCount));
-      }
-
-      // Reset state
+      // Reset selection state
       setSelectedIds(new Set());
       setAmounts({});
       await loadUnbilled();
+
+      // Switch to billed tab mirroring the unbilled section's filters
+      setHistoryDate(unbilledDate ?? new Date());
+      setHistoryCustomerId(byCustomer.size === 1 ? String(byCustomer.keys().next().value!) : unbilledCustomerId);
+      setMode('billed');
     } catch {
       Alert.alert(tr.couldNotSave);
     } finally {
