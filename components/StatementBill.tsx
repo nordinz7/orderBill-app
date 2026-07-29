@@ -20,7 +20,7 @@ export interface StatementBillProps {
 
 const LABELS = {
   en: {
-    title: 'STATEMENT',
+    title: 'BILL',
     to: 'To',
     date: 'Date',
     dateCol: 'Date',
@@ -34,11 +34,12 @@ const LABELS = {
     allSettled: 'All Settled',
     thankYou: 'Thank You!',
     eoe: 'E. & O.E.',
+    subtotal: 'Subtotal',
     order: 'Order',
     payment: 'Payment',
   },
   ta: {
-    title: 'அறிக்கை',
+    title: 'பில்',
     to: 'பெறுநர்',
     date: 'தேதி',
     dateCol: 'தேதி',
@@ -52,6 +53,7 @@ const LABELS = {
     allSettled: 'தீர்வு ஆனது',
     thankYou: 'நன்றி!',
     eoe: 'E. & O.E.',
+    subtotal: 'துணை மொத்தம்',
     order: 'ஆர்டர்',
     payment: 'பணம்',
   },
@@ -79,6 +81,22 @@ const StatementBill = forwardRef<View, StatementBillProps>(
     const sorted = [...transactions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
+
+    // Build display rows: insert a subtotal row before each payment when 2+ orders precede it
+    const displayRows: Array<
+      | { kind: 'subtotal'; count: number; total: number; key: string }
+      | { kind: 'txn'; txn: TransactionWithQuantity; rowIdx: number }
+    > = [];
+    {
+      let pOrders = 0, pTotal = 0, rowIdx = 0;
+      for (const txn of sorted) {
+        if (txn.type === 'credit') {
+          if (pOrders >= 2) displayRows.push({ kind: 'subtotal', count: pOrders, total: pTotal, key: `sub-${txn.id}` });
+          pOrders = 0; pTotal = 0;
+        } else { pOrders++; pTotal += txn.amount; }
+        displayRows.push({ kind: 'txn', txn, rowIdx: rowIdx++ });
+      }
+    }
 
     return (
       <View ref={ref} style={S.container} collapsable={false}>
@@ -114,23 +132,32 @@ const StatementBill = forwardRef<View, StatementBillProps>(
         </View>
 
         {/* ─── Table Rows ──────────────────────── */}
-        {sorted.map((txn, idx) => {
-          const isDebit = txn.type === 'debit';
+        {displayRows.map(row => {
+          if (row.kind === 'subtotal') {
+            return (
+              <View key={row.key} style={S.subtotalRow}>
+                <Text style={[S.subtotalText, S.colDate]} />
+                <Text style={[S.subtotalText, S.colDesc]}>{L.subtotal} ({row.count})</Text>
+                <Text style={[S.subtotalText, S.colAmt]}>{Math.round(row.total)}</Text>
+              </View>
+            );
+          }
+          const isDebit = row.txn.type === 'debit';
           return (
             <View
-              key={txn.id}
-              style={[S.tableRow, idx % 2 === 0 ? S.rowEven : S.rowOdd]}
+              key={row.txn.id}
+              style={[S.tableRow, row.rowIdx % 2 === 0 ? S.rowEven : S.rowOdd]}
             >
               <Text style={[S.tdText, S.colDate]}>
-                {format(new Date(txn.date), 'dd/MM')}
+                {format(new Date(row.txn.date), 'dd/MM')}
               </Text>
               <Text style={[S.tdText, S.colDesc]} numberOfLines={1}>
                 {isDebit
-                  ? `${txn.description}${txn.quantity > 0 ? ` x${Math.round(txn.quantity)}` : ''}`
-                  : txn.description}
+                  ? `${row.txn.description}${row.txn.quantity > 0 ? ` x${Math.round(row.txn.quantity)}` : ''}`
+                  : row.txn.description}
               </Text>
               <Text style={[S.tdText, S.colAmt]}>
-                {isDebit ? '' : '-'}{Math.round(txn.amount)}
+                {isDebit ? '' : '-'}{Math.round(row.txn.amount)}
               </Text>
             </View>
           );
@@ -283,6 +310,20 @@ const S = StyleSheet.create({
   },
   rowEven: { backgroundColor: '#FAFAFA' },
   rowOdd: { backgroundColor: '#FFFFFF' },
+  subtotalRow: {
+    flexDirection: 'row',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    backgroundColor: NAVY_LIGHT,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: BORDER,
+  },
+  subtotalText: {
+    fontSize: 11,
+    color: NAVY,
+    fontWeight: '700',
+  },
   tdText: {
     fontSize: 12,
     color: TEXT,
