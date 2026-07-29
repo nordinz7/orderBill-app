@@ -22,6 +22,7 @@ import {
     Platform,
     Pressable,
     RefreshControl,
+    Share,
     StyleSheet,
     Text,
     TextInput,
@@ -57,12 +58,15 @@ function makeStyles(c: AppColors) {
     filterChipTextActive: { color: '#FFFFFF' },
     filterSpacer: { flex: 1 },
     summary: {
-      flexDirection: 'row', justifyContent: 'space-between',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       paddingHorizontal: Spacing.lg, paddingVertical: 6,
       backgroundColor: c.primaryLight,
     },
-    summaryText:   { fontSize: FontSizes.sm, color: c.primary, fontWeight: '600' },
-    summaryAmount: { fontSize: FontSizes.sm, color: c.primary, fontWeight: '800' },
+    summaryText:   { fontSize: FontSizes.sm, color: c.primary, fontWeight: '600', flex: 1 },
+    summaryAmount: { fontSize: FontSizes.sm, color: c.primary, fontWeight: '800', marginRight: Spacing.sm },
+    summaryShare:  { padding: 4 },
     listContent:   { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
     emptyOuter:    { flexGrow: 1 },
     card: {
@@ -303,6 +307,26 @@ export default function OrdersScreen() {
     ]);
   };
 
+  const handleShareOrders = async () => {
+    if (!displayed.length) return;
+    const header = selectedDate ? format(selectedDate, 'dd MMM yyyy') : tr.allOrders;
+    const lines = displayed.map((o, i) => {
+      const qty = o.quantity > 0 ? ` x${Math.round(o.quantity)}` : '';
+      const amt = o.transaction_id !== null ? ` — ${currencySymbol}${o.billed_amount}` : '';
+      return `${i + 1}. ${o.customer_name}${qty}${amt}`;
+    });
+    const text = [
+      `*${header}*`,
+      '─────────────────────',
+      ...lines,
+      '─────────────────────',
+      `${displayed.length} ${displayed.length === 1 ? tr.order : tr.orders_plural}  |  ${tr.total}: ${currencySymbol}${totalAmount}`,
+    ].join('\n');
+    try {
+      await Share.share({ message: text });
+    } catch { /* dismissed */ }
+  };
+
   const displayed = orders;
   const totalAmount = displayed.reduce((s, o) => s + o.billed_amount, 0);
 
@@ -426,6 +450,9 @@ export default function OrdersScreen() {
             {displayed.length} {displayed.length === 1 ? tr.order : tr.orders_plural}
           </Text>
           <Text style={S.summaryAmount}>{currencySymbol}{totalAmount}</Text>
+          <TouchableOpacity style={S.summaryShare} onPress={handleShareOrders} accessibilityLabel={tr.shareOrders}>
+            <MaterialIcons name="share" size={18} color={colors.primary} />
+          </TouchableOpacity>
         </View>
       )}
 
