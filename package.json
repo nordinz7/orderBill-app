@@ -12,7 +12,9 @@
     "build:apk": "eas build --platform android --profile preview",
     "build:apk:local": "eas build --platform android --profile preview --local",
     "build:aab": "eas build --platform android --profile production",
-    "submit": "eas submit --platform android --profile production"
+    "submit": "eas submit --platform android --profile production",
+    "version:patch": "npm version patch --no-git-tag-version && node -e \"const a=require('./app.json');a.expo.version=require('./package.json').version;require('fs').writeFileSync('./app.json',JSON.stringify(a,null,2)+'\\n')\"",
+    "version:minor": "npm version minor --no-git-tag-version && node -e \"const a=require('./app.json');a.expo.version=require('./package.json').version;require('fs').writeFileSync('./app.json',JSON.stringify(a,null,2)+'\\n')\""
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

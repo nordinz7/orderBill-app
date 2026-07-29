@@ -251,9 +251,10 @@ export default function SettingsScreen() {
         <Image source={require('@/assets/images/icon.png')} style={S.appIcon} />
         <Text style={S.appName}>{companyName || 'orderBill'}</Text>
         <Text style={S.appVersion}>v{Constants.expoConfig?.version}</Text>
-        {Constants.nativeBuildVersion ? (
-          <Text style={S.appBuild}>Build {Constants.nativeBuildVersion}</Text>
-        ) : null}
+        <Text style={S.appBuild}>
+          {Constants.nativeBuildVersion ? `Build ${Constants.nativeBuildVersion} · ` : ''}
+          {Constants.expoConfig?.extra?.gitCommit ?? 'dev'}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
