@@ -15,7 +15,7 @@ import {
     View,
 } from 'react-native';
 
-const TABLE_NAMES = ['customers', 'orders', 'transactions', 'statements', 'statement_transactions'];
+const TABLE_NAMES = ['customers', 'orders', 'transactions', 'bills'];
 
 interface TableStats { name: string; count: number }
 interface QueryResult { columns: string[]; rows: Record<string, unknown>[]; time: number; error?: string }
@@ -227,15 +227,15 @@ export default function DeveloperScreen() {
       {
         text: 'Delete Everything', style: 'destructive',
         onPress: () => {
-          Alert.alert('⚠️ Final Confirmation', 'ALL customers, orders, payments, and statements will be permanently erased.', [
+          Alert.alert('⚠️ Final Confirmation', 'ALL customers, orders, payments, and bills will be permanently erased.', [
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Yes, Reset', style: 'destructive',
               onPress: async () => {
                 try {
+                  // FK-safe order, same as the restore clear in services/database/backup.ts
                   await db.execAsync(`
-                    DELETE FROM statement_transactions;
-                    DELETE FROM statements;
+                    DELETE FROM bills;
                     DELETE FROM transactions;
                     DELETE FROM orders;
                     DELETE FROM customers;

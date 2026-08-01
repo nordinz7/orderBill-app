@@ -127,7 +127,6 @@ export async function unbillOrder(
     if (order?.transaction_id === null || order?.transaction_id === undefined) {
       throw new Error('Order is not billed');
     }
-    await db.runAsync(`DELETE FROM statement_transactions WHERE transaction_id = ?`, [order.transaction_id]);
     await db.runAsync(`DELETE FROM transactions WHERE id = ?`, [order.transaction_id]);
     await db.runAsync(`UPDATE orders SET transaction_id = NULL, amount = 0 WHERE id = ?`, [orderId]);
   });

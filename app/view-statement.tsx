@@ -7,7 +7,6 @@ import {
     getCustomerById,
     getTransactionsByCustomer,
     getTransactionsByCustomerUpToDate,
-    insertStatement,
     TransactionWithQuantity,
 } from '@/services/database';
 import { shareStatementImage } from '@/utils/whatsapp';
@@ -69,20 +68,6 @@ export default function ViewStatementScreen() {
     if (!customer || sharing) return;
     setSharing(true);
     try {
-      const earliestDate = [...transactions].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-      )[0]?.date ?? new Date().toISOString();
-
-      await insertStatement(
-        db,
-        customerId,
-        transactions.map((t) => t.id),
-        balance.totalDebit,
-        balance.totalCredit,
-        balance.balance,
-        earliestDate,
-      );
-
       if (billRef.current?.capture) {
         const uri = await billRef.current.capture();
         await shareStatementImage(uri, customer.name, lang);
@@ -92,7 +77,7 @@ export default function ViewStatementScreen() {
     } finally {
       setSharing(false);
     }
-  }, [customer, sharing, transactions, balance, db, customerId, lang]);
+  }, [customer, sharing, lang]);
 
   useEffect(() => {
     navigation.setOptions({

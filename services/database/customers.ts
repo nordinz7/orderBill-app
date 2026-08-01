@@ -115,10 +115,7 @@ export async function canDeleteCustomer(
 
 /** Delete a customer and every row referencing them, in FK-safe order. Caller provides the transaction. */
 async function deleteCustomerData(db: SQLite.SQLiteDatabase, id: number): Promise<void> {
-  await db.runAsync(`DELETE FROM bill_items WHERE bill_id IN (SELECT id FROM bills WHERE customer_id = ?)`, [id]);
   await db.runAsync(`DELETE FROM bills WHERE customer_id = ?`, [id]);
-  await db.runAsync(`DELETE FROM statement_transactions WHERE statement_id IN (SELECT id FROM statements WHERE customer_id = ?)`, [id]);
-  await db.runAsync(`DELETE FROM statements WHERE customer_id = ?`, [id]);
   await db.runAsync(`DELETE FROM transactions WHERE customer_id = ?`, [id]);
   await db.runAsync(`DELETE FROM orders WHERE customer_id = ?`, [id]);
   await db.runAsync(`DELETE FROM customers WHERE id = ?`, [id]);

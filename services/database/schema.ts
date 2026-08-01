@@ -46,30 +46,6 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   `);
 
   await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS statements (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      customer_id   INTEGER NOT NULL REFERENCES customers(id),
-      from_date     TEXT    NOT NULL,
-      to_date       TEXT    NOT NULL,
-      total_debit   REAL    NOT NULL DEFAULT 0,
-      total_credit  REAL    NOT NULL DEFAULT 0,
-      balance       REAL    NOT NULL DEFAULT 0,
-      sent_via      TEXT    NOT NULL DEFAULT '',
-      status        TEXT    NOT NULL DEFAULT 'active',
-      created_date  TEXT    NOT NULL,
-      updated_at    TEXT    NOT NULL DEFAULT ''
-    );
-  `);
-
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS statement_transactions (
-      id              INTEGER PRIMARY KEY AUTOINCREMENT,
-      statement_id    INTEGER NOT NULL REFERENCES statements(id),
-      transaction_id  INTEGER NOT NULL REFERENCES transactions(id)
-    );
-  `);
-
-  await db.execAsync(`
     CREATE TABLE IF NOT EXISTS bills (
       id               INTEGER PRIMARY KEY AUTOINCREMENT,
       bill_number      TEXT    NOT NULL UNIQUE,
@@ -86,17 +62,13 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     );
   `);
 
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS bill_items (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      bill_id     INTEGER NOT NULL REFERENCES bills(id),
-      order_id    INTEGER REFERENCES orders(id),
-      type        TEXT    NOT NULL DEFAULT 'order',
-      description TEXT    NOT NULL DEFAULT '',
-      quantity    REAL    NOT NULL DEFAULT 0,
-      amount      REAL    NOT NULL DEFAULT 0
-    );
-  `);
+  // Retired tables. bill_items was superseded by transactions rows; statements and
+  // statement_transactions were only ever written, never read. Children first so the
+  // FK checks in DROP TABLE's implicit delete pass.
+  const retiredTables = ['bill_items', 'statement_transactions', 'statements'];
+  for (const table of retiredTables) {
+    try { await db.execAsync(`DROP TABLE IF EXISTS ${table}`); } catch { /* already gone */ }
+  }
 
   // Non-destructive migrations for existing DBs — ignore errors if column exists
   const migrations = [
@@ -116,8 +88,6 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
 
   // Clean up previously soft-deleted rows (migration from status-based to hard-delete)
   try {
-    await db.execAsync(`DELETE FROM statement_transactions WHERE statement_id IN (SELECT id FROM statements WHERE status = 'deleted')`);
-    await db.execAsync(`DELETE FROM statements WHERE status = 'deleted'`);
     await db.execAsync(`DELETE FROM transactions WHERE status = 'deleted'`);
     await db.execAsync(`DELETE FROM orders WHERE status = 'deleted'`);
     await db.execAsync(`DELETE FROM customers WHERE status = 'deleted'`);

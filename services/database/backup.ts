@@ -2,28 +2,16 @@ import * as SQLite from 'expo-sqlite';
 import { Customer } from './customers';
 import { Order } from './orders';
 import { Transaction } from './payments';
-import { Statement, StatementTransaction } from './statements';
 import { Bill } from './billing';
 
-interface BackupBillItem {
-  id: number;
-  bill_id: number;
-  order_id: number | null;
-  type: string;
-  description: string;
-  quantity: number;
-  amount: number;
-}
-
 export async function getAllDataForBackup(db: SQLite.SQLiteDatabase) {
-  const customers              = await db.getAllAsync<Customer>(`SELECT * FROM customers`);
-  const orders                 = await db.getAllAsync<Order>(`SELECT * FROM orders`);
-  const transactions           = await db.getAllAsync<Transaction>(`SELECT * FROM transactions`);
-  const statements             = await db.getAllAsync<Statement>(`SELECT * FROM statements`);
-  const statement_transactions = await db.getAllAsync<StatementTransaction>(`SELECT * FROM statement_transactions`);
-  const bills                  = await db.getAllAsync<Bill>(`SELECT * FROM bills`);
-  const bill_items             = await db.getAllAsync<BackupBillItem>(`SELECT * FROM bill_items`);
-  return { customers, orders, transactions, statements, statement_transactions, bills, bill_items };
+  const [customers, orders, transactions, bills] = await Promise.all([
+    db.getAllAsync<Customer>(`SELECT * FROM customers`),
+    db.getAllAsync<Order>(`SELECT * FROM orders`),
+    db.getAllAsync<Transaction>(`SELECT * FROM transactions`),
+    db.getAllAsync<Bill>(`SELECT * FROM bills`),
+  ]);
+  return { customers, orders, transactions, bills };
 }
 
 export interface BackupPayload {
@@ -32,10 +20,7 @@ export interface BackupPayload {
   customers: Customer[];
   orders: (Order & { amount?: number })[];
   transactions?: (Transaction & { bill_id?: number | null })[];
-  statements?: Statement[];
-  statement_transactions?: StatementTransaction[];
   bills?: (Bill & { previous_balance?: number; total_amount?: number; payment_amount?: number; net_amount?: number })[];
-  bill_items?: BackupBillItem[];
 }
 
 /**
@@ -61,10 +46,7 @@ export async function restoreFromBackupData(
 ): Promise<{ customers: number; orders: number }> {
   await db.withTransactionAsync(async () => {
     // Clear all tables (respect FK ordering)
-    await db.execAsync(`DELETE FROM bill_items`);
     await db.execAsync(`DELETE FROM bills`);
-    await db.execAsync(`DELETE FROM statement_transactions`);
-    await db.execAsync(`DELETE FROM statements`);
     await db.execAsync(`DELETE FROM transactions`);
     await db.execAsync(`DELETE FROM orders`);
     await db.execAsync(`DELETE FROM customers`);
@@ -96,19 +78,6 @@ export async function restoreFromBackupData(
           [t.id, t.customer_id, t.order_id, t.bill_id ?? null, t.type, t.amount, t.description, t.date, (t as any).status ?? 'active', t.created_date, t.updated_at],
         );
       }
-      for (const s of payload.statements ?? []) {
-        await db.runAsync(
-          `INSERT INTO statements (id, customer_id, from_date, to_date, total_debit, total_credit, balance, sent_via, status, created_date, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [s.id, s.customer_id, s.from_date, s.to_date, s.total_debit, s.total_credit, s.balance, s.sent_via, (s as any).status ?? 'active', s.created_date, s.updated_at],
-        );
-      }
-      for (const st of payload.statement_transactions ?? []) {
-        await db.runAsync(
-          `INSERT INTO statement_transactions (id, statement_id, transaction_id) VALUES (?, ?, ?)`,
-          [st.id, st.statement_id, st.transaction_id],
-        );
-      }
       for (const b of payload.bills ?? []) {
         await db.runAsync(
           `INSERT INTO bills (id, bill_number, customer_id, bill_date, previous_balance, total_amount, payment_amount, net_amount, notes, status, created_date, updated_at)
@@ -116,13 +85,8 @@ export async function restoreFromBackupData(
           [b.id, b.bill_number, b.customer_id, b.bill_date, b.previous_balance ?? 0, b.total_amount ?? 0, b.payment_amount ?? 0, b.net_amount ?? 0, b.notes, (b as any).status ?? 'active', b.created_date, b.updated_at],
         );
       }
-      for (const item of payload.bill_items ?? []) {
-        await db.runAsync(
-          `INSERT INTO bill_items (id, bill_id, order_id, type, description, quantity, amount)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [item.id, item.bill_id, item.order_id, item.type, item.description, item.quantity, item.amount],
-        );
-      }
+      // bill_items, statements and statement_transactions in older backups are
+      // intentionally skipped — those tables are retired.
     } else {
       // v1 backup — retroactively create debit transactions for active orders
       for (const o of payload.orders) {
