@@ -31,6 +31,10 @@ export default function TabLayout() {
           fontSize: FontSizes.xs,
           fontWeight: '600',
         },
+        tabBarItemStyle: {
+          minHeight: 48,
+        },
+        tabBarHideOnKeyboard: true,
         headerShown: false,
         sceneStyle: { paddingTop: insets.top },
       }}

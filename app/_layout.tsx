@@ -6,10 +6,12 @@ import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { Suspense, useEffect, useRef } from 'react';
 import { ActivityIndicator, AppState, AppStateStatus, View } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InnerLayout() {
   const { colors, tr } = useSettings();
   const db = useSQLiteContext();
+  const insets = useSafeAreaInsets();
   const appState = useRef(AppState.currentState);
 
   // Auto-save local backup when app goes to background
@@ -33,7 +35,7 @@ function InnerLayout() {
           headerStyle: { backgroundColor: colors.headerBg },
           headerTintColor: colors.headerText,
           headerTitleStyle: { fontSize: 20, fontWeight: '700' },
-          contentStyle: { backgroundColor: colors.background },
+          contentStyle: { backgroundColor: colors.background, paddingBottom: insets.bottom },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -112,12 +114,14 @@ function LoadingFallback() {
 
 export default function RootLayout() {
   return (
-    <SettingsProvider>
-      <Suspense fallback={<LoadingFallback />}>
-        <SQLiteProvider databaseName="orderbill.db" onInit={initDatabase}>
-          <InnerLayout />
-        </SQLiteProvider>
-      </Suspense>
-    </SettingsProvider>
+    <SafeAreaProvider>
+      <SettingsProvider>
+        <Suspense fallback={<LoadingFallback />}>
+          <SQLiteProvider databaseName="orderbill.db" onInit={initDatabase}>
+            <InnerLayout />
+          </SQLiteProvider>
+        </Suspense>
+      </SettingsProvider>
+    </SafeAreaProvider>
   );
 }
