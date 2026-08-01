@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { Customer, getActiveCustomers, getTransactionById, insertInitialDebt, insertPayment, updatePayment } from '@/services/database';
+import { Customer, getActiveCustomers, getTransactionById, insertTransaction, updateTransaction } from '@/services/database';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -109,6 +109,10 @@ export default function AddPaymentScreen() {
   const [paymentDate, setPaymentDate]       = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving]                 = useState(false);
+
+  // A leading minus means "money owed" — the type is inferred from the amount's sign.
+  const isDebt = amount.trim().startsWith('-');
+
   const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
     if (date) setPaymentDate(date);
@@ -155,24 +159,23 @@ export default function AddPaymentScreen() {
     if (!selectedCustomer) { Alert.alert(tr.required, tr.pleaseSelectCustomer); return; }
     const num = parseFloat(amount);
     if (!amount || isNaN(num) || num === 0) { Alert.alert(tr.required, tr.enterAmount); return; }
-    const txnType = num < 0 ? 'debit' : 'credit';
+    const txnType = isDebt ? 'debit' : 'credit';
     const transactionAmount = Math.abs(num);
+    const desc = description || (isDebt ? tr.debtTransaction : tr.paymentReceived);
     setSaving(true);
     try {
       if (isEdit) {
-        await updatePayment(
+        await updateTransaction(
           db,
           Number(params.transactionId),
           selectedCustomer.id,
           txnType,
           transactionAmount,
-          description || (txnType === 'debit' ? tr.debtTransaction : tr.paymentReceived),
+          desc,
           paymentDate.toISOString(),
         );
-      } else if (txnType === 'debit') {
-        await insertInitialDebt(db, selectedCustomer.id, transactionAmount, description || tr.debtTransaction, paymentDate.toISOString());
       } else {
-        await insertPayment(db, selectedCustomer.id, transactionAmount, description || tr.paymentReceived, paymentDate.toISOString(), null);
+        await insertTransaction(db, selectedCustomer.id, txnType, transactionAmount, desc, paymentDate.toISOString());
       }
       router.back();
     } catch {
@@ -221,7 +224,7 @@ export default function AddPaymentScreen() {
             returnKeyType="next"
           />
         </View>
-        {!amount.trim().startsWith('-') && (
+        {!isDebt && (
           <View style={S.field}>
             <Text style={S.label}><MaterialIcons name="payments" size={16} color={colors.text} /> {tr.payment}</Text>
             <View style={S.methodRow}>
@@ -248,7 +251,7 @@ export default function AddPaymentScreen() {
         )}
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description}</Text>
-          <TextInput style={S.input} value={description} onChangeText={(text) => { setDescription(text); if (selectedMethod && text !== PAYMENT_METHODS.find(m => m.key === selectedMethod)?.label) setSelectedMethod(null); }} placeholder={amount.trim().startsWith('-') ? tr.debtDescPlaceholder : tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
+          <TextInput style={S.input} value={description} onChangeText={(text) => { setDescription(text); if (selectedMethod && text !== PAYMENT_METHODS.find(m => m.key === selectedMethod)?.label) setSelectedMethod(null); }} placeholder={isDebt ? tr.debtDescPlaceholder : tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
         </View>
         <TouchableOpacity style={[S.saveButton, saving && S.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
           <MaterialIcons name="payments" size={24} color="#FFFFFF" />

@@ -1,6 +1,7 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
+  confirmAndRestore,
   createAndShareBackup,
   getBackupDirectoryPath,
   getLastBackupDate,
@@ -128,51 +129,11 @@ export default function BackupScreen() {
   };
 
   const handleRestoreFromFile = () => {
-    Alert.alert(tr.restoreConfirm, tr.restoreConfirmMsg, [
-      { text: tr.cancel, style: 'cancel' },
-      {
-        text: tr.proceed,
-        style: 'destructive',
-        onPress: async () => {
-          setRestoring(true);
-          try {
-            const result = await pickAndRestoreBackup(db);
-            if (result) {
-              Alert.alert(tr.restoreSuccess, tr.restoreSuccessMsg(result.customers, result.orders));
-            }
-          } catch {
-            Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
-          } finally {
-            setRestoring(false);
-          }
-        },
-      },
-    ]);
+    confirmAndRestore(tr, setRestoring, () => pickAndRestoreBackup(db));
   };
 
-  const handleRestoreFromAutoBackup = (uri: string, dateStr: string) => {
-    Alert.alert(tr.restoreConfirm, tr.restoreConfirmMsg, [
-      { text: tr.cancel, style: 'cancel' },
-      {
-        text: tr.proceed,
-        style: 'destructive',
-        onPress: async () => {
-          setRestoring(true);
-          try {
-            const result = await restoreFromLocalBackup(db, uri);
-            if (result) {
-              Alert.alert(tr.restoreSuccess, tr.restoreSuccessMsg(result.customers, result.orders));
-            } else {
-              Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
-            }
-          } catch {
-            Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
-          } finally {
-            setRestoring(false);
-          }
-        },
-      },
-    ]);
+  const handleRestoreFromAutoBackup = (uri: string) => {
+    confirmAndRestore(tr, setRestoring, () => restoreFromLocalBackup(db, uri), { alertWhenEmpty: true });
   };
 
   const busy = loading || restoring;
@@ -226,7 +187,7 @@ export default function BackupScreen() {
               <Text style={S.backupFileName}>{bf.date}</Text>
               <TouchableOpacity
                 style={S.restoreFileBtn}
-                onPress={() => handleRestoreFromAutoBackup(bf.uri, bf.date)}
+                onPress={() => handleRestoreFromAutoBackup(bf.uri)}
                 disabled={busy}
               >
                 <Text style={S.restoreFileBtnText}>{tr.restoreButton}</Text>

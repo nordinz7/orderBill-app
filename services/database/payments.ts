@@ -117,16 +117,29 @@ export async function getCustomerBalanceForPeriod(
   );
 }
 
-export async function insertPayment(
-  db: SQLite.SQLiteDatabase, customerId: number, amount: number, description: string = 'Payment received', date?: string, billId?: number | null,
+/** Insert a ledger entry of either sign. `amount` is always positive — `type` carries the direction. */
+export async function insertTransaction(
+  db: SQLite.SQLiteDatabase,
+  customerId: number,
+  type: Transaction['type'],
+  amount: number,
+  description: string,
+  date?: string,
+  billId?: number | null,
 ): Promise<number> {
   const now = nowISO();
   const result = await db.runAsync(
     `INSERT INTO transactions (customer_id, order_id, bill_id, type, amount, description, date, created_date, updated_at)
-     VALUES (?, NULL, ?, 'credit', ?, ?, ?, ?, ?)`,
-    [customerId, billId ?? null, amount, description.trim(), date || now, now, now]
+     VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
+    [customerId, billId ?? null, type, amount, description.trim(), date || now, now, now]
   );
   return result.lastInsertRowId;
+}
+
+export async function insertPayment(
+  db: SQLite.SQLiteDatabase, customerId: number, amount: number, description: string = 'Payment received', date?: string, billId?: number | null,
+): Promise<number> {
+  return insertTransaction(db, customerId, 'credit', amount, description, date, billId);
 }
 
 export async function bulkInsertPayments(
@@ -158,15 +171,11 @@ export async function insertInitialDebt(
   description: string = 'Carried forward',
   date?: string,
 ): Promise<void> {
-  const now = nowISO();
-  await db.runAsync(
-    `INSERT INTO transactions (customer_id, order_id, bill_id, type, amount, description, date, created_date, updated_at)
-     VALUES (?, NULL, NULL, 'debit', ?, ?, ?, ?, ?)`,
-    [customerId, amount, description, date ?? now, now, now],
-  );
+  await insertTransaction(db, customerId, 'debit', amount, description, date);
 }
 
-export async function updatePayment(
+/** Update a ledger entry in place. `bill_id` and `order_id` are left untouched. */
+export async function updateTransaction(
   db: SQLite.SQLiteDatabase,
   transactionId: number,
   customerId: number,
@@ -174,14 +183,12 @@ export async function updatePayment(
   amount: number,
   description: string,
   date: string,
-  billId?: number | null,
 ): Promise<void> {
   await db.runAsync(
     `UPDATE transactions
-     SET customer_id = ?, type = ?, amount = ?, description = ?, date = ?,
-         bill_id = COALESCE(?, bill_id), updated_at = ?
+     SET customer_id = ?, type = ?, amount = ?, description = ?, date = ?, updated_at = ?
      WHERE id = ?`,
-    [customerId, type, amount, description.trim(), date, billId ?? null, nowISO(), transactionId]
+    [customerId, type, amount, description.trim(), date, nowISO(), transactionId]
   );
 }
 

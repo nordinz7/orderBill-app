@@ -316,8 +316,6 @@ const en = {
   payments_plural: 'payments',
   // Debt transaction (add-payment)
   debtTransaction: 'Debt',
-  recordDebt: 'Record Debt',
-  transactionType: 'Type',
   debtDescPlaceholder: 'e.g. Goods on credit',
   // Share orders
   shareOrders: 'Share',
@@ -627,14 +625,14 @@ const ta: typeof en = {
   payments_plural: 'பணங்கள்',
   // Debt transaction (add-payment)
   debtTransaction: 'கடன்',
-  recordDebt: 'கடன் பதிவு செய்',
-  transactionType: 'வகை',
   debtDescPlaceholder: 'எ.கா. கடனில் பொருட்கள்',
   // Share orders
   shareOrders: 'பகிர்',
 };
 
 export const translations = { en, ta };
+
+export type Translations = typeof en;
 
 export function t(lang: Lang, key: keyof typeof en): typeof en[typeof key] {
   return translations[lang][key];

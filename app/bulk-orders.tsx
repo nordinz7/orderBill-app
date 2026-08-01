@@ -1,6 +1,7 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import { bulkAddOrders, Customer, getActiveCustomers } from '@/services/database';
+import { promptAddFirstCustomer } from '@/utils/customers';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -255,10 +256,7 @@ export default function BulkOrdersScreen() {
       setCustomers(custs);
       if (custs.length === 0) {
         setHasNoCustomers(true);
-        Alert.alert(tr.noCustomersYet, tr.tapToAdd, [
-          { text: tr.cancel, style: 'cancel', onPress: () => router.back() },
-          { text: tr.addCustomer, onPress: () => router.replace('/add-customer') },
-        ]);
+        promptAddFirstCustomer(tr, router);
         return;
       }
       if (draft) {
@@ -273,7 +271,7 @@ export default function BulkOrdersScreen() {
       }
       setDraftLoaded(true);
     })();
-  }, [db, router, tr.addCustomer, tr.cancel, tr.noCustomersYet, tr.tapToAdd]);
+  }, [db, router, tr]);
 
   // Auto-save draft on every change (debounced via effect)
   const persistDraft = useCallback(() => {

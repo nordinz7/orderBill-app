@@ -6,7 +6,7 @@ import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { Suspense, useEffect, useRef } from 'react';
 import { ActivityIndicator, AppState, AppStateStatus, View } from 'react-native';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InnerLayout() {
   const { colors, tr } = useSettings();
@@ -27,6 +27,9 @@ function InnerLayout() {
     return () => sub.remove();
   }, [db]);
 
+  // The tab bar already sits above the bottom inset, so only stack screens pad for it.
+  const contentStyle = { backgroundColor: colors.background };
+
   return (
     <>
       <StatusBar style={colors.statusBar} backgroundColor={colors.headerBg} />
@@ -35,16 +38,10 @@ function InnerLayout() {
           headerStyle: { backgroundColor: colors.headerBg },
           headerTintColor: colors.headerText,
           headerTitleStyle: { fontSize: 20, fontWeight: '700' },
-          contentStyle: { backgroundColor: colors.background, paddingBottom: insets.bottom },
+          contentStyle: { ...contentStyle, paddingBottom: insets.bottom },
         }}
       >
-        <Stack.Screen
-          name="(tabs)"
-          options={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle }} />
         <Stack.Screen
           name="add-customer"
           options={{ title: tr.addCustomer, presentation: 'modal', animation: 'slide_from_bottom' }}
@@ -119,15 +116,14 @@ function LoadingFallback() {
 }
 
 export default function RootLayout() {
+  // expo-router already wraps the navigator in a SafeAreaProvider.
   return (
-    <SafeAreaProvider>
-      <SettingsProvider>
-        <Suspense fallback={<LoadingFallback />}>
-          <SQLiteProvider databaseName="orderbill.db" onInit={initDatabase}>
-            <InnerLayout />
-          </SQLiteProvider>
-        </Suspense>
-      </SettingsProvider>
-    </SafeAreaProvider>
+    <SettingsProvider>
+      <Suspense fallback={<LoadingFallback />}>
+        <SQLiteProvider databaseName="orderbill.db" onInit={initDatabase}>
+          <InnerLayout />
+        </SQLiteProvider>
+      </Suspense>
+    </SettingsProvider>
   );
 }

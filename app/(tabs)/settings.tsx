@@ -1,7 +1,7 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { Lang } from '@/constants/translations';
 import { useSettings } from '@/contexts/SettingsContext';
-import { createAndShareBackup, pickAndRestoreBackup } from '@/utils/backup';
+import { confirmAndRestore, createAndShareBackup, pickAndRestoreBackup } from '@/utils/backup';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
@@ -78,29 +78,10 @@ export default function SettingsScreen() {
   };
 
   const handleImportBackup = () => {
-    Alert.alert(tr.restoreConfirm, tr.restoreConfirmMsg, [
-      { text: tr.cancel, style: 'cancel' },
-      {
-        text: tr.proceed,
-        style: 'destructive',
-        onPress: async () => {
-          setRestoreLoading(true);
-          try {
-            const result = await pickAndRestoreBackup(db);
-            if (result) {
-              Alert.alert(tr.restoreSuccess, tr.restoreSuccessMsg(result.customers, result.orders));
-            }
-          } catch {
-            Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
-          } finally {
-            setRestoreLoading(false);
-          }
-        },
-      },
-    ]);
+    confirmAndRestore(tr, setRestoreLoading, () => pickAndRestoreBackup(db));
   };
 
-
+  const busy = backupLoading || restoreLoading;
 
   const handleDevTap = useCallback(() => {
     setDevTapCount(prev => {
@@ -241,7 +222,7 @@ export default function SettingsScreen() {
       <View style={S.section}>
         <Text style={S.sectionTitle}>{tr.backup}</Text>
         <View style={S.card}>
-          <TouchableOpacity style={S.row} onPress={handleSaveBackup} disabled={backupLoading || restoreLoading}>
+          <TouchableOpacity style={S.row} onPress={handleSaveBackup} disabled={busy}>
             <MaterialIcons name="save" size={24} color={colors.primary} style={S.rowIcon} />
             <Text style={S.rowLabel}>{tr.saveBackup}</Text>
             {backupLoading
@@ -249,7 +230,7 @@ export default function SettingsScreen() {
               : <MaterialIcons name="chevron-right" size={22} color={colors.textMuted} />
             }
           </TouchableOpacity>
-          <TouchableOpacity style={[S.row, S.rowLast]} onPress={handleImportBackup} disabled={backupLoading || restoreLoading}>
+          <TouchableOpacity style={[S.row, S.rowLast]} onPress={handleImportBackup} disabled={busy}>
             <MaterialIcons name="file-upload" size={24} color={colors.primary} style={S.rowIcon} />
             <Text style={S.rowLabel}>{tr.importBackup}</Text>
             {restoreLoading

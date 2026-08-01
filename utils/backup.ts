@@ -1,3 +1,4 @@
+import type { Translations } from '@/constants/translations';
 import { getAllDataForBackup, isValidBackup, restoreFromBackupData } from '@/services/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { differenceInDays, format } from 'date-fns';
@@ -19,6 +20,18 @@ export function getBackupDirectoryPath(): string {
   return fullUri.replace('/__probe__', '');
 }
 const MAX_ROLLING_BACKUPS = 5;
+
+/**
+ * Builds the versioned backup payload. Table keys come straight from
+ * getAllDataForBackup, so a new table only has to be added there.
+ */
+async function buildBackupPayload(db: SQLiteDatabase) {
+  return {
+    exportedAt: new Date().toISOString(),
+    version: 2,
+    ...(await getAllDataForBackup(db)),
+  };
+}
 
 // ─── Persistence helpers ──────────────────────────────────────────────────────
 
@@ -92,19 +105,9 @@ export async function saveLocalBackup(db: SQLiteDatabase): Promise<void> {
     // Skip if already backed up today
     if (lastDate === today) return;
 
-    const data = await getAllDataForBackup(db);
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      version: 2,
-      customers: data.customers,
-      orders: data.orders,
-      transactions: data.transactions,
-      statements: data.statements,
-      statement_transactions: data.statement_transactions,
-      bills: data.bills,
-      bill_items: data.bill_items,
-    };
-    const json = JSON.stringify(payload, null, 2);
+    // Not pretty-printed: this file is only ever read back by JSON.parse, and the
+    // write happens on the app-startup / backgrounding path.
+    const json = JSON.stringify(await buildBackupPayload(db));
     const file = new File(Paths.document, getRollingFilename(new Date()));
     file.write(json);
 
@@ -149,21 +152,7 @@ export async function restoreFromLocalBackup(
 export async function createBackupFile(
   db: SQLiteDatabase,
 ): Promise<{ uri: string; fileName: string }> {
-  const data = await getAllDataForBackup(db);
-
-  const payload = {
-    exportedAt: new Date().toISOString(),
-    version: 2,
-    customers: data.customers,
-    orders: data.orders,
-    transactions: data.transactions,
-    statements: data.statements,
-    statement_transactions: data.statement_transactions,
-    bills: data.bills,
-    bill_items: data.bill_items,
-  };
-
-  const json = JSON.stringify(payload, null, 2);
+  const json = JSON.stringify(await buildBackupPayload(db), null, 2);
   const dateStamp = format(new Date(), 'yyyy-MM-dd_HHmm');
   const fileName = `backup-${dateStamp}.json`;
 
@@ -232,4 +221,39 @@ export async function pickAndRestoreBackup(
   }
 
   return restoreFromBackupData(db, parsed);
+}
+
+/**
+ * Shared "this replaces all your data" confirmation around a restore action.
+ * `restore` returns null when nothing was restored (e.g. the user cancelled the
+ * file picker) — set `alertWhenEmpty` when null means failure rather than cancel.
+ */
+export function confirmAndRestore(
+  tr: Translations,
+  setBusy: (busy: boolean) => void,
+  restore: () => Promise<{ customers: number; orders: number } | null>,
+  options?: { alertWhenEmpty?: boolean },
+): void {
+  Alert.alert(tr.restoreConfirm, tr.restoreConfirmMsg, [
+    { text: tr.cancel, style: 'cancel' },
+    {
+      text: tr.proceed,
+      style: 'destructive',
+      onPress: async () => {
+        setBusy(true);
+        try {
+          const result = await restore();
+          if (result) {
+            Alert.alert(tr.restoreSuccess, tr.restoreSuccessMsg(result.customers, result.orders));
+          } else if (options?.alertWhenEmpty) {
+            Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
+          }
+        } catch {
+          Alert.alert(tr.restoreFailed, tr.restoreFailedMsg);
+        } finally {
+          setBusy(false);
+        }
+      },
+    },
+  ]);
 }
