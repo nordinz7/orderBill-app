@@ -167,11 +167,21 @@ export async function insertInitialDebt(
 }
 
 export async function updatePayment(
-  db: SQLite.SQLiteDatabase, transactionId: number, amount: number, description: string, date: string, billId?: number | null,
+  db: SQLite.SQLiteDatabase,
+  transactionId: number,
+  customerId: number,
+  type: Transaction['type'],
+  amount: number,
+  description: string,
+  date: string,
+  billId?: number | null,
 ): Promise<void> {
   await db.runAsync(
-    `UPDATE transactions SET amount = ?, description = ?, date = ?, bill_id = ?, updated_at = ? WHERE id = ?`,
-    [amount, description.trim(), date, billId ?? null, nowISO(), transactionId]
+    `UPDATE transactions
+     SET customer_id = ?, type = ?, amount = ?, description = ?, date = ?,
+         bill_id = COALESCE(?, bill_id), updated_at = ?
+     WHERE id = ?`,
+    [customerId, type, amount, description.trim(), date, billId ?? null, nowISO(), transactionId]
   );
 }
 
