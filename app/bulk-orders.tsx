@@ -9,15 +9,15 @@ import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -242,6 +242,7 @@ export default function BulkOrdersScreen() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [hasNoCustomers, setHasNoCustomers] = useState(false);
   const inputRefs = useRef<Record<number, TextInput | null>>({});
 
   // Load customers + restore draft
@@ -252,6 +253,14 @@ export default function BulkOrdersScreen() {
         loadDraft(),
       ]);
       setCustomers(custs);
+      if (custs.length === 0) {
+        setHasNoCustomers(true);
+        Alert.alert(tr.noCustomersYet, tr.tapToAdd, [
+          { text: tr.cancel, style: 'cancel', onPress: () => router.back() },
+          { text: tr.addCustomer, onPress: () => router.replace('/add-customer') },
+        ]);
+        return;
+      }
       if (draft) {
         // Convert string keys back to number keys
         const restored: Record<number, string> = {};
@@ -264,7 +273,7 @@ export default function BulkOrdersScreen() {
       }
       setDraftLoaded(true);
     })();
-  }, [db]);
+  }, [db, router, tr.addCustomer, tr.cancel, tr.noCustomersYet, tr.tapToAdd]);
 
   // Auto-save draft on every change (debounced via effect)
   const persistDraft = useCallback(() => {
@@ -382,6 +391,8 @@ export default function BulkOrdersScreen() {
       />
     );
   }, [quantities, filteredCustomers, handleQtyChange, S, colors.textMuted]);
+
+  if (hasNoCustomers) return null;
 
   return (
     <KeyboardAvoidingView

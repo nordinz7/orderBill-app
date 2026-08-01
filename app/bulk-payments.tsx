@@ -309,6 +309,7 @@ export default function BulkPaymentsScreen() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [hasNoCustomers, setHasNoCustomers] = useState(false);
   const inputRefs = useRef<Record<number, TextInput | null>>({});
 
   // Load customers + restore draft
@@ -319,6 +320,14 @@ export default function BulkPaymentsScreen() {
         loadDraft(),
       ]);
       setCustomers(custs);
+      if (custs.length === 0) {
+        setHasNoCustomers(true);
+        Alert.alert(tr.noCustomersYet, tr.tapToAdd, [
+          { text: tr.cancel, style: 'cancel', onPress: () => router.back() },
+          { text: tr.addCustomer, onPress: () => router.replace('/add-customer') },
+        ]);
+        return;
+      }
       if (draft) {
         const restoredAmounts: Record<number, string> = {};
         for (const [k, v] of Object.entries(draft.amounts)) {
@@ -336,7 +345,7 @@ export default function BulkPaymentsScreen() {
       }
       setDraftLoaded(true);
     })();
-  }, [db]);
+  }, [db, router, tr.addCustomer, tr.cancel, tr.noCustomersYet, tr.tapToAdd]);
 
   // Auto-save draft on every change
   const persistDraft = useCallback(() => {
@@ -479,6 +488,8 @@ export default function BulkPaymentsScreen() {
       />
     );
   }, [amounts, filteredCustomers, handleAmtChange, handleMethodChange, getMethodForCustomer, S, colors]);
+
+  if (hasNoCustomers) return null;
 
   return (
     <KeyboardAvoidingView
