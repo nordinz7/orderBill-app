@@ -38,7 +38,13 @@ function InnerLayout() {
           contentStyle: { backgroundColor: colors.background, paddingBottom: insets.bottom },
         }}
       >
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        />
         <Stack.Screen
           name="add-customer"
           options={{ title: tr.addCustomer, presentation: 'modal', animation: 'slide_from_bottom' }}
