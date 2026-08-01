@@ -5,6 +5,16 @@ import { Transaction } from './payments';
 import { Statement, StatementTransaction } from './statements';
 import { Bill } from './billing';
 
+interface BackupBillItem {
+  id: number;
+  bill_id: number;
+  order_id: number | null;
+  type: string;
+  description: string;
+  quantity: number;
+  amount: number;
+}
+
 export async function getAllDataForBackup(db: SQLite.SQLiteDatabase) {
   const customers              = await db.getAllAsync<Customer>(`SELECT * FROM customers`);
   const orders                 = await db.getAllAsync<Order>(`SELECT * FROM orders`);
@@ -12,7 +22,8 @@ export async function getAllDataForBackup(db: SQLite.SQLiteDatabase) {
   const statements             = await db.getAllAsync<Statement>(`SELECT * FROM statements`);
   const statement_transactions = await db.getAllAsync<StatementTransaction>(`SELECT * FROM statement_transactions`);
   const bills                  = await db.getAllAsync<Bill>(`SELECT * FROM bills`);
-  return { customers, orders, transactions, statements, statement_transactions, bills };
+  const bill_items             = await db.getAllAsync<BackupBillItem>(`SELECT * FROM bill_items`);
+  return { customers, orders, transactions, statements, statement_transactions, bills, bill_items };
 }
 
 export interface BackupPayload {
@@ -24,6 +35,7 @@ export interface BackupPayload {
   statements?: Statement[];
   statement_transactions?: StatementTransaction[];
   bills?: (Bill & { previous_balance?: number; total_amount?: number; payment_amount?: number; net_amount?: number })[];
+  bill_items?: BackupBillItem[];
 }
 
 /**
@@ -102,6 +114,13 @@ export async function restoreFromBackupData(
           `INSERT INTO bills (id, bill_number, customer_id, bill_date, previous_balance, total_amount, payment_amount, net_amount, notes, status, created_date, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [b.id, b.bill_number, b.customer_id, b.bill_date, b.previous_balance ?? 0, b.total_amount ?? 0, b.payment_amount ?? 0, b.net_amount ?? 0, b.notes, (b as any).status ?? 'active', b.created_date, b.updated_at],
+        );
+      }
+      for (const item of payload.bill_items ?? []) {
+        await db.runAsync(
+          `INSERT INTO bill_items (id, bill_id, order_id, type, description, quantity, amount)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [item.id, item.bill_id, item.order_id, item.type, item.description, item.quantity, item.amount],
         );
       }
     } else {

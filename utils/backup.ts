@@ -101,6 +101,8 @@ export async function saveLocalBackup(db: SQLiteDatabase): Promise<void> {
       transactions: data.transactions,
       statements: data.statements,
       statement_transactions: data.statement_transactions,
+      bills: data.bills,
+      bill_items: data.bill_items,
     };
     const json = JSON.stringify(payload, null, 2);
     const file = new File(Paths.document, getRollingFilename(new Date()));
@@ -157,6 +159,8 @@ export async function createBackupFile(
     transactions: data.transactions,
     statements: data.statements,
     statement_transactions: data.statement_transactions,
+    bills: data.bills,
+    bill_items: data.bill_items,
   };
 
   const json = JSON.stringify(payload, null, 2);
