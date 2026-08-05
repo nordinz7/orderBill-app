@@ -18,7 +18,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
     Alert,
     FlatList,
-    Modal,
     Platform,
     Pressable,
     RefreshControl,
@@ -29,10 +28,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import KeyboardModal from '@/components/KeyboardModal';
 
 interface DropdownItem { id: string; label: string }
 
-function makeStyles(c: AppColors) {
+function makeStyles(c: AppColors, bottomInset: number) {
   return StyleSheet.create({
     container:    { flex: 1, backgroundColor: c.background },
     filterRow: {
@@ -148,7 +149,7 @@ function makeStyles(c: AppColors) {
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       maxHeight: '60%',
-      paddingBottom: 30,
+      paddingBottom: bottomInset + Spacing.lg,
     },
     modalHeader: {
       flexDirection: 'row',
@@ -200,7 +201,8 @@ export default function OrdersScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ filterDate?: string }>();
   const { colors, tr, defaultOrderDescription, currencySymbol } = useSettings();
-  const S = makeStyles(colors);
+  const insets = useSafeAreaInsets();
+  const S = makeStyles(colors, insets.bottom);
 
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
@@ -490,7 +492,7 @@ export default function OrdersScreen() {
       </TouchableOpacity>
 
       {/* Customer picker modal with search */}
-      <Modal visible={showCustomerModal} transparent animationType="slide" onRequestClose={() => { setShowCustomerModal(false); setCustomerSearch(''); }}>
+      <KeyboardModal visible={showCustomerModal} onRequestClose={() => { setShowCustomerModal(false); setCustomerSearch(''); }}>
         <Pressable style={S.modalOverlay} onPress={() => { setShowCustomerModal(false); setCustomerSearch(''); }}>
           <Pressable style={S.modalContent} onPress={() => {}}>
             <View style={S.modalHeader}>
@@ -530,7 +532,7 @@ export default function OrdersScreen() {
             />
           </Pressable>
         </Pressable>
-      </Modal>
+      </KeyboardModal>
     </View>
   );
 }

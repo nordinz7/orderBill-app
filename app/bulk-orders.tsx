@@ -12,7 +12,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     Alert,
     FlatList,
-    KeyboardAvoidingView,
     Platform,
     StyleSheet,
     Text,
@@ -20,7 +19,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import KeyboardScreen from '@/components/KeyboardScreen';
 
 const DRAFT_KEY = '@orderbill_bulk_draft';
 
@@ -232,7 +231,6 @@ export default function BulkOrdersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { colors, tr, defaultOrderDescription } = useSettings();
-  const insets = useSafeAreaInsets();
   const S = makeStyles(colors);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -393,10 +391,7 @@ export default function BulkOrdersScreen() {
   if (hasNoCustomers) return null;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardScreen>
       <View style={S.container}>
         {/* Header: date + description + search */}
         <View style={S.header}>
@@ -465,8 +460,10 @@ export default function BulkOrdersScreen() {
           }
         />
 
-        {/* Footer: Draft + Clear + Finalize */}
-        <View style={[S.footer, { paddingBottom: Math.max(Spacing.lg, insets.bottom + Spacing.sm) }]}>
+        {/* Footer: Draft + Clear + Finalize.
+            The stack already pads the screen by the bottom safe-area inset, so
+            adding it again here would double-count the navigation bar. */}
+        <View style={S.footer}>
           <View style={S.footerRow}>
             <TouchableOpacity style={S.draftButton} onPress={handleSaveDraft}>
               <MaterialIcons name="save" size={20} color={colors.text} />
@@ -490,6 +487,6 @@ export default function BulkOrdersScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardScreen>
   );
 }

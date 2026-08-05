@@ -319,6 +319,23 @@ const en = {
   debtDescPlaceholder: 'e.g. Goods on credit',
   // Share orders
   shareOrders: 'Share',
+  // Export statement images
+  exportStatementImages: 'Export',
+  exportConfirm: 'Export Statements?',
+  exportConfirmMsg: (count: number, date: string) =>
+    `Save ${count} statement image${count === 1 ? '' : 's'} as of ${date} into a folder on this phone?`,
+  exportProgress: (done: number, total: number) => `Saving ${done + 1} of ${total}…`,
+  exportDone: 'Statements Saved',
+  exportDoneMsg: (count: number, folder: string) => `${count} image${count === 1 ? '' : 's'} saved to ${folder}.`,
+  exportPartialMsg: (saved: number, failed: number, folder: string) =>
+    `${saved} image${saved === 1 ? '' : 's'} saved to ${folder}. ${failed} could not be saved.`,
+  exportNothing: 'Nothing to Export',
+  exportNothingMsg: 'No customers match the current filter. Adjust the date or customer filter and try again.',
+  exportFailed: 'Export Failed',
+  exportFailedMsg: 'Could not save the statements. Please try again.',
+  exportFolderFailedMsg: 'Could not open the folder picker. Please try again.',
+  exportFolderLostMsg: 'The saved folder is no longer available. Please choose a folder again.',
+  exportAndroidOnly: 'Saving to a folder is only available on Android.',
 };
 
 const ta: typeof en = {
@@ -628,6 +645,23 @@ const ta: typeof en = {
   debtDescPlaceholder: 'எ.கா. கடனில் பொருட்கள்',
   // Share orders
   shareOrders: 'பகிர்',
+  // Export statement images
+  exportStatementImages: 'ஏற்றுமதி',
+  exportConfirm: 'கணக்கு அறிக்கைகளை ஏற்றுமதி செய்யவா?',
+  exportConfirmMsg: (count: number, date: string) =>
+    `${date} தேதி வரையிலான ${count} கணக்கு அறிக்கை படங்களை இந்த ஃபோனில் ஒரு கோப்புறையில் சேமிக்கவா?`,
+  exportProgress: (done: number, total: number) => `${total}-ல் ${done + 1} சேமிக்கிறது…`,
+  exportDone: 'கணக்கு அறிக்கைகள் சேமிக்கப்பட்டன',
+  exportDoneMsg: (count: number, folder: string) => `${count} படம் ${folder} கோப்புறையில் சேமிக்கப்பட்டது.`,
+  exportPartialMsg: (saved: number, failed: number, folder: string) =>
+    `${saved} படம் ${folder} கோப்புறையில் சேமிக்கப்பட்டது. ${failed} சேமிக்க முடியவில்லை.`,
+  exportNothing: 'ஏற்றுமதி செய்ய எதுவும் இல்லை',
+  exportNothingMsg: 'தற்போதைய வடிகட்டலுக்கு வாடிக்கையாளர் யாரும் இல்லை. தேதி அல்லது வாடிக்கையாளர் வடிகட்டலை மாற்றி முயற்சிக்கவும்.',
+  exportFailed: 'ஏற்றுமதி தோல்வி',
+  exportFailedMsg: 'கணக்கு அறிக்கைகளைச் சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
+  exportFolderFailedMsg: 'கோப்புறை தேர்வுத் திரையைத் திறக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.',
+  exportFolderLostMsg: 'சேமித்த கோப்புறை இப்போது கிடைக்கவில்லை. கோப்புறையை மீண்டும் தேர்ந்தெடுக்கவும்.',
+  exportAndroidOnly: 'கோப்புறையில் சேமிக்கும் வசதி Android-ல் மட்டுமே கிடைக்கும்.',
 };
 
 export const translations = { en, ta };

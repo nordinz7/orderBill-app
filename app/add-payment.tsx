@@ -1,3 +1,5 @@
+import KeyboardModal from '@/components/KeyboardModal';
+import KeyboardScrollView from '@/components/KeyboardScrollView';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import { Customer, getActiveCustomers, getTransactionById, insertTransaction, updateTransaction } from '@/services/database';
@@ -10,14 +12,12 @@ import { useEffect, useState } from 'react';
 import {
     Alert,
     FlatList,
-    KeyboardAvoidingView,
-    Modal,
     Platform,
-    ScrollView,
     StyleSheet,
     Text, TextInput, TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const PAYMENT_METHODS = [
   { key: 'cash', label: 'Cash', icon: 'cash' as const },
@@ -27,7 +27,7 @@ const PAYMENT_METHODS = [
   { key: 'cheque', label: 'Cheque', icon: 'checkbook' as const },
 ];
 
-function makeStyles(c: AppColors) {
+function makeStyles(c: AppColors, bottomInset: number) {
   return StyleSheet.create({
     container:          { flex: 1, backgroundColor: c.background },
     scrollContent:      { padding: Spacing.xl, gap: Spacing.lg },
@@ -54,7 +54,7 @@ function makeStyles(c: AppColors) {
     saveButtonDisabled: { opacity: 0.6 },
     saveButtonText:     { color: '#FFFFFF', fontSize: FontSizes.xl, fontWeight: '700' },
     modalOverlay:       { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
-    modalContent:       { backgroundColor: c.card, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, paddingBottom: 32, maxHeight: '75%' },
+    modalContent:       { backgroundColor: c.card, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, paddingBottom: bottomInset + Spacing.lg, maxHeight: '75%' },
     modalHeader:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.xl, borderBottomWidth: 1, borderBottomColor: c.border },
     modalTitle:         { fontSize: FontSizes.xl, fontWeight: '700', color: c.text },
     customerOption:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.xl, borderBottomWidth: 1, borderBottomColor: c.separator },
@@ -96,7 +96,8 @@ export default function AddPaymentScreen() {
   const params = useLocalSearchParams<{ customerId?: string; customerName?: string; customerPlace?: string; transactionId?: string }>();
   const navigation = useNavigation();
   const { colors, tr } = useSettings();
-  const S = makeStyles(colors);
+  const insets = useSafeAreaInsets();
+  const S = makeStyles(colors, insets.bottom);
   const isEdit = !!params.transactionId;
 
   const [customers, setCustomers]           = useState<Customer[]>([]);
@@ -184,8 +185,8 @@ export default function AddPaymentScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={S.container} contentContainerStyle={S.scrollContent} keyboardShouldPersistTaps="handled">
+    <View style={S.container}>
+      <KeyboardScrollView contentContainerStyle={S.scrollContent}>
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="person" size={16} color={colors.text} /> {tr.customers} *</Text>
           <TouchableOpacity style={S.pickerButton} onPress={() => setShowPicker(true)}>
@@ -257,9 +258,9 @@ export default function AddPaymentScreen() {
           <MaterialIcons name="payments" size={24} color="#FFFFFF" />
           <Text style={S.saveButtonText}>{saving ? tr.saving : isEdit ? tr.saveChanges : tr.recordPayment}</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardScrollView>
 
-      <Modal visible={showPicker} animationType="slide" transparent onRequestClose={() => { setShowPicker(false); setCustomerSearch(''); }}>
+      <KeyboardModal visible={showPicker} onRequestClose={() => { setShowPicker(false); setCustomerSearch(''); }}>
         <View style={S.modalOverlay}>
           <View style={S.modalContent}>
             <View style={S.modalHeader}>
@@ -305,7 +306,7 @@ export default function AddPaymentScreen() {
             )}
           </View>
         </View>
-      </Modal>
-    </KeyboardAvoidingView>
+      </KeyboardModal>
+    </View>
   );
 }

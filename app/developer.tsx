@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import KeyboardScrollView from '@/components/KeyboardScrollView';
 
 const TABLE_NAMES = ['customers', 'orders', 'transactions', 'bills'];
 
@@ -254,7 +255,7 @@ export default function DeveloperScreen() {
   }, [db, loadStats]);
 
   return (
-    <ScrollView style={S.container} contentContainerStyle={S.scrollContent} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={S.container} contentContainerStyle={S.scrollContent}>
       {/* Database Stats */}
       <View style={S.section}>
         <View style={S.sectionHeader}>
@@ -388,6 +389,6 @@ export default function DeveloperScreen() {
           <Text style={S.dangerBtnText}>Reset Entire Database</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </KeyboardScrollView>
   );
 }

@@ -8,7 +8,8 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import KeyboardScrollView from '@/components/KeyboardScrollView';
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
@@ -105,7 +106,7 @@ export default function SettingsScreen() {
   }, [tr]);
 
   return (
-    <ScrollView style={S.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <KeyboardScrollView style={S.container} contentContainerStyle={{ paddingBottom: 40 }}>
       {/* General — theme + language */}
       <View style={S.section}>
         <Text style={S.sectionTitle}>{tr.appSettings}</Text>
@@ -269,6 +270,6 @@ export default function SettingsScreen() {
           {Constants.expoConfig?.extra?.gitCommit ?? 'dev'}
         </Text>
       </TouchableOpacity>
-    </ScrollView>
+    </KeyboardScrollView>
   );
 }

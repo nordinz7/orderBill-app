@@ -6,6 +6,7 @@ import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { Suspense, useEffect, useRef } from 'react';
 import { ActivityIndicator, AppState, AppStateStatus, View } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InnerLayout() {
@@ -13,6 +14,7 @@ function InnerLayout() {
   const db = useSQLiteContext();
   const insets = useSafeAreaInsets();
   const appState = useRef(AppState.currentState);
+
 
   // Auto-save local backup when app goes to background
   useEffect(() => {
@@ -118,12 +120,14 @@ function LoadingFallback() {
 export default function RootLayout() {
   // expo-router already wraps the navigator in a SafeAreaProvider.
   return (
-    <SettingsProvider>
-      <Suspense fallback={<LoadingFallback />}>
-        <SQLiteProvider databaseName="orderbill.db" onInit={initDatabase}>
-          <InnerLayout />
-        </SQLiteProvider>
-      </Suspense>
-    </SettingsProvider>
+    <KeyboardProvider>
+      <SettingsProvider>
+        <Suspense fallback={<LoadingFallback />}>
+          <SQLiteProvider databaseName="orderbill.db" onInit={initDatabase}>
+            <InnerLayout />
+          </SQLiteProvider>
+        </Suspense>
+      </SettingsProvider>
+    </KeyboardProvider>
   );
 }

@@ -1,3 +1,4 @@
+import KeyboardScrollView from '@/components/KeyboardScrollView';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import { addCustomer } from '@/services/database';
@@ -6,8 +7,7 @@ import { useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import {
-    Alert, KeyboardAvoidingView, Platform,
-    ScrollView,
+    Alert,
     StyleSheet,
     Text, TextInput, TouchableOpacity,
     View,
@@ -83,8 +83,7 @@ export default function AddCustomerScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={S.container} contentContainerStyle={S.scrollContent} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={S.container} contentContainerStyle={S.scrollContent}>
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="person" size={16} color={colors.text} /> {tr.name} *</Text>
           <TextInput style={S.input} value={name} onChangeText={setName} placeholder={tr.namePlaceholder} placeholderTextColor={colors.textMuted} autoFocus returnKeyType="next" />
@@ -105,7 +104,6 @@ export default function AddCustomerScreen() {
           <MaterialIcons name="check" size={24} color="#FFFFFF" />
           <Text style={S.saveButtonText}>{saving ? tr.saving : tr.save}</Text>
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScrollView>
   );
 }

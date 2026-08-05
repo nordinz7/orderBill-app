@@ -21,11 +21,10 @@ import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/dat
 import { format } from 'date-fns';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     FlatList,
-    Modal,
     Platform,
     Pressable,
     RefreshControl,
@@ -37,6 +36,8 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import KeyboardModal from '@/components/KeyboardModal';
+import StatementExporter, { type StatementExporterHandle, type StatementTarget } from '@/components/StatementExporter';
 
 interface DropdownItem { id: string; label: string }
 
@@ -44,7 +45,7 @@ type TabMode = 'unbilled' | 'billed' | 'payments' | null;
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-function makeStyles(c: AppColors) {
+function makeStyles(c: AppColors, bottomInset: number) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
     // Segmented control
@@ -98,6 +99,17 @@ function makeStyles(c: AppColors) {
     filterChipActive: { backgroundColor: c.primary },
     filterChipText: { fontSize: FontSizes.sm, fontWeight: '700', color: c.textSecondary },
     filterChipTextActive: { color: '#FFFFFF' },
+    // Outlined so the export action reads as a verb, not another filter toggle.
+    exportChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      flexShrink: 0,
+      paddingHorizontal: Spacing.sm, paddingVertical: 5,
+      borderRadius: 20,
+      borderWidth: 1.5, borderColor: c.primary,
+      backgroundColor: c.primaryLight,
+    },
+    exportChipDisabled: { opacity: 0.4 },
+    exportChipText: { fontSize: FontSizes.sm, fontWeight: '700', color: c.primary },
     filterSpacer: { flex: 1 },
     // Summary
     summary: {
@@ -273,7 +285,7 @@ function makeStyles(c: AppColors) {
     },
     modalContent: {
       backgroundColor: c.card, borderTopLeftRadius: 20, borderTopRightRadius: 20,
-      maxHeight: '60%', paddingBottom: 30,
+      maxHeight: '60%', paddingBottom: bottomInset + Spacing.lg,
     },
     modalHeader: {
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -316,7 +328,7 @@ export default function BillingScreen() {
   const router = useRouter();
   const { colors, tr, defaultOrderDescription, currencySymbol } = useSettings();
   const insets = useSafeAreaInsets();
-  const S = makeStyles(colors);
+  const S = makeStyles(colors, insets.bottom);
 
   const [mode, setMode] = useState<TabMode>('unbilled');
   const toggleMode = (m: TabMode) => setMode(prev => prev === m ? null : m);
@@ -523,6 +535,32 @@ export default function BillingScreen() {
     if (mode === 'payments') return transactions.filter(t => t.type === 'credit');
     return transactions;
   }, [transactions, mode]);
+
+  // ── Statement export (driven by whatever filter is applied) ──
+  const exporterRef = useRef<StatementExporterHandle>(null);
+
+  /** Distinct customers in the list as currently filtered, in display order. */
+  const exportTargets = useMemo<StatementTarget[]>(() => {
+    const byId = new Map<number, StatementTarget>();
+    for (const t of displayedTransactions) {
+      if (!byId.has(t.customer_id)) {
+        byId.set(t.customer_id, { id: t.customer_id, name: t.customer_name, place: t.customer_place });
+      }
+    }
+    return Array.from(byId.values());
+  }, [displayedTransactions]);
+
+  const handleExportStatements = () => {
+    const asOf = historyDate ?? new Date();
+    Alert.alert(
+      tr.exportConfirm,
+      tr.exportConfirmMsg(exportTargets.length, format(asOf, 'dd MMM yyyy')),
+      [
+        { text: tr.cancel, style: 'cancel' },
+        { text: tr.exportStatementImages, onPress: () => { void exporterRef.current?.run(exportTargets, asOf); } },
+      ],
+    );
+  };
   const totalCredit = useMemo(() => displayedTransactions.filter(t => t.type === 'credit').reduce((s, t) => s + t.amount, 0), [displayedTransactions]);
   const totalDebit = useMemo(() => displayedTransactions.filter(t => t.type === 'debit').reduce((s, t) => s + t.amount, 0), [displayedTransactions]);
 
@@ -716,7 +754,7 @@ export default function BillingScreen() {
     selectedId: string | null,
     onSelect: (id: string) => void,
   ) => (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <KeyboardModal visible={visible} onRequestClose={onClose}>
       <Pressable style={S.modalOverlay} onPress={onClose}>
         <Pressable style={S.modalContent} onPress={() => {}}>
           <View style={S.modalHeader}>
@@ -750,7 +788,7 @@ export default function BillingScreen() {
           />
         </Pressable>
       </Pressable>
-    </Modal>
+    </KeyboardModal>
   );
 
   return (
@@ -907,6 +945,20 @@ export default function BillingScreen() {
                 {historyCustomerLabel ?? tr.customer}
               </Text>
             </TouchableOpacity>
+            {/* Exports statements for exactly the customers listed below,
+                as of the applied date filter. */}
+            <TouchableOpacity
+              style={[S.exportChip, exportTargets.length === 0 && S.exportChipDisabled]}
+              onPress={handleExportStatements}
+              disabled={exportTargets.length === 0}
+              accessibilityLabel={tr.exportStatementImages}
+            >
+              <MaterialIcons name="save-alt" size={14} color={colors.primary} />
+              <Text style={S.exportChipText}>
+                {tr.exportStatementImages}
+                {exportTargets.length > 0 ? ` (${exportTargets.length})` : ''}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {showHistoryDatePicker && (
@@ -973,7 +1025,7 @@ export default function BillingScreen() {
       )}
 
       {/* ─── EDIT AMOUNT MODAL ─── */}
-      <Modal visible={!!editingTxn} transparent animationType="fade" onRequestClose={() => setEditingTxn(null)}>
+      <KeyboardModal visible={!!editingTxn} animationType="fade" onRequestClose={() => setEditingTxn(null)}>
         <Pressable style={S.modalOverlay} onPress={() => setEditingTxn(null)}>
           <Pressable style={S.modalContent} onPress={() => {}}>
             <View style={S.modalHeader}>
@@ -1007,7 +1059,9 @@ export default function BillingScreen() {
             </View>
           </Pressable>
         </Pressable>
-      </Modal>
+      </KeyboardModal>
+
+      <StatementExporter ref={exporterRef} />
     </View>
   );
 }

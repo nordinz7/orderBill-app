@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform,
+  StyleSheet, Alert,
 } from 'react-native';
+import KeyboardScrollView from '@/components/KeyboardScrollView';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -84,8 +85,7 @@ export default function EditCustomerScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={S.container} contentContainerStyle={S.scrollContent} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={S.container} contentContainerStyle={S.scrollContent}>
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="person" size={16} color={colors.text} /> {tr.name} *</Text>
           <TextInput style={S.input} value={name} onChangeText={setName} placeholder={tr.namePlaceholder} placeholderTextColor={colors.textMuted} autoFocus returnKeyType="next" />
@@ -106,7 +106,6 @@ export default function EditCustomerScreen() {
           <MaterialIcons name="check" size={24} color="#FFFFFF" />
           <Text style={S.saveButtonText}>{saving ? tr.saving : tr.edit}</Text>
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScrollView>
   );
 }

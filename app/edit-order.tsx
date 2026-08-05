@@ -9,15 +9,14 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import {
   Alert,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import KeyboardScrollView from '@/components/KeyboardScrollView';
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
@@ -101,8 +100,7 @@ export default function EditOrderScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={S.container} contentContainerStyle={S.scrollContent} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView style={S.container} contentContainerStyle={S.scrollContent}>
         {/* Customer (read-only) */}
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="person" size={16} color={colors.text} /> {tr.customers}</Text>
@@ -145,7 +143,6 @@ export default function EditOrderScreen() {
           <MaterialIcons name="save" size={24} color="#FFFFFF" />
           <Text style={S.saveButtonText}>{saving ? tr.saving : tr.saveChanges}</Text>
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardScrollView>
   );
 }

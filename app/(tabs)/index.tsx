@@ -1,3 +1,4 @@
+import KeyboardModal from '@/components/KeyboardModal';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
 import { bulkDeleteCustomers, bulkImportContacts, CustomerWithBalance, deleteCustomer, getCustomersWithBalance } from '@/services/database';
@@ -11,7 +12,6 @@ import {
     Alert,
     FlatList,
     Linking,
-    Modal,
     RefreshControl,
     StyleSheet,
     Text,
@@ -19,8 +19,9 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-function makeStyles(c: AppColors) {
+function makeStyles(c: AppColors, insets: { top: number; bottom: number }) {
   return StyleSheet.create({
     container:   { flex: 1, backgroundColor: c.background },
     topBar: {
@@ -124,7 +125,8 @@ function makeStyles(c: AppColors) {
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },
     modalContainer: {
       flex: 1,
-      marginTop: 60,
+      // The modal is its own translucent window, so clear the status bar here.
+      marginTop: insets.top + Spacing.xl,
       backgroundColor: c.background,
       borderTopLeftRadius: Radius.lg,
       borderTopRightRadius: Radius.lg,
@@ -177,7 +179,9 @@ function makeStyles(c: AppColors) {
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: Spacing.md,
-      paddingVertical: Spacing.sm,
+      paddingTop: Spacing.sm,
+      // Keep the import button clear of the Android navigation bar.
+      paddingBottom: Spacing.sm + insets.bottom,
       borderTopWidth: 1,
       borderTopColor: c.border,
     },
@@ -196,7 +200,8 @@ export default function CustomersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { colors, tr, currencySymbol } = useSettings();
-  const S = makeStyles(colors);
+  const insets = useSafeAreaInsets();
+  const S = makeStyles(colors, insets);
 
   const [customers, setCustomers] = useState<CustomerWithBalance[]>([]);
   const [search, setSearch] = useState('');
@@ -533,7 +538,7 @@ export default function CustomersScreen() {
       )}
 
       {/* Contact Picker Modal */}
-      <Modal visible={contactPickerVisible} animationType="slide" transparent>
+      <KeyboardModal visible={contactPickerVisible} onRequestClose={() => setContactPickerVisible(false)}>
         <View style={S.modalOverlay}>
           <View style={S.modalContainer}>
             <View style={S.modalHeader}>
@@ -601,7 +606,7 @@ export default function CustomersScreen() {
             </View>
           </View>
         </View>
-      </Modal>
+      </KeyboardModal>
     </View>
   );
 }
