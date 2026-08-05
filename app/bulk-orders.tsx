@@ -11,7 +11,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
-    FlatList,
     Platform,
     StyleSheet,
     Text,
@@ -19,7 +18,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import KeyboardScreen from '@/components/KeyboardScreen';
+import KeyboardFooter from '@/components/KeyboardFooter';
+import KeyboardListView from '@/components/KeyboardListView';
 
 const DRAFT_KEY = '@orderbill_bulk_draft';
 
@@ -391,102 +391,99 @@ export default function BulkOrdersScreen() {
   if (hasNoCustomers) return null;
 
   return (
-    <KeyboardScreen>
-      <View style={S.container}>
-        {/* Header: date + description + search */}
-        <View style={S.header}>
-          <View style={S.headerRow}>
-            <View style={S.field}>
-              <Text style={S.label}>{tr.orderDate}</Text>
-              <TouchableOpacity style={S.dateButton} onPress={() => setShowDatePicker(true)}>
-                <Text style={S.dateButtonText}>{format(orderDate, 'dd MMM yyyy, EEE')}</Text>
-                <MaterialIcons name="calendar-today" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            <View style={[S.field, { maxWidth: 150 }]}>
-              <Text style={S.label}>{tr.description}</Text>
-              <TextInput
-                style={S.descInput}
-                value={description}
-                onChangeText={setDescription}
-                placeholder={tr.descPlaceholder}
-                placeholderTextColor={colors.textMuted}
-              />
-            </View>
+    <View style={S.container}>
+      {/* Header: date + description + search */}
+      <View style={S.header}>
+        <View style={S.headerRow}>
+          <View style={S.field}>
+            <Text style={S.label}>{tr.orderDate}</Text>
+            <TouchableOpacity style={S.dateButton} onPress={() => setShowDatePicker(true)}>
+              <Text style={S.dateButtonText}>{format(orderDate, 'dd MMM yyyy, EEE')}</Text>
+              <MaterialIcons name="calendar-today" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
-          <TextInput
-            style={S.searchInput}
-            value={search}
-            onChangeText={setSearch}
-            placeholder={tr.searchCustomers}
-            placeholderTextColor={colors.textMuted}
-          />
-          {showDatePicker && (
-            <DateTimePicker
-              value={orderDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              onChange={onDateChange}
-              themeVariant={colors.background === '#000000' || colors.background === '#121212' ? 'dark' : 'light'}
+          <View style={[S.field, { maxWidth: 150 }]}>
+            <Text style={S.label}>{tr.description}</Text>
+            <TextInput
+              style={S.descInput}
+              value={description}
+              onChangeText={setDescription}
+              placeholder={tr.descPlaceholder}
+              placeholderTextColor={colors.textMuted}
             />
+          </View>
+        </View>
+        <TextInput
+          style={S.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder={tr.searchCustomers}
+          placeholderTextColor={colors.textMuted}
+        />
+        {showDatePicker && (
+          <DateTimePicker
+            value={orderDate}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            onChange={onDateChange}
+            themeVariant={colors.background === '#000000' || colors.background === '#121212' ? 'dark' : 'light'}
+          />
+        )}
+      </View>
+
+      {/* Summary bar */}
+      {filledCount > 0 && (
+        <View style={S.summary}>
+          <Text style={S.summaryText}>
+            {filledCount} {filledCount === 1 ? tr.order : tr.orders_plural}
+          </Text>
+          <Text style={S.summaryText}>
+            {tr.total}: {totalQty}
+          </Text>
+        </View>
+      )}
+
+      {/* Customer list with quantity inputs */}
+      <KeyboardListView
+        data={filteredCustomers}
+        keyExtractor={item => String(item.id)}
+        renderItem={renderItem}
+        extraData={quantities}
+        contentContainerStyle={filteredCustomers.length === 0 ? { flexGrow: 1 } : S.listContent}
+        ListEmptyComponent={
+          <View style={S.emptyWrap}>
+            <MaterialIcons name="people-outline" size={72} color={colors.textMuted} />
+            <Text style={S.emptyText}>{tr.noCustomersYet}</Text>
+          </View>
+        }
+      />
+
+      {/* Footer: Draft + Clear + Finalize.
+          The stack already pads the screen by the bottom safe-area inset, so
+          adding it again here would double-count the navigation bar. */}
+      <KeyboardFooter style={S.footer}>
+        <View style={S.footerRow}>
+          <TouchableOpacity style={S.draftButton} onPress={handleSaveDraft}>
+            <MaterialIcons name="save" size={20} color={colors.text} />
+            <Text style={S.draftButtonText}>{tr.saveDraft}</Text>
+          </TouchableOpacity>
+          {filledCount > 0 && (
+            <TouchableOpacity style={S.clearButton} onPress={handleClearDraft}>
+              <MaterialIcons name="delete-outline" size={20} color={colors.danger} />
+            </TouchableOpacity>
           )}
         </View>
-
-        {/* Summary bar */}
-        {filledCount > 0 && (
-          <View style={S.summary}>
-            <Text style={S.summaryText}>
-              {filledCount} {filledCount === 1 ? tr.order : tr.orders_plural}
-            </Text>
-            <Text style={S.summaryText}>
-              {tr.total}: {totalQty}
-            </Text>
-          </View>
-        )}
-
-        {/* Customer list with quantity inputs */}
-        <FlatList
-          data={filteredCustomers}
-          keyExtractor={item => String(item.id)}
-          renderItem={renderItem}
-          extraData={quantities}
-          contentContainerStyle={filteredCustomers.length === 0 ? { flexGrow: 1 } : S.listContent}
-          keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={
-            <View style={S.emptyWrap}>
-              <MaterialIcons name="people-outline" size={72} color={colors.textMuted} />
-              <Text style={S.emptyText}>{tr.noCustomersYet}</Text>
-            </View>
-          }
-        />
-
-        {/* Footer: Draft + Clear + Finalize.
-            The stack already pads the screen by the bottom safe-area inset, so
-            adding it again here would double-count the navigation bar. */}
-        <View style={S.footer}>
-          <View style={S.footerRow}>
-            <TouchableOpacity style={S.draftButton} onPress={handleSaveDraft}>
-              <MaterialIcons name="save" size={20} color={colors.text} />
-              <Text style={S.draftButtonText}>{tr.saveDraft}</Text>
-            </TouchableOpacity>
-            {filledCount > 0 && (
-              <TouchableOpacity style={S.clearButton} onPress={handleClearDraft}>
-                <MaterialIcons name="delete-outline" size={20} color={colors.danger} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity
-            style={[S.finalizeButton, (saving || filledCount === 0) && S.finalizeDisabled]}
-            onPress={handleFinalize}
-            disabled={saving || filledCount === 0}
-          >
-            <MaterialIcons name="check-circle" size={26} color="#FFFFFF" />
-            <Text style={S.finalizeText}>
-              {saving ? tr.saving : `${tr.finalize} (${filledCount})`}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardScreen>
+        <TouchableOpacity
+          style={[S.finalizeButton, (saving || filledCount === 0) && S.finalizeDisabled]}
+          onPress={handleFinalize}
+          disabled={saving || filledCount === 0}
+        >
+          <MaterialIcons name="check-circle" size={26} color="#FFFFFF" />
+          <Text style={S.finalizeText}>
+            {saving ? tr.saving : `${tr.finalize} (${filledCount})`}
+          </Text>
+        </TouchableOpacity>
+      </KeyboardFooter>
+    </View>
   );
 }

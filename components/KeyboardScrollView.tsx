@@ -1,13 +1,11 @@
 import { Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import type { ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import type { ScrollViewProps } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
-interface KeyboardScrollViewProps {
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
-  contentContainerStyle?: StyleProp<ViewStyle>;
+interface KeyboardScrollViewProps extends ScrollViewProps {
+  /** Gap kept between the focused input and the top of the keyboard. */
+  bottomOffset?: number;
 }
 
 /**
@@ -17,23 +15,23 @@ interface KeyboardScrollViewProps {
  * the keyboard once it opens, because nothing scrolls it up. This measures the
  * focused input and scrolls it above the keyboard, which is what actually fixes
  * "I can't see what I'm typing".
+ *
+ * For lists whose rows contain inputs use KeyboardListView instead — it gives a
+ * FlatList/SectionList the same behaviour.
  */
 export default function KeyboardScrollView({
-  children,
+  bottomOffset = Spacing.xxl,
   style,
-  contentContainerStyle,
+  ...props
 }: KeyboardScrollViewProps) {
   const { colors } = useSettings();
 
   return (
     <KeyboardAwareScrollView
-      // Breathing room between the caret and the top of the keyboard.
-      bottomOffset={Spacing.xxl}
+      bottomOffset={bottomOffset}
       keyboardShouldPersistTaps="handled"
+      {...props}
       style={[{ flex: 1, backgroundColor: colors.background }, style]}
-      contentContainerStyle={contentContainerStyle}
-    >
-      {children}
-    </KeyboardAwareScrollView>
+    />
   );
 }

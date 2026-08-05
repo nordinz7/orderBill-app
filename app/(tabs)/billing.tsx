@@ -28,7 +28,6 @@ import {
     Platform,
     Pressable,
     RefreshControl,
-    SectionList,
     StyleSheet,
     Text,
     TextInput,
@@ -36,6 +35,7 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardSectionList } from '@/components/KeyboardListView';
 import KeyboardModal from '@/components/KeyboardModal';
 import StatementExporter, { type StatementExporterHandle, type StatementTarget } from '@/components/StatementExporter';
 
@@ -862,7 +862,7 @@ export default function BillingScreen() {
             </View>
           )}
 
-          <SectionList
+          <KeyboardSectionList
             sections={groupedSections}
             keyExtractor={item => String(item.id)}
             renderItem={renderUnbilledOrder}
