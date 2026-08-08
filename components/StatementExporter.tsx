@@ -10,14 +10,17 @@ import {
     describeExportDirectory,
     exportFileName,
     exportKey,
+    findChildFolder,
     fingerprint,
     forgetExportDirectory,
     getSavedExportDirectory,
     hasExportFile,
     isFolderExportSupported,
+    openChildFolder,
     openExportFolder,
     pickExportDirectory,
     pruneExportKey,
+    sanitizeSegment,
     writePngToFolder,
 } from '@/utils/imageExport';
 import { endOfDay, format } from 'date-fns';
@@ -42,6 +45,14 @@ export interface StatementExporterHandle {
  * so already-saved images are re-rendered instead of being taken as current.
  */
 const TEMPLATE_VERSION = 1;
+
+/**
+ * Every statement is filed twice inside the chosen folder — once under the day
+ * it covers, and once under the customer it belongs to — so the same export can
+ * be browsed either way without hunting.
+ */
+const BY_DATE_FOLDER = 'by date';
+const BY_CUSTOMER_FOLDER = 'customer';
 
 interface RenderJob {
   target: StatementTarget;
@@ -161,17 +172,24 @@ const StatementExporter = forwardRef<StatementExporterHandle>(function Statement
       let failed = 0;
 
       try {
-        const folder = await openExportFolder(root, stamp);
+        const byDate = await openExportFolder(root, BY_DATE_FOLDER);
+        const dateFolder = await openChildFolder(byDate, stamp);
+        const byCustomer = await openExportFolder(root, BY_CUSTOMER_FOLDER);
 
         for (const [index, target] of targets.entries()) {
           setProgress({ done: index, total: targets.length, label: target.name });
           const key = exportKey('Statement', stamp, target.id);
+          const customerName = sanitizeSegment(target.name);
           try {
             const transactions = await getTransactionsByCustomerUpToDate(db, target.id, upTo);
             // Nothing to show on a statement with no ledger entries — including
             // when an earlier export left one that no longer has any.
             if (transactions.length === 0) {
-              await pruneExportKey(folder, key, null);
+              await pruneExportKey(dateFolder, key, null);
+              // Only if the customer already has a folder: a customer with
+              // nothing to export should not gain an empty one.
+              const stale = await findChildFolder(byCustomer, customerName);
+              if (stale) await pruneExportKey(stale, key, null);
               continue;
             }
             const balance = await getCustomerBalanceUpToDate(db, target.id, upTo);
@@ -186,16 +204,24 @@ const StatementExporter = forwardRef<StatementExporterHandle>(function Statement
                 `${t.id}|${t.type}|${t.amount}|${t.quantity}|${t.description}|${t.date}`),
             ]));
 
-            if (hasExportFile(folder, fileName)) {
+            const customerFolder = await openChildFolder(byCustomer, customerName);
+            const inDate = hasExportFile(dateFolder, fileName);
+            const inCustomer = hasExportFile(customerFolder, fileName);
+            if (inDate && inCustomer) {
               unchanged++;
               continue;
             }
 
+            // Rendering is what costs — the one capture serves both copies.
             const base64 = await captureJob({ target, transactions, balance });
             // Written before the older versions are dropped — the fingerprint
             // keeps the new name distinct, so the statement is never missing.
-            await writePngToFolder(folder, fileName, base64);
-            await pruneExportKey(folder, key, fileName);
+            if (!inDate) await writePngToFolder(dateFolder, fileName, base64);
+            if (!inCustomer) await writePngToFolder(customerFolder, fileName, base64);
+            // Keyed on the date too, so this only clears earlier attempts at the
+            // same day's statement — the customer's other days stay put.
+            await pruneExportKey(dateFolder, key, fileName);
+            await pruneExportKey(customerFolder, key, fileName);
             written++;
           } catch {
             failed++;
@@ -212,7 +238,7 @@ const StatementExporter = forwardRef<StatementExporterHandle>(function Statement
       // Statements left untouched are still saved and current, so they count
       // towards what the folder now holds.
       const saved = written + unchanged;
-      const where = `${describeExportDirectory(root)}/${stamp}`;
+      const where = `${describeExportDirectory(root)}/${BY_DATE_FOLDER}/${stamp}`;
       if (failed > 0) {
         Alert.alert(tr.exportDone, tr.exportPartialMsg(saved, failed, where));
       } else if (saved === 0) {

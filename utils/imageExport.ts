@@ -81,13 +81,29 @@ async function indexChildren(dirUri: string): Promise<Map<string, string>> {
  * open the parent folder itself.
  */
 export async function openExportFolder(parentUri: string, name: string | null): Promise<ExportFolder> {
-  if (!name) {
-    return { uri: parentUri, children: await indexChildren(parentUri) };
-  }
-  const siblings = await indexChildren(parentUri);
-  const existing = siblings.get(name);
-  const uri = existing ?? (await StorageAccessFramework.makeDirectoryAsync(parentUri, name));
-  return { uri, children: existing ? await indexChildren(uri) : new Map() };
+  const parent: ExportFolder = { uri: parentUri, children: await indexChildren(parentUri) };
+  return name ? openChildFolder(parent, name) : parent;
+}
+
+/**
+ * Open `name` inside an already-open folder, creating it if absent.
+ *
+ * Takes the parent as an `ExportFolder` rather than a URI so that opening many
+ * children — one folder per customer, say — lists the parent once in total
+ * instead of once per child.
+ */
+export async function openChildFolder(parent: ExportFolder, name: string): Promise<ExportFolder> {
+  const found = await findChildFolder(parent, name);
+  if (found) return found;
+  const uri = await StorageAccessFramework.makeDirectoryAsync(parent.uri, name);
+  parent.children.set(name, uri);
+  return { uri, children: new Map() };
+}
+
+/** Open `name` inside `parent` only if it is already there — never creates it. */
+export async function findChildFolder(parent: ExportFolder, name: string): Promise<ExportFolder | null> {
+  const uri = parent.children.get(name);
+  return uri ? { uri, children: await indexChildren(uri) } : null;
 }
 
 /**
