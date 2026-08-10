@@ -107,9 +107,9 @@ export async function findChildFolder(parent: ExportFolder, name: string): Promi
  * Write a base64 PNG as `fileName.png` inside `folder`.
  *
  * SAF has no "overwrite" mode — handed a name that is already taken,
- * createFileAsync silently produces `Bill (1).png` next to `Bill.png`. Callers
- * are expected to use `hasExportFile` and skip instead, so the delete here only
- * guards against that quirk; it is not the normal path.
+ * createFileAsync silently produces `Bill (1).png` next to `Bill.png`. Deleting
+ * first is what makes re-exporting a day replace what is there instead of
+ * piling copies up beside it.
  */
 export async function writePngToFolder(
   folder: ExportFolder,
@@ -128,67 +128,43 @@ export async function writePngToFolder(
   folder.children.set(`${fileName}.png`, fileUri);
 }
 
-// ─── Idempotent naming ────────────────────────────────────────────────────────
+// ─── Naming ───────────────────────────────────────────────────────────────────
 
 /**
- * Exported files are named `<kind>~<stamp>~<id>~<label>~<fingerprint>.png`.
+ * What an exported document is called: `2026-08-10 - Ah Seng.png`.
  *
- * The leading `<kind>~<stamp>~<id>~` is the *key*: the record's stable identity,
- * and what a re-export replaces. The label is cosmetic — it is only there so a
- * person can tell the files apart — and the fingerprint covers everything that
- * affects the rendered image.
+ * The name is the whole of it — no key, no hash. A file is going to be found in
+ * a folder on a phone and sent on from there, so it has to say what it is to
+ * someone who never saw the app, and the two parts it needs are the day it
+ * covers and who it belongs to. The date leads so that a customer's folder
+ * falls into chronological order.
  *
- * That makes a repeat export a no-op instead of a conflict: an unchanged
- * document already exists under exactly that name and is skipped, and a changed
- * one is written under a new name before the older versions of the same key are
- * removed, so the document is never briefly missing.
- *
- * `sanitizeSegment` strips `~` for exactly this reason, so it can never appear
- * inside a label and the parts stay unambiguous.
+ * Re-exporting the same day overwrites, rather than recognising the file as
+ * unchanged and skipping it — the cost of a name with nothing hidden in it.
  */
-export function exportKey(kind: string, stamp: string, id: number): string {
-  return `${kind}~${stamp}~${String(id).padStart(4, '0')}~`;
+export function exportFileName(stamp: string, label: string): string {
+  return `${stamp} - ${sanitizeSegment(label)}`;
 }
 
-/** Full name (without extension) for one version of the document at `key`. */
-export function exportFileName(key: string, label: string, fingerprint: string): string {
-  return `${key}${sanitizeSegment(label)}~${fingerprint}`;
-}
-
-/**
- * 32-bit FNV-1a, as 8 hex characters. Used to notice that a document's inputs
- * changed — not for anything that needs to resist tampering.
- */
-export function fingerprint(parts: (string | number)[]): string {
-  // Joined on the unit separator, a character no typed-in field will
-  // contain, so adjacent values cannot shift across the boundary and
-  // still hash the same.
-  const input = parts.join(String.fromCharCode(31));
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, '0');
-}
-
-/** True when this exact version is already on disk, so there is nothing to do. */
-export function hasExportFile(folder: ExportFolder, fileName: string): boolean {
-  return folder.children.has(`${fileName}.png`);
+/** Remove `fileName.png` from `folder` if it is there. */
+export async function removeExportFile(folder: ExportFolder, fileName: string): Promise<void> {
+  const uri = folder.children.get(`${fileName}.png`);
+  if (!uri) return;
+  await StorageAccessFramework.deleteAsync(uri, { idempotent: true });
+  folder.children.delete(`${fileName}.png`);
 }
 
 /**
- * Delete every file under `key` apart from `keep` — the older versions after a
- * write, or all of them when the record has nothing to export any more.
+ * Clear out anything this folder holds for `stamp` under the old
+ * `Statement~<stamp>~<id>~<label>~<fingerprint>.png` scheme.
+ *
+ * Only for the day being exported, so a folder full of other days keeps them
+ * until they are re-exported under the new name in their turn.
  */
-export async function pruneExportKey(
-  folder: ExportFolder,
-  key: string,
-  keep: string | null,
-): Promise<void> {
-  const keepName = keep && `${keep}.png`;
+export async function removeLegacyExports(folder: ExportFolder, stamp: string): Promise<void> {
+  const prefix = `Statement~${stamp}~`;
   for (const [name, uri] of Array.from(folder.children)) {
-    if (!name.startsWith(key) || name === keepName) continue;
+    if (!name.startsWith(prefix)) continue;
     await StorageAccessFramework.deleteAsync(uri, { idempotent: true });
     folder.children.delete(name);
   }

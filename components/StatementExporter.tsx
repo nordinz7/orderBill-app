@@ -9,17 +9,15 @@ import {
 import {
     describeExportDirectory,
     exportFileName,
-    exportKey,
     findChildFolder,
-    fingerprint,
     forgetExportDirectory,
     getSavedExportDirectory,
-    hasExportFile,
     isFolderExportSupported,
     openChildFolder,
     openExportFolder,
     pickExportDirectory,
-    pruneExportKey,
+    removeExportFile,
+    removeLegacyExports,
     sanitizeSegment,
     writePngToFolder,
 } from '@/utils/imageExport';
@@ -41,18 +39,43 @@ export interface StatementExporterHandle {
 }
 
 /**
- * Part of every statement's fingerprint. Bump it after changing StatementBill,
- * so already-saved images are re-rendered instead of being taken as current.
- */
-const TEMPLATE_VERSION = 1;
-
-/**
  * Every statement is filed twice inside the chosen folder — once under the day
  * it covers, and once under the customer it belongs to — so the same export can
  * be browsed either way without hunting.
  */
 const BY_DATE_FOLDER = 'by date';
 const BY_CUSTOMER_FOLDER = 'customer';
+
+/**
+ * What each statement's file is called after the customer's name, keeping the
+ * names apart when two customers share one.
+ *
+ * Two people called Ah Seng would otherwise write to the same file and the
+ * second would quietly replace the first, so the place is added to tell them
+ * apart, and the customer number if even that matches.
+ */
+function fileLabels(targets: StatementTarget[]): Map<number, string> {
+  const timesSeen = (labels: string[]) => {
+    const counts = new Map<string, number>();
+    for (const l of labels) counts.set(l, (counts.get(l) ?? 0) + 1);
+    return counts;
+  };
+
+  const plain = targets.map(t => sanitizeSegment(t.name));
+  const plainCounts = timesSeen(plain);
+
+  const placed = targets.map((t, i) =>
+    plainCounts.get(plain[i])! > 1 && t.place
+      ? sanitizeSegment(`${t.name} (${t.place})`)
+      : plain[i]);
+  const placedCounts = timesSeen(placed);
+
+  const labels = new Map<number, string>();
+  targets.forEach((t, i) => {
+    labels.set(t.id, placedCounts.get(placed[i])! > 1 ? `${placed[i]} (#${t.id})` : placed[i]);
+  });
+  return labels;
+}
 
 interface RenderJob {
   target: StatementTarget;
@@ -168,60 +191,46 @@ const StatementExporter = forwardRef<StatementExporterHandle>(function Statement
       setProgress({ done: 0, total: targets.length, label: '' });
 
       let written = 0;
-      let unchanged = 0;
       let failed = 0;
 
       try {
         const byDate = await openExportFolder(root, BY_DATE_FOLDER);
         const dateFolder = await openChildFolder(byDate, stamp);
         const byCustomer = await openExportFolder(root, BY_CUSTOMER_FOLDER);
+        // Whatever this day left behind under the old naming, before any of it
+        // is written again under the new one.
+        await removeLegacyExports(dateFolder, stamp);
+
+        const labels = fileLabels(targets);
 
         for (const [index, target] of targets.entries()) {
           setProgress({ done: index, total: targets.length, label: target.name });
-          const key = exportKey('Statement', stamp, target.id);
+          const fileName = exportFileName(stamp, labels.get(target.id)!);
           const customerName = sanitizeSegment(target.name);
           try {
             const transactions = await getTransactionsByCustomerUpToDate(db, target.id, upTo);
             // Nothing to show on a statement with no ledger entries — including
             // when an earlier export left one that no longer has any.
             if (transactions.length === 0) {
-              await pruneExportKey(dateFolder, key, null);
+              await removeExportFile(dateFolder, fileName);
               // Only if the customer already has a folder: a customer with
               // nothing to export should not gain an empty one.
               const stale = await findChildFolder(byCustomer, customerName);
-              if (stale) await pruneExportKey(stale, key, null);
+              if (stale) {
+                await removeExportFile(stale, fileName);
+                await removeLegacyExports(stale, stamp);
+              }
               continue;
             }
             const balance = await getCustomerBalanceUpToDate(db, target.id, upTo);
 
-            // Everything the rendered image depends on, so that re-exporting an
-            // untouched statement matches its own earlier output.
-            const fileName = exportFileName(key, target.name, fingerprint([
-              TEMPLATE_VERSION, lang, companyName, companyPlace, companyPhone,
-              target.name, target.place, stamp,
-              balance.totalDebit, balance.totalCredit, balance.balance,
-              ...transactions.map(t =>
-                `${t.id}|${t.type}|${t.amount}|${t.quantity}|${t.description}|${t.date}`),
-            ]));
-
             const customerFolder = await openChildFolder(byCustomer, customerName);
-            const inDate = hasExportFile(dateFolder, fileName);
-            const inCustomer = hasExportFile(customerFolder, fileName);
-            if (inDate && inCustomer) {
-              unchanged++;
-              continue;
-            }
+            await removeLegacyExports(customerFolder, stamp);
 
             // Rendering is what costs — the one capture serves both copies.
             const base64 = await captureJob({ target, transactions, balance });
-            // Written before the older versions are dropped — the fingerprint
-            // keeps the new name distinct, so the statement is never missing.
-            if (!inDate) await writePngToFolder(dateFolder, fileName, base64);
-            if (!inCustomer) await writePngToFolder(customerFolder, fileName, base64);
-            // Keyed on the date too, so this only clears earlier attempts at the
-            // same day's statement — the customer's other days stay put.
-            await pruneExportKey(dateFolder, key, fileName);
-            await pruneExportKey(customerFolder, key, fileName);
+            await writePngToFolder(dateFolder, fileName, base64);
+            await writePngToFolder(customerFolder, fileName, base64);
             written++;
           } catch {
             failed++;
@@ -235,9 +244,7 @@ const StatementExporter = forwardRef<StatementExporterHandle>(function Statement
         setRunning(false);
       }
 
-      // Statements left untouched are still saved and current, so they count
-      // towards what the folder now holds.
-      const saved = written + unchanged;
+      const saved = written;
       const where = `${describeExportDirectory(root)}/${BY_DATE_FOLDER}/${stamp}`;
       if (failed > 0) {
         Alert.alert(tr.exportDone, tr.exportPartialMsg(saved, failed, where));
@@ -249,7 +256,7 @@ const StatementExporter = forwardRef<StatementExporterHandle>(function Statement
     } finally {
       busy.current = false;
     }
-  }, [db, captureJob, tr, lang, companyName, companyPlace, companyPhone]);
+  }, [db, captureJob, tr]);
 
   useImperativeHandle(ref, () => ({ run }), [run]);
 

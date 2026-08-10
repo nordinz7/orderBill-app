@@ -87,4 +87,5 @@ Two languages: English (`en`) and Tamil (`ta`), defined in `constants/translatio
 - All components are functional, using hooks (`useState`, `useEffect`, `useCallback`, `useMemo`, `useFocusEffect`)
 - Dates stored as ISO 8601 strings in SQLite
 - Filenames for exported/shared images go through `sanitizeSegment` (`utils/filenames.ts`), which keeps non-Latin scripts intact
+- Bulk-exported statements are named `<yyyy-MM-dd> - <customer>.png` and overwrite on re-export; `fileLabels` in `StatementExporter.tsx` adds the place, then the customer id, when two customers would otherwise land on the same name
 - UI optimized for large text and high contrast (target user: older, mid-size Android phone)
