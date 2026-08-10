@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { addOrder, Customer, findDuplicateOrder, getActiveCustomers } from '@/services/database';
+import { addOrder, Customer, findDuplicateOrder, getActiveCustomers, orderAmount } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -24,6 +24,16 @@ function makeStyles(c: AppColors, bottomInset: number) {
     container:          { flex: 1, backgroundColor: c.background },
     scrollContent:      { padding: Spacing.xl, gap: Spacing.lg },
     field:              { gap: Spacing.xs },
+    // Quantity and rate share a line; each takes half of it.
+    row:                { flexDirection: 'row', gap: Spacing.md },
+    halfField:          { gap: Spacing.xs, flex: 1 },
+    totalRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: c.primaryLight, borderRadius: Radius.md,
+      paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+    },
+    totalLabel:         { fontSize: FontSizes.md, fontWeight: '700', color: c.primary },
+    totalValue:         { fontSize: FontSizes.xl, fontWeight: '800', color: c.primary },
     label:              { fontSize: FontSizes.md, fontWeight: '700', color: c.text },
     input: {
       backgroundColor: c.inputBg, borderWidth: 1.5,
@@ -75,7 +85,7 @@ function makeStyles(c: AppColors, bottomInset: number) {
 export default function AddOrderScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr, defaultOrderDescription } = useSettings();
+  const { colors, tr, defaultOrderDescription, currencySymbol } = useSettings();
   const insets = useSafeAreaInsets();
   const S = makeStyles(colors, insets.bottom);
   const params = useLocalSearchParams<{ defaultDate?: string }>();
@@ -85,6 +95,7 @@ export default function AddOrderScreen() {
   const [showPicker, setShowPicker]         = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [quantity, setQuantity]             = useState('');
+  const [rate, setRate]                     = useState('');
   const [description, setDescription]       = useState(defaultOrderDescription);
   const [saving, setSaving]                 = useState(false);
 
@@ -104,6 +115,10 @@ export default function AddOrderScreen() {
 
   useEffect(() => { getActiveCustomers(db).then(setCustomers); }, [db]);
 
+  const qty = parseInt(quantity, 10) || 0;
+  const unitRate = parseFloat(rate) || 0;
+  const total = orderAmount(qty, unitRate);
+
   const handleSave = async () => {
     if (!selectedCustomer) { Alert.alert(tr.required, tr.pleaseSelectCustomer); return; }
     if (!description.trim()) { Alert.alert(tr.required, tr.enterDesc); return; }
@@ -116,24 +131,14 @@ export default function AddOrderScreen() {
         { text: tr.cancel, style: 'cancel' },
         {
           text: tr.editExisting, onPress: () => {
-            router.replace({
-              pathname: '/edit-order',
-              params: {
-                orderId: existing.id,
-                customerName: `${existing.customer_name} — ${existing.customer_place}`,
-                description: existing.description,
-                quantity: String(existing.quantity),
-                date: existing.date,
-              },
-            });
+            router.replace({ pathname: '/edit-order', params: { orderId: String(existing.id) } });
           },
         },
         {
           text: tr.addNew, onPress: async () => {
             setSaving(true);
             try {
-              const qty = parseInt(quantity, 10) || 0;
-              await addOrder(db, selectedCustomer.id, description, qty, orderDate.toISOString());
+              await addOrder(db, selectedCustomer.id, description, qty, unitRate, orderDate.toISOString());
               router.back();
             } catch {
               Alert.alert('Error', tr.couldNotSave);
@@ -146,8 +151,7 @@ export default function AddOrderScreen() {
 
     setSaving(true);
     try {
-      const qty = parseInt(quantity, 10) || 0;
-      await addOrder(db, selectedCustomer.id, description, qty, orderDate.toISOString());
+      await addOrder(db, selectedCustomer.id, description, qty, unitRate, orderDate.toISOString());
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);
@@ -182,9 +186,19 @@ export default function AddOrderScreen() {
             />
           )}
         </View>
-        <View style={S.field}>
-          <Text style={S.label}><MaterialIcons name="scale" size={16} color={colors.text} /> {tr.quantity}</Text>
-          <TextInput style={S.input} value={quantity} onChangeText={t => setQuantity(t.replace(/[^0-9]/g, ''))} placeholder={tr.quantityPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="number-pad" returnKeyType="next" />
+        <View style={S.row}>
+          <View style={S.halfField}>
+            <Text style={S.label}><MaterialIcons name="scale" size={16} color={colors.text} /> {tr.quantity}</Text>
+            <TextInput style={S.input} value={quantity} onChangeText={t => setQuantity(t.replace(/[^0-9]/g, ''))} placeholder={tr.quantityPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="number-pad" returnKeyType="next" />
+          </View>
+          <View style={S.halfField}>
+            <Text style={S.label}><MaterialIcons name="sell" size={16} color={colors.text} /> {tr.rate}</Text>
+            <TextInput style={S.input} value={rate} onChangeText={t => setRate(t.replace(/[^0-9.]/g, ''))} placeholder={tr.ratePlaceholder} placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" returnKeyType="next" />
+          </View>
+        </View>
+        <View style={S.totalRow}>
+          <Text style={S.totalLabel}>{tr.orderValue}</Text>
+          <Text style={S.totalValue}>{currencySymbol}{total}</Text>
         </View>
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description} *</Text>

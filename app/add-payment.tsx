@@ -2,7 +2,7 @@ import KeyboardModal from '@/components/KeyboardModal';
 import KeyboardScrollView from '@/components/KeyboardScrollView';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { Customer, getActiveCustomers, getTransactionById, insertTransaction, updateTransaction } from '@/services/database';
+import { Customer, getActiveCustomers, getTransactionById, insertTransaction, isLocked, setTransactionLock, updateTransaction } from '@/services/database';
 import { MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -110,6 +110,7 @@ export default function AddPaymentScreen() {
   const [paymentDate, setPaymentDate]       = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving]                 = useState(false);
+  const [locked, setLocked]                 = useState(false);
 
   // A leading minus means "money owed" — the type is inferred from the amount's sign.
   const isDebt = amount.trim().startsWith('-');
@@ -138,13 +139,26 @@ export default function AddPaymentScreen() {
           setPaymentDate(new Date(txn.date));
           const method = PAYMENT_METHODS.find(m => m.label === txn.description);
           setSelectedMethod(txn.type === 'credit' && method ? method.key : null);
+          // An entry whose day is over is closed to edits until it is unlocked.
+          if (isLocked(txn.date, txn.locked)) {
+            setLocked(true);
+            Alert.alert(tr.locked, tr.cannotEditLocked, [
+              { text: tr.cancel, style: 'cancel', onPress: () => router.back() },
+              {
+                text: tr.unlock, onPress: async () => {
+                  await setTransactionLock(db, txn.id, false);
+                  setLocked(false);
+                },
+              },
+            ]);
+          }
         }
       } else if (params.customerId) {
         const found = list.find(c => c.id === Number(params.customerId));
         if (found) setSelected(found);
       }
     })();
-  }, [db, isEdit, params.customerId, params.transactionId]);
+  }, [db, isEdit, params.customerId, params.transactionId, router, tr]);
 
   const handleMethodSelect = (method: typeof PAYMENT_METHODS[number]) => {
     if (selectedMethod === method.key) {
@@ -180,7 +194,7 @@ export default function AddPaymentScreen() {
       }
       router.back();
     } catch {
-      Alert.alert('Error', tr.couldNotSave);
+      Alert.alert(locked ? tr.locked : 'Error', locked ? tr.cannotEditLocked : tr.couldNotSave);
     } finally { setSaving(false); }
   };
 
@@ -254,7 +268,7 @@ export default function AddPaymentScreen() {
           <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description}</Text>
           <TextInput style={S.input} value={description} onChangeText={(text) => { setDescription(text); if (selectedMethod && text !== PAYMENT_METHODS.find(m => m.key === selectedMethod)?.label) setSelectedMethod(null); }} placeholder={isDebt ? tr.debtDescPlaceholder : tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
         </View>
-        <TouchableOpacity style={[S.saveButton, saving && S.saveButtonDisabled]} onPress={handleSave} disabled={saving}>
+        <TouchableOpacity style={[S.saveButton, (saving || locked) && S.saveButtonDisabled]} onPress={handleSave} disabled={saving || locked}>
           <MaterialIcons name="payments" size={24} color="#FFFFFF" />
           <Text style={S.saveButtonText}>{saving ? tr.saving : isEdit ? tr.saveChanges : tr.recordPayment}</Text>
         </TouchableOpacity>

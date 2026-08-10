@@ -28,7 +28,7 @@ const MAX_ROLLING_BACKUPS = 5;
 async function buildBackupPayload(db: SQLiteDatabase) {
   return {
     exportedAt: new Date().toISOString(),
-    version: 2,
+    version: 3,
     ...(await getAllDataForBackup(db)),
   };
 }

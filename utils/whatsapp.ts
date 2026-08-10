@@ -9,7 +9,7 @@ import { Alert, Linking } from 'react-native';
 export function formatInvoice(order: OrderWithCustomer, lang: Lang = 'en', companyName: string = '', currencySymbol: string = '$'): string {
   const tr = translations[lang];
   const dateStr    = format(new Date(order.date), 'dd MMM yyyy');
-  const amountStr  = `${currencySymbol}${order.billed_amount.toFixed(2)}`;
+  const amountStr  = `${currencySymbol}${order.amount.toFixed(2)}`;
   const qtyLine    = order.quantity > 0 ? `\n*${tr.quantity}:* x${order.quantity}` : '';
 
   return (

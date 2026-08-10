@@ -8,7 +8,6 @@ export interface InvoiceBillProps {
   companyName?: string;
   companyPlace?: string;
   companyPhone?: string;
-  billNumber?: string;
   order?: OrderWithCustomer;
   orders?: OrderWithCustomer[];
   lang?: 'en' | 'ta';
@@ -26,7 +25,6 @@ const LABELS = {
     totalAmount: 'Total Amount',
     thankYou: 'THANK YOU!',
     eoe: 'E. & O.E.',
-    billNo: 'Bill No',
   },
   ta: {
     title: 'விலைப்பட்டியல் / பில்',
@@ -39,12 +37,11 @@ const LABELS = {
     totalAmount: 'மொத்த தொகை',
     thankYou: 'நன்றி!',
     eoe: 'E. & O.E.',
-    billNo: 'பில் எண்',
   },
 };
 
 const InvoiceBill = forwardRef<View, InvoiceBillProps>(
-  ({ companyName, companyPlace, companyPhone, billNumber, order, orders, lang = 'en' }, ref) => {
+  ({ companyName, companyPlace, companyPhone, order, orders, lang = 'en' }, ref) => {
     const { currencySymbol } = useSettings();
     const L = LABELS[lang];
     const allOrders = orders ?? (order ? [order] : []);
@@ -52,7 +49,7 @@ const InvoiceBill = forwardRef<View, InvoiceBillProps>(
     if (!firstOrder) return null;
 
     const dateStr = format(new Date(firstOrder.date), 'dd/MM/yyyy');
-    const totalAmount = allOrders.reduce((s, o) => s + o.billed_amount, 0);
+    const totalAmount = allOrders.reduce((s, o) => s + o.amount, 0);
 
     return (
       <View ref={ref} style={S.container} collapsable={false}>
@@ -79,12 +76,6 @@ const InvoiceBill = forwardRef<View, InvoiceBillProps>(
             ) : null}
           </View>
           <View style={S.metaRight}>
-            {billNumber ? (
-              <Text style={S.metaLabel}>
-                {L.billNo}:{' '}
-                <Text style={S.metaValue}>{billNumber}</Text>
-              </Text>
-            ) : null}
             <Text style={S.metaLabel}>
               {L.date}:{' '}
               <Text style={S.metaValue}>{dateStr}</Text>
@@ -114,7 +105,7 @@ const InvoiceBill = forwardRef<View, InvoiceBillProps>(
               {o.quantity > 0 ? Math.round(o.quantity) : '-'}
             </Text>
             <Text style={[S.tdText, S.colAmt, { textAlign: 'right', fontWeight: '700' }]}>
-              {currencySymbol}{Math.round(o.billed_amount)}
+              {currencySymbol}{Math.round(o.amount)}
             </Text>
           </View>
         ))}

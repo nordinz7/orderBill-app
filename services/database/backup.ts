@@ -2,25 +2,28 @@ import * as SQLite from 'expo-sqlite';
 import { Customer } from './customers';
 import { Order } from './orders';
 import { Transaction } from './payments';
-import { Bill } from './billing';
 
 export async function getAllDataForBackup(db: SQLite.SQLiteDatabase) {
-  const [customers, orders, transactions, bills] = await Promise.all([
+  const [customers, orders, transactions] = await Promise.all([
     db.getAllAsync<Customer>(`SELECT * FROM customers`),
     db.getAllAsync<Order>(`SELECT * FROM orders`),
     db.getAllAsync<Transaction>(`SELECT * FROM transactions`),
-    db.getAllAsync<Bill>(`SELECT * FROM bills`),
   ]);
-  return { customers, orders, transactions, bills };
+  return { customers, orders, transactions };
 }
 
+/**
+ * Older backups carried columns this app no longer keeps — the per-order
+ * `amount` that predates the ledger, and the `bills` grouping that the billing
+ * step used. They are read where they still say something and ignored otherwise.
+ */
 export interface BackupPayload {
   exportedAt: string;
   version: number;
   customers: Customer[];
-  orders: (Order & { amount?: number })[];
-  transactions?: (Transaction & { bill_id?: number | null })[];
-  bills?: (Bill & { previous_balance?: number; total_amount?: number; payment_amount?: number; net_amount?: number })[];
+  orders: (Partial<Order> & { id: number; customer_id: number; description: string; date: string; updated_at: string; amount?: number })[];
+  transactions?: Transaction[];
+  bills?: unknown[];
 }
 
 /**
@@ -46,12 +49,10 @@ export async function restoreFromBackupData(
 ): Promise<{ customers: number; orders: number }> {
   await db.withTransactionAsync(async () => {
     // Clear all tables (respect FK ordering)
-    await db.execAsync(`DELETE FROM bills`);
     await db.execAsync(`DELETE FROM transactions`);
     await db.execAsync(`DELETE FROM orders`);
     await db.execAsync(`DELETE FROM customers`);
 
-    // Re-insert customers
     for (const c of payload.customers) {
       await db.runAsync(
         `INSERT INTO customers (id, name, place, phone_number, created_date, updated_at, status)
@@ -60,33 +61,32 @@ export async function restoreFromBackupData(
       );
     }
 
-    // Re-insert orders (amount column kept in DB as 0 for backward compat)
     for (const o of payload.orders) {
       await db.runAsync(
-        `INSERT INTO orders (id, customer_id, amount, description, quantity, transaction_id, bill_id, date, updated_at, status)
-         VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?)`,
-        [o.id, o.customer_id, o.description, o.quantity ?? 0, o.transaction_id ?? null, o.bill_id ?? null, o.date, o.updated_at, (o as any).status ?? 'active'],
+        `INSERT INTO orders (id, customer_id, description, quantity, rate, transaction_id, locked, date, updated_at, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          o.id, o.customer_id, o.description, o.quantity ?? 0, o.rate ?? 0,
+          o.transaction_id ?? null, o.locked ?? null, o.date, o.updated_at,
+          (o as any).status ?? 'active',
+        ],
       );
     }
 
     if (payload.transactions && payload.transactions.length > 0) {
-      // v2 backup — restore all ledger data
+      // v2 and later — the ledger is in the backup
       for (const t of payload.transactions) {
         await db.runAsync(
-          `INSERT INTO transactions (id, customer_id, order_id, bill_id, type, amount, description, date, status, created_date, updated_at)
+          `INSERT INTO transactions (id, customer_id, order_id, type, amount, description, date, locked, status, created_date, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [t.id, t.customer_id, t.order_id, t.bill_id ?? null, t.type, t.amount, t.description, t.date, (t as any).status ?? 'active', t.created_date, t.updated_at],
+          [
+            t.id, t.customer_id, t.order_id, t.type, t.amount, t.description, t.date,
+            t.locked ?? null, (t as any).status ?? 'active', t.created_date, t.updated_at,
+          ],
         );
       }
-      for (const b of payload.bills ?? []) {
-        await db.runAsync(
-          `INSERT INTO bills (id, bill_number, customer_id, bill_date, previous_balance, total_amount, payment_amount, net_amount, notes, status, created_date, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [b.id, b.bill_number, b.customer_id, b.bill_date, b.previous_balance ?? 0, b.total_amount ?? 0, b.payment_amount ?? 0, b.net_amount ?? 0, b.notes, (b as any).status ?? 'active', b.created_date, b.updated_at],
-        );
-      }
-      // bill_items, statements and statement_transactions in older backups are
-      // intentionally skipped — those tables are retired.
+      // bills, bill_items, statements and statement_transactions in older
+      // backups are intentionally skipped — those tables are retired.
     } else {
       // v1 backup — retroactively create debit transactions for active orders
       for (const o of payload.orders) {
@@ -101,6 +101,23 @@ export async function restoreFromBackupData(
         }
       }
     }
+
+    // Backups taken before orders carried a rate leave it at zero; recover it
+    // from what the order is worth in the ledger, as the schema migration does.
+    await db.execAsync(`
+      UPDATE orders SET rate = COALESCE((
+        SELECT t.amount / (CASE WHEN orders.quantity > 0 THEN orders.quantity ELSE 1 END)
+        FROM transactions t WHERE t.id = orders.transaction_id
+      ), 0)
+      WHERE rate = 0 AND transaction_id IS NOT NULL
+    `);
+
+    // Also as the migration does: an order that never reached the ledger is
+    // still waiting to be priced, so it is held open rather than locked by its
+    // own date. Orders whose lock was set explicitly keep what the backup says.
+    await db.execAsync(`
+      UPDATE orders SET locked = 0 WHERE transaction_id IS NULL AND locked IS NULL
+    `);
   });
 
   return { customers: payload.customers.length, orders: payload.orders.length };

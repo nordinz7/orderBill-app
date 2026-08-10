@@ -5,6 +5,7 @@ import {
   deleteTransaction,
   getCustomerBalance, getCustomerBalanceForPeriod,
   getCustomerById, getTransactionsByCustomer, getTransactionsByCustomerForPeriod,
+  isLocked,
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import { endOfDay, format, startOfDay, startOfMonth, startOfWeek, startOfYear } from 'date-fns';
@@ -195,12 +196,20 @@ export default function CustomerDetailScreen() {
 
   const handleDeleteTransaction = (txn: TransactionWithQuantity) => {
     if (txn.type === 'debit') return; // Debit transactions are deleted via order deletion
+    if (isLocked(txn.date, txn.locked)) {
+      Alert.alert(tr.locked, tr.cannotEditLocked);
+      return;
+    }
     Alert.alert(tr.delete, `Delete this payment of ${currencySymbol}${txn.amount.toFixed(2)}?`, [
       { text: tr.cancel, style: 'cancel' },
       {
         text: tr.delete, style: 'destructive', onPress: async () => {
-          await deleteTransaction(db, txn.id);
-          load();
+          try {
+            await deleteTransaction(db, txn.id);
+            load();
+          } catch {
+            Alert.alert(tr.locked, tr.cannotEditLocked);
+          }
         },
       },
     ]);

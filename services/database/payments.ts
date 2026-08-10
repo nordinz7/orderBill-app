@@ -1,15 +1,15 @@
 import * as SQLite from 'expo-sqlite';
-import { nowISO, SQLParams } from './helpers';
+import { isLocked, LockedRecordError, LockFlag, nowISO, SQLParams } from './helpers';
 
 export interface Transaction {
   id: number;
   customer_id: number;
   order_id: number | null;
-  bill_id: number | null;
   type: 'debit' | 'credit';
   amount: number;
   description: string;
   date: string;
+  locked: LockFlag;
   created_date: string;
   updated_at: string;
 }
@@ -18,11 +18,10 @@ export interface TransactionWithQuantity extends Transaction {
   quantity: number;
 }
 
-export interface TransactionWithCustomer extends Transaction {
+export interface TransactionWithCustomer extends TransactionWithQuantity {
   customer_name: string;
   customer_place: string;
   customer_phone: string;
-  quantity: number;
 }
 
 const TXN_SELECT = `
@@ -71,6 +70,20 @@ async function queryBalance(
   const totalDebit = row?.total_debit ?? 0;
   const totalCredit = row?.total_credit ?? 0;
   return { totalDebit, totalCredit, balance: totalDebit - totalCredit };
+}
+
+/**
+ * Customers who appear anywhere in the ledger — including those who have only
+ * ever paid, or only ever been owed, and so have no order to their name.
+ */
+export async function getCustomersWithTransactions(
+  db: SQLite.SQLiteDatabase,
+): Promise<{ id: number; name: string }[]> {
+  return db.getAllAsync<{ id: number; name: string }>(
+    `SELECT DISTINCT c.id, c.name FROM customers c
+     JOIN transactions t ON t.customer_id = c.id
+     ORDER BY c.name ASC`
+  );
 }
 
 export async function getTransactionsByCustomer(
@@ -125,21 +138,20 @@ export async function insertTransaction(
   amount: number,
   description: string,
   date?: string,
-  billId?: number | null,
 ): Promise<number> {
   const now = nowISO();
   const result = await db.runAsync(
-    `INSERT INTO transactions (customer_id, order_id, bill_id, type, amount, description, date, created_date, updated_at)
-     VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
-    [customerId, billId ?? null, type, amount, description.trim(), date || now, now, now]
+    `INSERT INTO transactions (customer_id, order_id, type, amount, description, date, created_date, updated_at)
+     VALUES (?, NULL, ?, ?, ?, ?, ?, ?)`,
+    [customerId, type, amount, description.trim(), date || now, now, now]
   );
   return result.lastInsertRowId;
 }
 
 export async function insertPayment(
-  db: SQLite.SQLiteDatabase, customerId: number, amount: number, description: string = 'Payment received', date?: string, billId?: number | null,
+  db: SQLite.SQLiteDatabase, customerId: number, amount: number, description: string = 'Payment received', date?: string,
 ): Promise<number> {
-  return insertTransaction(db, customerId, 'credit', amount, description, date, billId);
+  return insertTransaction(db, customerId, 'credit', amount, description, date);
 }
 
 export async function bulkInsertPayments(
@@ -158,12 +170,6 @@ export async function bulkInsertPayments(
   return count;
 }
 
-export async function deleteTransaction(
-  db: SQLite.SQLiteDatabase, id: number,
-): Promise<void> {
-  await db.runAsync(`DELETE FROM transactions WHERE id = ?`, [id]);
-}
-
 export async function insertInitialDebt(
   db: SQLite.SQLiteDatabase,
   customerId: number,
@@ -174,7 +180,49 @@ export async function insertInitialDebt(
   await insertTransaction(db, customerId, 'debit', amount, description, date);
 }
 
-/** Update a ledger entry in place. `bill_id` and `order_id` are left untouched. */
+/** The entry as the lock sees it: its day, and any override on it. */
+async function getTransactionLockState(
+  db: SQLite.SQLiteDatabase,
+  id: number,
+): Promise<{ date: string; locked: LockFlag } | null> {
+  return db.getFirstAsync<{ date: string; locked: LockFlag }>(
+    `SELECT date, locked FROM transactions WHERE id = ?`,
+    [id]
+  );
+}
+
+export async function isTransactionLocked(
+  db: SQLite.SQLiteDatabase, id: number,
+): Promise<boolean> {
+  const row = await getTransactionLockState(db, id);
+  return row ? isLocked(row.date, row.locked) : false;
+}
+
+/**
+ * Hold a ledger entry open (`false`) or shut (`true`) regardless of its date.
+ * An entry that belongs to an order is unlocked alongside it, so the two never
+ * disagree about whether that sale can still be changed.
+ */
+export async function setTransactionLock(
+  db: SQLite.SQLiteDatabase,
+  id: number,
+  locked: boolean,
+): Promise<void> {
+  const now = nowISO();
+  const flag = locked ? 1 : 0;
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(`UPDATE transactions SET locked = ?, updated_at = ? WHERE id = ?`, [flag, now, id]);
+    await db.runAsync(
+      `UPDATE orders SET locked = ?, updated_at = ? WHERE transaction_id = ?`,
+      [flag, now, id]
+    );
+  });
+}
+
+/**
+ * Update a ledger entry in place. `order_id` is left untouched — an entry that
+ * belongs to an order is edited through the order instead.
+ */
 export async function updateTransaction(
   db: SQLite.SQLiteDatabase,
   transactionId: number,
@@ -184,12 +232,22 @@ export async function updateTransaction(
   description: string,
   date: string,
 ): Promise<void> {
+  const lock = await getTransactionLockState(db, transactionId);
+  if (lock && isLocked(lock.date, lock.locked)) throw new LockedRecordError();
   await db.runAsync(
     `UPDATE transactions
      SET customer_id = ?, type = ?, amount = ?, description = ?, date = ?, updated_at = ?
      WHERE id = ?`,
     [customerId, type, amount, description.trim(), date, nowISO(), transactionId]
   );
+}
+
+export async function deleteTransaction(
+  db: SQLite.SQLiteDatabase, id: number,
+): Promise<void> {
+  const lock = await getTransactionLockState(db, id);
+  if (lock && isLocked(lock.date, lock.locked)) throw new LockedRecordError();
+  await db.runAsync(`DELETE FROM transactions WHERE id = ?`, [id]);
 }
 
 export async function getTransactionById(

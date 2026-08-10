@@ -8,9 +8,9 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 function getSampleTransactions(): TransactionWithQuantity[] {
   const today = new Date();
   return [
-    { id: 1, customer_id: 1, order_id: 1, type: 'debit', amount: 500, description: 'Chicken Biriyani', quantity: 2, date: subDays(today, 5).toISOString(), created_date: '', updated_at: '' },
-    { id: 2, customer_id: 1, order_id: 2, type: 'debit', amount: 300, description: 'Mutton Curry', quantity: 1, date: subDays(today, 3).toISOString(), created_date: '', updated_at: '' },
-    { id: 3, customer_id: 1, order_id: null, type: 'credit', amount: 400, description: 'Cash Payment', quantity: 0, date: subDays(today, 1).toISOString(), created_date: '', updated_at: '' },
+    { id: 1, customer_id: 1, order_id: 1, type: 'debit', amount: 500, description: 'Chicken Biriyani', quantity: 2, date: subDays(today, 5).toISOString(), locked: null, created_date: '', updated_at: '' },
+    { id: 2, customer_id: 1, order_id: 2, type: 'debit', amount: 300, description: 'Mutton Curry', quantity: 1, date: subDays(today, 3).toISOString(), locked: null, created_date: '', updated_at: '' },
+    { id: 3, customer_id: 1, order_id: null, type: 'credit', amount: 400, description: 'Cash Payment', quantity: 0, date: subDays(today, 1).toISOString(), locked: null, created_date: '', updated_at: '' },
   ];
 }
 

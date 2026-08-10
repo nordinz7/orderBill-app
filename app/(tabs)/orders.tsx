@@ -6,8 +6,9 @@ import {
     getAllOrdersWithCustomer,
     getCustomersWithOrders,
     getOrdersByDateRange,
+    isLocked,
     OrderWithCustomer,
-    unbillOrder,
+    setOrderLock,
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -86,24 +87,12 @@ function makeStyles(c: AppColors, bottomInset: number) {
     },
     cardContent:  { flex: 1 },
     cardRow1:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm },
-    customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flex: 1 },
+    customerName: { fontSize: FontSizes.md, fontWeight: '700', color: c.text, flexShrink: 1 },
     cardRight:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
     amount:       { fontSize: FontSizes.md, fontWeight: '800', color: c.success },
+    amountZero:   { color: c.textMuted },
     qtyText:      { fontSize: FontSizes.sm, fontWeight: '700', color: c.primary },
-    unbilledTag: {
-      backgroundColor: c.dangerLight,
-      paddingHorizontal: 6,
-      paddingVertical: 1,
-      borderRadius: 8,
-    },
-    unbilledTagText: { fontSize: 10, fontWeight: '800', color: c.danger },
-    billedTag: {
-      backgroundColor: c.successLight,
-      paddingHorizontal: 6,
-      paddingVertical: 1,
-      borderRadius: 8,
-    },
-    billedTagText: { fontSize: 10, fontWeight: '800', color: c.success },
+    nameWrap:     { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
     cardSub:      { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: 1 },
     emptyWrap:    { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
     emptyText:    { fontSize: FontSizes.xl, fontWeight: '600', color: c.textSecondary, marginTop: Spacing.lg },
@@ -280,33 +269,62 @@ export default function OrdersScreen() {
   };
 
   const handleDelete = (order: OrderWithCustomer) => {
-    if (order.transaction_id !== null) return; // billed orders use handleUnbill
     Alert.alert(tr.deleteOrder, tr.deleteOrderMsg(order.customer_name), [
       { text: tr.cancel, style: 'cancel' },
       {
         text: tr.delete, style: 'destructive', onPress: async () => {
-          await deleteOrder(db, order.id);
-          load();
+          try {
+            await deleteOrder(db, order.id);
+            load();
+          } catch {
+            Alert.alert(tr.locked, tr.cannotEditLocked);
+          }
         },
       },
     ]);
   };
 
-  const handleUnbill = (order: OrderWithCustomer) => {
-    Alert.alert(tr.unbillOrder, tr.unbillOrderMsg, [
-      { text: tr.cancel, style: 'cancel' },
-      {
-        text: tr.unbill, style: 'destructive', onPress: async () => {
-          try {
-            await unbillOrder(db, order.id);
-            Alert.alert(tr.unbillOrder, tr.unbillSuccess);
+  const handleToggleLock = (order: OrderWithCustomer) => {
+    const locked = isLocked(order.date, order.locked);
+    Alert.alert(
+      locked ? tr.unlockConfirm : tr.lockConfirm,
+      locked ? tr.unlockConfirmMsg : tr.lockConfirmMsg,
+      [
+        { text: tr.cancel, style: 'cancel' },
+        {
+          text: locked ? tr.unlock : tr.lock, onPress: async () => {
+            await setOrderLock(db, order.id, !locked);
             load();
-          } catch {
-            Alert.alert('Error', tr.couldNotSave);
-          }
+          },
         },
-      },
-    ]);
+      ],
+    );
+  };
+
+  const handleOpen = (order: OrderWithCustomer) => {
+    if (isLocked(order.date, order.locked)) {
+      Alert.alert(tr.locked, tr.cannotEditLocked, [
+        { text: tr.cancel, style: 'cancel' },
+        { text: tr.unlock, onPress: () => handleToggleLock(order) },
+      ]);
+      return;
+    }
+    router.push({ pathname: '/edit-order', params: { orderId: String(order.id) } });
+  };
+
+  /** Long press is the way in to everything destructive or unusual. */
+  const handleLongPress = (order: OrderWithCustomer) => {
+    const locked = isLocked(order.date, order.locked);
+    const options: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [
+      { text: locked ? tr.unlock : tr.lock, onPress: () => handleToggleLock(order) },
+    ];
+    if (!locked) options.push({ text: tr.delete, style: 'destructive', onPress: () => handleDelete(order) });
+    options.push({ text: tr.cancel, style: 'cancel' });
+    Alert.alert(
+      order.customer_name,
+      `${format(new Date(order.date), 'dd MMM yyyy')} · ${currencySymbol}${order.amount}`,
+      options,
+    );
   };
 
   const handleShareOrders = async () => {
@@ -335,48 +353,37 @@ export default function OrdersScreen() {
   };
 
   const displayed = orders;
-  const totalAmount = displayed.reduce((s, o) => s + o.billed_amount, 0);
+  const totalAmount = displayed.reduce((s, o) => s + o.amount, 0);
 
   const customerChipLabel = selectedCustomerId
     ? customerOptions.find(c => c.id === selectedCustomerId)?.label ?? null
     : null;
 
   const renderItem = ({ item }: { item: OrderWithCustomer }) => {
-    const isBilled = item.transaction_id !== null;
+    const locked = isLocked(item.date, item.locked);
     return (
       <TouchableOpacity
         style={S.card}
         activeOpacity={0.7}
-        onPress={() => {
-          if (isBilled) { handleUnbill(item); return; }
-          router.push({ pathname: '/edit-order', params: { orderId: item.id, customerName: `${item.customer_name} — ${item.customer_place}`, description: item.description, quantity: String(item.quantity), date: item.date } });
-        }}
-        onLongPress={() => isBilled ? handleUnbill(item) : handleDelete(item)}
+        onPress={() => handleOpen(item)}
+        onLongPress={() => handleLongPress(item)}
       >
         <View style={S.cardContent}>
           <View style={S.cardRow1}>
-            <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
+            <View style={S.nameWrap}>
+              <Text style={S.customerName} numberOfLines={1}>{item.customer_name}</Text>
+              {locked && <MaterialIcons name="lock" size={14} color={colors.textMuted} />}
+            </View>
             <View style={S.cardRight}>
               {item.quantity > 0 && <Text style={S.qtyText}>x{item.quantity}</Text>}
-              {isBilled
-                ? (
-                  <>
-                    <View style={S.billedTag}>
-                      <Text style={S.billedTagText}>{tr.billedTag}</Text>
-                    </View>
-                    <Text style={S.amount}>{currencySymbol}{item.billed_amount}</Text>
-                  </>
-                )
-                : (
-                  <View style={S.unbilledTag}>
-                    <Text style={S.unbilledTagText}>{tr.unbilledTag}</Text>
-                  </View>
-                )
-              }
+              <Text style={[S.amount, item.amount === 0 && S.amountZero]}>
+                {currencySymbol}{item.amount}
+              </Text>
             </View>
           </View>
           <Text style={S.cardSub} numberOfLines={1}>
             {format(new Date(item.date), 'dd MMM')}
+            {item.rate > 0 ? ` · ${currencySymbol}${item.rate} ${tr.perUnit}` : ''}
             {item.description !== defaultOrderDescription ? ` · ${item.description}` : ''}
           </Text>
         </View>

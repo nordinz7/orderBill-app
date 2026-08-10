@@ -85,10 +85,6 @@ function InnerLayout() {
           options={{ title: tr.sendInvoice }}
         />
         <Stack.Screen
-          name="view-bill"
-          options={{ title: tr.generateBill }}
-        />
-        <Stack.Screen
           name="preview-statement"
           options={{ title: tr.previewStatement }}
         />

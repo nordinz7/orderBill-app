@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import KeyboardScrollView from '@/components/KeyboardScrollView';
 
-const TABLE_NAMES = ['customers', 'orders', 'transactions', 'bills'];
+const TABLE_NAMES = ['customers', 'orders', 'transactions'];
 
 interface TableStats { name: string; count: number }
 interface QueryResult { columns: string[]; rows: Record<string, unknown>[]; time: number; error?: string }
@@ -201,7 +201,8 @@ export default function DeveloperScreen() {
                   const items = defaultOrderDescription ? [defaultOrderDescription] : DEFAULT_ITEMS;
                   const item = items[Math.floor(Math.random() * items.length)];
                   const qty = 1 + Math.floor(Math.random() * 5);
-                  await addOrder(db, customerId, item, qty, date.toISOString());
+                  const rate = [50, 80, 120, 200][Math.floor(Math.random() * 4)];
+                  await addOrder(db, customerId, item, qty, rate, date.toISOString());
                 }
                 const paymentCount = 1 + Math.floor(Math.random() * 2);
                 for (let i = 0; i < paymentCount; i++) {
@@ -228,7 +229,7 @@ export default function DeveloperScreen() {
       {
         text: 'Delete Everything', style: 'destructive',
         onPress: () => {
-          Alert.alert('⚠️ Final Confirmation', 'ALL customers, orders, payments, and bills will be permanently erased.', [
+          Alert.alert('⚠️ Final Confirmation', 'ALL customers, orders, and payments will be permanently erased.', [
             { text: 'Cancel', style: 'cancel' },
             {
               text: 'Yes, Reset', style: 'destructive',
@@ -236,7 +237,6 @@ export default function DeveloperScreen() {
                 try {
                   // FK-safe order, same as the restore clear in services/database/backup.ts
                   await db.execAsync(`
-                    DELETE FROM bills;
                     DELETE FROM transactions;
                     DELETE FROM orders;
                     DELETE FROM customers;

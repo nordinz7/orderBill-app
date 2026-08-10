@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { bulkAddOrders, Customer, getActiveCustomers } from '@/services/database';
+import { bulkAddOrders, Customer, getActiveCustomers, orderAmount } from '@/services/database';
 import { promptAddFirstCustomer } from '@/utils/customers';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,6 +26,8 @@ const DRAFT_KEY = '@orderbill_bulk_draft';
 interface BulkDraft {
   quantities: Record<string, string>;
   description: string;
+  /** Applied to every order in the batch. Absent in drafts saved before rates. */
+  rate?: string;
   orderDate: string;
 }
 
@@ -230,12 +232,13 @@ const CustomerRow = React.memo(function CustomerRow({
 export default function BulkOrdersScreen() {
   const db = useSQLiteContext();
   const router = useRouter();
-  const { colors, tr, defaultOrderDescription } = useSettings();
+  const { colors, tr, defaultOrderDescription, currencySymbol } = useSettings();
   const S = makeStyles(colors);
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [quantities, setQuantities] = useState<Record<number, string>>({});
   const [description, setDescription] = useState(defaultOrderDescription);
+  const [rate, setRate] = useState('');
   const [orderDate, setOrderDate] = useState<Date>(addDays(new Date(), 1));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -265,6 +268,7 @@ export default function BulkOrdersScreen() {
         }
         setQuantities(restored);
         setDescription(draft.description);
+        setRate(draft.rate ?? '');
         setOrderDate(new Date(draft.orderDate));
       }
       setDraftLoaded(true);
@@ -281,9 +285,10 @@ export default function BulkOrdersScreen() {
     saveDraft({
       quantities: stringKeys,
       description,
+      rate,
       orderDate: orderDate.toISOString(),
     });
-  }, [quantities, description, orderDate, draftLoaded]);
+  }, [quantities, description, rate, orderDate, draftLoaded]);
 
   useEffect(() => { persistDraft(); }, [persistDraft]);
 
@@ -314,6 +319,14 @@ export default function BulkOrdersScreen() {
     [quantities]
   );
 
+  const unitRate = parseFloat(rate) || 0;
+  const totalValue = useMemo(
+    () => Object.values(quantities).reduce(
+      (sum, v) => sum + orderAmount(parseInt(v, 10) || 0, unitRate), 0,
+    ),
+    [quantities, unitRate]
+  );
+
   const handleSaveDraft = () => {
     persistDraft();
     Alert.alert(tr.draftSaved, tr.draftSavedMsg);
@@ -326,6 +339,7 @@ export default function BulkOrdersScreen() {
         text: tr.delete, style: 'destructive', onPress: async () => {
           setQuantities({});
           setDescription(defaultOrderDescription);
+          setRate('');
           setOrderDate(addDays(new Date(), 1));
           await clearBulkDraft();
         },
@@ -353,7 +367,7 @@ export default function BulkOrdersScreen() {
         text: tr.finalize, onPress: async () => {
           setSaving(true);
           try {
-            const count = await bulkAddOrders(db, entries, description, orderDate.toISOString());
+            const count = await bulkAddOrders(db, entries, description, unitRate, orderDate.toISOString());
             await clearBulkDraft();
             Alert.alert(tr.bulkOrdersSaved, tr.bulkOrdersSavedMsg(count), [
               { text: 'OK', onPress: () => router.replace({ pathname: '/(tabs)/orders', params: { filterDate: orderDate.toISOString().slice(0, 10) } }) },
@@ -402,7 +416,7 @@ export default function BulkOrdersScreen() {
               <MaterialIcons name="calendar-today" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          <View style={[S.field, { maxWidth: 150 }]}>
+          <View style={[S.field, { maxWidth: 130 }]}>
             <Text style={S.label}>{tr.description}</Text>
             <TextInput
               style={S.descInput}
@@ -410,6 +424,17 @@ export default function BulkOrdersScreen() {
               onChangeText={setDescription}
               placeholder={tr.descPlaceholder}
               placeholderTextColor={colors.textMuted}
+            />
+          </View>
+          <View style={[S.field, { maxWidth: 80 }]}>
+            <Text style={S.label}>{tr.rate}</Text>
+            <TextInput
+              style={S.descInput}
+              value={rate}
+              onChangeText={t => setRate(t.replace(/[^0-9.]/g, ''))}
+              placeholder={tr.ratePlaceholder}
+              placeholderTextColor={colors.textMuted}
+              keyboardType="decimal-pad"
             />
           </View>
         </View>
@@ -439,6 +464,7 @@ export default function BulkOrdersScreen() {
           </Text>
           <Text style={S.summaryText}>
             {tr.total}: {totalQty}
+            {totalValue > 0 ? ` · ${currencySymbol}${totalValue}` : ''}
           </Text>
         </View>
       )}
