@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageAccessFramework } from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
+import { sanitizeSegment } from './filenames';
 
 const EXPORT_DIR_KEY = '@orderbill_export_dir';
 
@@ -49,11 +50,7 @@ export function describeExportDirectory(uri: string): string {
 
 // ─── Writing files ────────────────────────────────────────────────────────────
 
-/** Strip characters that are not safe in a file or folder name. */
-export function sanitizeSegment(name: string): string {
-  const cleaned = name.replace(/[^a-zA-Z0-9\-_. ]/g, '_').replace(/\s+/g, ' ').trim();
-  return cleaned || 'Untitled';
-}
+export { sanitizeSegment } from './filenames';
 
 /**
  * A folder open for writing, with its existing children indexed by name.
@@ -146,8 +143,8 @@ export async function writePngToFolder(
  * one is written under a new name before the older versions of the same key are
  * removed, so the document is never briefly missing.
  *
- * `~` is deliberately outside `sanitizeSegment`'s allowlist, so it can never
- * appear inside a label and the parts stay unambiguous.
+ * `sanitizeSegment` strips `~` for exactly this reason, so it can never appear
+ * inside a label and the parts stay unambiguous.
  */
 export function exportKey(kind: string, stamp: string, id: number): string {
   return `${kind}~${stamp}~${String(id).padStart(4, '0')}~`;

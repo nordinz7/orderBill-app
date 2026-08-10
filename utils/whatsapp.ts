@@ -1,5 +1,6 @@
 import { Lang, translations } from '@/constants/translations';
 import type { OrderWithCustomer, Transaction } from '@/services/database';
+import { sanitizeSegment } from '@/utils/filenames';
 import { format } from 'date-fns';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -119,7 +120,7 @@ export async function sendWhatsAppStatement(
  * Prepare image file: copy to cache with a nice filename, return the file URI.
  */
 function prepareImageFile(imageUri: string, prefix: string, customerName: string): string {
-  const safeName = customerName.replace(/[^a-zA-Z0-9]/g, '_');
+  const safeName = sanitizeSegment(customerName);
   const dateTag = format(new Date(), 'yyyyMMdd');
   const fileName = `${prefix}_${safeName}_${dateTag}.png`;
 
@@ -162,7 +163,7 @@ export async function shareInvoiceImage(
   companyName: string = '',
 ): Promise<void> {
   const tr = translations[lang];
-  const prefix = companyName ? `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_Invoice` : 'Invoice';
+  const prefix = companyName ? `${sanitizeSegment(companyName)}_Invoice` : 'Invoice';
   try {
     const fileUri = prepareImageFile(imageUri, prefix, customerName);
     await shareImage(fileUri, tr.sendInvoice);
@@ -182,7 +183,7 @@ export async function shareStatementImage(
   companyName: string = '',
 ): Promise<void> {
   const tr = translations[lang];
-  const prefix = companyName ? `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_Statement` : 'Statement';
+  const prefix = companyName ? `${sanitizeSegment(companyName)}_Statement` : 'Statement';
   try {
     const fileUri = prepareImageFile(imageUri, prefix, customerName);
     await shareImage(fileUri, tr.shareStatement);
@@ -202,7 +203,7 @@ export async function sharePaymentReceiptImage(
   companyName: string = '',
 ): Promise<void> {
   const tr = translations[lang];
-  const prefix = companyName ? `${companyName.replace(/[^a-zA-Z0-9]/g, '_')}_Receipt` : 'Receipt';
+  const prefix = companyName ? `${sanitizeSegment(companyName)}_Receipt` : 'Receipt';
   try {
     const fileUri = prepareImageFile(imageUri, prefix, customerName);
     await shareImage(fileUri, tr.sendPaymentReceipt);
