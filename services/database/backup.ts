@@ -14,8 +14,9 @@ export async function getAllDataForBackup(db: SQLite.SQLiteDatabase) {
 
 /**
  * Older backups carried columns this app no longer keeps — the per-order
- * `amount` that predates the ledger, and the `bills` grouping that the billing
- * step used. They are read where they still say something and ignored otherwise.
+ * `amount` that predates the ledger, a short-lived `rate`, and the `bills`
+ * grouping the billing step used. All of them are ignored: an order's value
+ * comes back from the ledger entries in the same file.
  */
 export interface BackupPayload {
   exportedAt: string;
@@ -63,10 +64,10 @@ export async function restoreFromBackupData(
 
     for (const o of payload.orders) {
       await db.runAsync(
-        `INSERT INTO orders (id, customer_id, description, quantity, rate, transaction_id, locked, date, updated_at, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO orders (id, customer_id, description, quantity, transaction_id, locked, date, updated_at, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          o.id, o.customer_id, o.description, o.quantity ?? 0, o.rate ?? 0,
+          o.id, o.customer_id, o.description, o.quantity ?? 0,
           o.transaction_id ?? null, o.locked ?? null, o.date, o.updated_at,
           (o as any).status ?? 'active',
         ],
@@ -102,17 +103,7 @@ export async function restoreFromBackupData(
       }
     }
 
-    // Backups taken before orders carried a rate leave it at zero; recover it
-    // from what the order is worth in the ledger, as the schema migration does.
-    await db.execAsync(`
-      UPDATE orders SET rate = COALESCE((
-        SELECT t.amount / (CASE WHEN orders.quantity > 0 THEN orders.quantity ELSE 1 END)
-        FROM transactions t WHERE t.id = orders.transaction_id
-      ), 0)
-      WHERE rate = 0 AND transaction_id IS NOT NULL
-    `);
-
-    // Also as the migration does: an order that never reached the ledger is
+    // As the migration does: an order that never reached the ledger is
     // still waiting to be priced, so it is held open rather than locked by its
     // own date. Orders whose lock was set explicitly keep what the backup says.
     await db.execAsync(`

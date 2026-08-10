@@ -266,10 +266,10 @@ const en = {
   currencySymbolPlaceholder: 'e.g. ₹, $, €, £',
   countryCode: 'Country Code',
   countryCodePlaceholder: 'e.g. +91, +1, +44',
-  // Rate & value
-  rate: 'Rate',
+  // Amount & rate
+  ratePerUnit: 'Rate / unit',
   ratePlaceholder: 'e.g. 50',
-  orderValue: 'Order Value',
+  perUnitRate: 'Works out to / unit',
   perUnit: 'per unit',
   // Locking
   locked: 'Locked',
@@ -575,10 +575,10 @@ const ta: typeof en = {
   currencySymbolPlaceholder: 'எ.கா. ₹, $, €, £',
   countryCode: 'நாட்டு குறியீடு',
   countryCodePlaceholder: 'எ.கா. +91, +1, +44',
-  // Rate & value
-  rate: 'விலை',
+  // Amount & rate
+  ratePerUnit: 'ஒன்றின் விலை',
   ratePlaceholder: 'எ.கா. 50',
-  orderValue: 'ஆர்டர் மதிப்பு',
+  perUnitRate: 'ஒன்றுக்கு வரும் விலை',
   perUnit: 'ஒன்றுக்கு',
   // Locking
   locked: 'பூட்டப்பட்டது',

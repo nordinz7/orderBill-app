@@ -202,7 +202,7 @@ export default function DeveloperScreen() {
                   const item = items[Math.floor(Math.random() * items.length)];
                   const qty = 1 + Math.floor(Math.random() * 5);
                   const rate = [50, 80, 120, 200][Math.floor(Math.random() * 4)];
-                  await addOrder(db, customerId, item, qty, rate, date.toISOString());
+                  await addOrder(db, customerId, item, qty, qty * rate, date.toISOString());
                 }
                 const paymentCount = 1 + Math.floor(Math.random() * 2);
                 for (let i = 0; i < paymentCount; i++) {

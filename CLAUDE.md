@@ -32,7 +32,7 @@ app/(tabs)/settings.tsx      → Theme, language, company details
 app/(tabs)/backup.tsx        → Backup/restore (hidden from tab bar, accessed via settings)
 app/add-customer.tsx         → Modal: add customer
 app/edit-customer.tsx        → Modal: edit customer
-app/add-order.tsx            → Modal: add single order (quantity × rate)
+app/add-order.tsx            → Modal: add single order (quantity + amount)
 app/edit-order.tsx           → Modal: edit order (read-only while locked)
 app/bulk-orders.tsx          → Modal: add orders to multiple customers at once
 app/add-payment.tsx          → Modal: record payment
@@ -49,7 +49,7 @@ app/developer.tsx            → Modal: DB stats, raw SQL query tool
 ### Data Layer
 
 - **Database**: `expo-sqlite` with WAL mode and foreign keys enabled. All CRUD lives in `services/database.ts`. The DB is named `mfc.db` and initialized via `initDatabase()` passed to `<SQLiteProvider onInit>`.
-- **Schema**: 3 tables — `customers`, `orders` (what was sold: description, quantity, rate), `transactions` (double-entry ledger with debit/credit types). Every order owns exactly one debit entry, created and kept in step by `syncOrderLedger` in `services/database/orders.ts`; the ledger is the only place an amount is stored. Migrations use `ALTER TABLE` wrapped in try-catch for idempotency, and retired tables/columns are dropped the same way — all of it safe to re-run on every launch. A one-time pass over existing *rows* goes behind the `PRAGMA user_version` check in `schema.ts` (bump `SCHEMA_VERSION`), so it cannot undo choices the user made afterwards. Row backfills must never touch `transactions`: balances have to come out of an upgrade unchanged.
+- **Schema**: 3 tables — `customers`, `orders` (what was sold: description, quantity, date), `transactions` (double-entry ledger with debit/credit types). Every order owns exactly one debit entry, created and kept in step by `syncOrderLedger` in `services/database/orders.ts`; the ledger is the only place an amount is stored — an order row carries no amount of its own, and the per-unit rate shown in the UI is derived from it (`unitRate`). Migrations use `ALTER TABLE` wrapped in try-catch for idempotency, and retired tables/columns are dropped the same way — all of it safe to re-run on every launch. A one-time pass over existing *rows* goes behind the `PRAGMA user_version` check in `schema.ts` (bump `SCHEMA_VERSION`), so it cannot undo choices the user made afterwards. Row backfills must never touch `transactions`: balances have to come out of an upgrade unchanged.
 - **Types**: All DB row interfaces (`Customer`, `Order`, `Transaction`, `CustomerWithBalance`, `OrderWithCustomer`, `TransactionWithCustomer`, etc.) are exported from `services/database`.
 - **Locking**: Orders and ledger entries lock themselves once their day has passed (`isLocked` in `services/database/helpers.ts`, compared in local time). The `locked` column overrides that in either direction — `setOrderLock` / `setTransactionLock` write it, and both keep an order and its debit entry in agreement. Writes to a locked record throw `LockedRecordError`.
 - **No remote API** — everything is local SQLite + AsyncStorage.

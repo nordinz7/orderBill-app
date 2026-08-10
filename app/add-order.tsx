@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { addOrder, Customer, findDuplicateOrder, getActiveCustomers, orderAmount } from '@/services/database';
+import { addOrder, Customer, findDuplicateOrder, getActiveCustomers, unitRate } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -95,7 +95,7 @@ export default function AddOrderScreen() {
   const [showPicker, setShowPicker]         = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [quantity, setQuantity]             = useState('');
-  const [rate, setRate]                     = useState('');
+  const [amount, setAmount]                 = useState('');
   const [description, setDescription]       = useState(defaultOrderDescription);
   const [saving, setSaving]                 = useState(false);
 
@@ -116,8 +116,8 @@ export default function AddOrderScreen() {
   useEffect(() => { getActiveCustomers(db).then(setCustomers); }, [db]);
 
   const qty = parseInt(quantity, 10) || 0;
-  const unitRate = parseFloat(rate) || 0;
-  const total = orderAmount(qty, unitRate);
+  const total = parseFloat(amount) || 0;
+  const perUnit = unitRate(total, qty);
 
   const handleSave = async () => {
     if (!selectedCustomer) { Alert.alert(tr.required, tr.pleaseSelectCustomer); return; }
@@ -138,7 +138,7 @@ export default function AddOrderScreen() {
           text: tr.addNew, onPress: async () => {
             setSaving(true);
             try {
-              await addOrder(db, selectedCustomer.id, description, qty, unitRate, orderDate.toISOString());
+              await addOrder(db, selectedCustomer.id, description, qty, total, orderDate.toISOString());
               router.back();
             } catch {
               Alert.alert('Error', tr.couldNotSave);
@@ -151,7 +151,7 @@ export default function AddOrderScreen() {
 
     setSaving(true);
     try {
-      await addOrder(db, selectedCustomer.id, description, qty, unitRate, orderDate.toISOString());
+      await addOrder(db, selectedCustomer.id, description, qty, total, orderDate.toISOString());
       router.back();
     } catch {
       Alert.alert('Error', tr.couldNotSave);
@@ -192,14 +192,18 @@ export default function AddOrderScreen() {
             <TextInput style={S.input} value={quantity} onChangeText={t => setQuantity(t.replace(/[^0-9]/g, ''))} placeholder={tr.quantityPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="number-pad" returnKeyType="next" />
           </View>
           <View style={S.halfField}>
-            <Text style={S.label}><MaterialIcons name="sell" size={16} color={colors.text} /> {tr.rate}</Text>
-            <TextInput style={S.input} value={rate} onChangeText={t => setRate(t.replace(/[^0-9.]/g, ''))} placeholder={tr.ratePlaceholder} placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" returnKeyType="next" />
+            <Text style={S.label}><MaterialIcons name="payments" size={16} color={colors.text} /> {tr.amount}</Text>
+            <TextInput style={S.input} value={amount} onChangeText={t => setAmount(t.replace(/[^0-9.]/g, ''))} placeholder={tr.amountPlaceholder} placeholderTextColor={colors.textMuted} keyboardType="decimal-pad" returnKeyType="next" />
           </View>
         </View>
-        <View style={S.totalRow}>
-          <Text style={S.totalLabel}>{tr.orderValue}</Text>
-          <Text style={S.totalValue}>{currencySymbol}{total}</Text>
-        </View>
+        {/* What the agreed amount works out to per unit — a read-out, not an
+            input, so a price that was settled as a total stays exact. */}
+        {perUnit > 0 && (
+          <View style={S.totalRow}>
+            <Text style={S.totalLabel}>{tr.perUnitRate}</Text>
+            <Text style={S.totalValue}>{currencySymbol}{perUnit}</Text>
+          </View>
+        )}
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description} *</Text>
           <TextInput style={[S.input, S.textArea]} value={description} onChangeText={setDescription} placeholder={tr.descPlaceholder} placeholderTextColor={colors.textMuted} multiline numberOfLines={4} textAlignVertical="top" />

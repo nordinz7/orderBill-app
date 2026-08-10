@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { bulkAddOrders, Customer, getActiveCustomers, orderAmount } from '@/services/database';
+import { bulkAddOrders, Customer, getActiveCustomers } from '@/services/database';
 import { promptAddFirstCustomer } from '@/utils/customers';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -26,7 +26,7 @@ const DRAFT_KEY = '@orderbill_bulk_draft';
 interface BulkDraft {
   quantities: Record<string, string>;
   description: string;
-  /** Applied to every order in the batch. Absent in drafts saved before rates. */
+  /** Per-unit rate the batch is priced at. Absent in drafts saved before rates. */
   rate?: string;
   orderDate: string;
 }
@@ -319,12 +319,15 @@ export default function BulkOrdersScreen() {
     [quantities]
   );
 
-  const unitRate = parseFloat(rate) || 0;
+  // A batch is priced by the unit — typing an amount per customer would defeat
+  // the point of this screen — but each order is stored with its own amount, so
+  // any one of them can be corrected afterwards without moving the rest.
+  const perUnit = parseFloat(rate) || 0;
   const totalValue = useMemo(
     () => Object.values(quantities).reduce(
-      (sum, v) => sum + orderAmount(parseInt(v, 10) || 0, unitRate), 0,
+      (sum, v) => sum + (parseInt(v, 10) || 0) * perUnit, 0,
     ),
-    [quantities, unitRate]
+    [quantities, perUnit]
   );
 
   const handleSaveDraft = () => {
@@ -349,7 +352,14 @@ export default function BulkOrdersScreen() {
 
   const handleFinalize = () => {
     const entries = Object.entries(quantities)
-      .map(([id, qty]) => ({ customer_id: parseInt(id, 10), quantity: parseInt(qty, 10) || 0 }))
+      .map(([id, qty]) => {
+        const quantity = parseInt(qty, 10) || 0;
+        return {
+          customer_id: parseInt(id, 10),
+          quantity,
+          amount: Math.round(quantity * perUnit * 100) / 100,
+        };
+      })
       .filter(e => e.quantity > 0);
 
     if (entries.length === 0) {
@@ -367,7 +377,7 @@ export default function BulkOrdersScreen() {
         text: tr.finalize, onPress: async () => {
           setSaving(true);
           try {
-            const count = await bulkAddOrders(db, entries, description, unitRate, orderDate.toISOString());
+            const count = await bulkAddOrders(db, entries, description, orderDate.toISOString());
             await clearBulkDraft();
             Alert.alert(tr.bulkOrdersSaved, tr.bulkOrdersSavedMsg(count), [
               { text: 'OK', onPress: () => router.replace({ pathname: '/(tabs)/orders', params: { filterDate: orderDate.toISOString().slice(0, 10) } }) },
@@ -427,7 +437,7 @@ export default function BulkOrdersScreen() {
             />
           </View>
           <View style={[S.field, { maxWidth: 80 }]}>
-            <Text style={S.label}>{tr.rate}</Text>
+            <Text style={S.label}>{tr.ratePerUnit}</Text>
             <TextInput
               style={S.descInput}
               value={rate}

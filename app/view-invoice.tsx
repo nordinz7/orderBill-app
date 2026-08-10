@@ -70,7 +70,6 @@ export default function ViewInvoiceScreen() {
     amount: parseFloat(amount ?? '0'),
     description: description ?? '',
     quantity: parseFloat(quantity ?? '0'),
-    rate: 0,
     transaction_id: null,
     locked: null,
     date: date ?? new Date().toISOString(),

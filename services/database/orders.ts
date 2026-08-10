@@ -6,8 +6,6 @@ export interface Order {
   customer_id: number;
   description: string;
   quantity: number;
-  /** Selling rate for one unit. The order's value is this times the quantity. */
-  rate: number;
   transaction_id: number | null;
   locked: LockFlag;
   date: string;
@@ -35,12 +33,15 @@ const ORDER_SELECT = `
 `;
 
 /**
- * What an order is worth. A quantity of zero is read as a single unit rather
- * than as nothing, so an order entered as a flat price still carries its value.
+ * What one unit of an order came to — the amount divided by the quantity.
+ *
+ * Derived rather than stored, and only ever shown: the price is agreed as a
+ * total, and it is the total that has to be exact. Returns 0 for an order with
+ * no quantity, which has no per-unit price to speak of.
  */
-export function orderAmount(quantity: number, rate: number): number {
-  const units = quantity > 0 ? quantity : 1;
-  return Math.round(units * rate * 100) / 100;
+export function unitRate(amount: number, quantity: number): number {
+  if (quantity <= 0 || amount <= 0) return 0;
+  return Math.round((amount / quantity) * 100) / 100;
 }
 
 /**
@@ -108,18 +109,18 @@ export async function getCustomersWithOrders(
 /**
  * Bring the order's debit entry in line with the order itself.
  *
- * The ledger is the only place an order's value is kept, so every write to an
- * order ends here: the entry is created, corrected, or — once the order is
- * worth nothing — removed.
+ * The ledger is the only place an order's value is kept — the order row carries
+ * no amount of its own — so every write to an order ends here: the entry is
+ * created, corrected, or, once the order is worth nothing, removed.
  */
 async function syncOrderLedger(
   db: SQLite.SQLiteDatabase,
   orderId: number,
+  amount: number,
 ): Promise<void> {
   const order = await db.getFirstAsync<Order>(`SELECT * FROM orders WHERE id = ?`, [orderId]);
   if (!order) return;
   const now = nowISO();
-  const amount = orderAmount(order.quantity, order.rate);
 
   if (amount <= 0) {
     if (order.transaction_id !== null) {
@@ -153,28 +154,35 @@ export async function addOrder(
   customer_id: number,
   description: string,
   quantity: number = 0,
-  rate: number = 0,
+  amount: number = 0,
   date?: string,
 ): Promise<number> {
   const now = nowISO();
   let orderId = 0;
   await db.withTransactionAsync(async () => {
     const result = await db.runAsync(
-      `INSERT INTO orders (customer_id, description, quantity, rate, date, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [customer_id, description.trim(), quantity, rate, date ?? now, now]
+      `INSERT INTO orders (customer_id, description, quantity, date, updated_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [customer_id, description.trim(), quantity, date ?? now, now]
     );
     orderId = result.lastInsertRowId;
-    await syncOrderLedger(db, orderId);
+    await syncOrderLedger(db, orderId, amount);
   });
   return orderId;
 }
 
+/**
+ * Add one order per entry, each priced at its own amount.
+ *
+ * The batch screen works from a single rate because typing an amount per
+ * customer would defeat the point of it, but what is stored is still the
+ * amount — so any one of them can be corrected afterwards without the others
+ * moving.
+ */
 export async function bulkAddOrders(
   db: SQLite.SQLiteDatabase,
-  orders: { customer_id: number; quantity: number }[],
+  orders: { customer_id: number; quantity: number; amount: number }[],
   description: string,
-  rate: number,
   date: string,
 ): Promise<number> {
   const now = nowISO();
@@ -183,11 +191,11 @@ export async function bulkAddOrders(
     for (const o of orders) {
       if (o.quantity <= 0) continue;
       const result = await db.runAsync(
-        `INSERT INTO orders (customer_id, description, quantity, rate, date, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [o.customer_id, description.trim(), o.quantity, rate, date, now]
+        `INSERT INTO orders (customer_id, description, quantity, date, updated_at)
+         VALUES (?, ?, ?, ?, ?)`,
+        [o.customer_id, description.trim(), o.quantity, date, now]
       );
-      await syncOrderLedger(db, result.lastInsertRowId);
+      await syncOrderLedger(db, result.lastInsertRowId, o.amount);
       count++;
     }
   });
@@ -238,7 +246,7 @@ export async function updateOrder(
   orderId: number,
   description: string,
   quantity: number = 0,
-  rate: number = 0,
+  amount: number = 0,
   date?: string,
 ): Promise<void> {
   const now = nowISO();
@@ -246,13 +254,13 @@ export async function updateOrder(
   if (lock && isLocked(lock.date, lock.locked)) throw new LockedRecordError();
   await db.withTransactionAsync(async () => {
     const params = date
-      ? [description.trim(), quantity, rate, now, date, orderId]
-      : [description.trim(), quantity, rate, now, orderId];
+      ? [description.trim(), quantity, now, date, orderId]
+      : [description.trim(), quantity, now, orderId];
     await db.runAsync(
-      `UPDATE orders SET description = ?, quantity = ?, rate = ?, updated_at = ?${date ? ', date = ?' : ''} WHERE id = ?`,
+      `UPDATE orders SET description = ?, quantity = ?, updated_at = ?${date ? ', date = ?' : ''} WHERE id = ?`,
       params
     );
-    await syncOrderLedger(db, orderId);
+    await syncOrderLedger(db, orderId, amount);
   });
 }
 

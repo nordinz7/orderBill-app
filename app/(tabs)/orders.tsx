@@ -9,6 +9,7 @@ import {
     isLocked,
     OrderWithCustomer,
     setOrderLock,
+    unitRate,
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -383,7 +384,9 @@ export default function OrdersScreen() {
           </View>
           <Text style={S.cardSub} numberOfLines={1}>
             {format(new Date(item.date), 'dd MMM')}
-            {item.rate > 0 ? ` · ${currencySymbol}${item.rate} ${tr.perUnit}` : ''}
+            {unitRate(item.amount, item.quantity) > 0
+              ? ` · ${currencySymbol}${unitRate(item.amount, item.quantity)} ${tr.perUnit}`
+              : ''}
             {item.description !== defaultOrderDescription ? ` · ${item.description}` : ''}
           </Text>
         </View>

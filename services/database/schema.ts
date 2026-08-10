@@ -34,15 +34,14 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     );
   `);
 
-  // An order carries what was sold and at what rate; its value reaches the
-  // books through the debit entry in `transactions` that it owns.
+  // An order carries what was sold; what it came to is held by the debit entry
+  // in `transactions` that it owns, and nowhere else.
   await db.execAsync(`
     CREATE TABLE IF NOT EXISTS orders (
       id             INTEGER PRIMARY KEY AUTOINCREMENT,
       customer_id    INTEGER NOT NULL REFERENCES customers(id),
       description    TEXT    NOT NULL DEFAULT '',
       quantity       REAL    NOT NULL DEFAULT 0,
-      rate           REAL    NOT NULL DEFAULT 0,
       transaction_id INTEGER DEFAULT NULL,
       locked         INTEGER DEFAULT NULL,
       date           TEXT    NOT NULL,
@@ -73,7 +72,6 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     `ALTER TABLE orders ADD COLUMN updated_at TEXT NOT NULL DEFAULT ''`,
     `ALTER TABLE orders ADD COLUMN status TEXT NOT NULL DEFAULT 'active'`,
     `ALTER TABLE orders ADD COLUMN quantity REAL NOT NULL DEFAULT 0`,
-    `ALTER TABLE orders ADD COLUMN rate REAL NOT NULL DEFAULT 0`,
     `ALTER TABLE orders ADD COLUMN transaction_id INTEGER DEFAULT NULL`,
     `ALTER TABLE orders ADD COLUMN locked INTEGER DEFAULT NULL`,
     `ALTER TABLE transactions ADD COLUMN locked INTEGER DEFAULT NULL`,
@@ -87,32 +85,10 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
   // in particular any order they have since locked by hand.
   const version = await getSchemaVersion(db);
   if (version < SCHEMA_VERSION) {
-    // Orders used to hold no rate at all — the amount was typed once, later, in
-    // the billing screen. Recover a rate from what the order was billed for, so
-    // an old order opened for editing shows a sensible number instead of zero.
-    // Only `rate` is written: the ledger is left exactly as it stands, so no
-    // customer's balance can move during the upgrade.
-    try {
-      await db.execAsync(`
-        UPDATE orders SET rate = COALESCE((
-          SELECT t.amount / (CASE WHEN orders.quantity > 0 THEN orders.quantity ELSE 1 END)
-          FROM transactions t WHERE t.id = orders.transaction_id
-        ), 0)
-        WHERE rate = 0 AND transaction_id IS NOT NULL
-      `);
-    } catch { /* nothing to recover */ }
-
-    // Same again for the per-order `amount` of a much older schema, in case a
-    // database still carries one that never made it into the ledger. Dropping
-    // that column below would otherwise take the price with it.
-    try {
-      await db.execAsync(`
-        UPDATE orders
-        SET rate = amount / (CASE WHEN quantity > 0 THEN quantity ELSE 1 END)
-        WHERE rate = 0 AND transaction_id IS NULL AND amount > 0
-      `);
-    } catch { /* no legacy amount column */ }
-
+    // Prices already billed need no rescuing: they are in the ledger, which
+    // this pass does not touch, so no customer's balance can move during the
+    // upgrade. Every order opened for editing reads its amount from there.
+    //
     // An order with no ledger entry was taken under the old rules, where pricing
     // came later and "unbilled" was a normal state to sit in. Auto-locking that
     // backlog on its date would strand it, so it is held open instead — the
@@ -131,11 +107,13 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     try { await db.execAsync(`DROP TABLE IF EXISTS ${table}`); } catch { /* already gone */ }
   }
 
-  // Retired columns. orders.amount was always 0 — the ledger holds the value —
-  // and both bill_id columns pointed at the dropped bills table. Every write
-  // omits them, so a failed drop here is harmless.
+  // Retired columns. orders.amount was always 0 and orders.rate belonged to a
+  // shortlived attempt at pricing by the unit — the ledger holds the value in
+  // both cases — and the bill_id columns pointed at the dropped bills table.
+  // Every write omits them, so a failed drop here is harmless.
   const retiredColumns = [
     `ALTER TABLE orders DROP COLUMN amount`,
+    `ALTER TABLE orders DROP COLUMN rate`,
     `ALTER TABLE orders DROP COLUMN bill_id`,
     `ALTER TABLE transactions DROP COLUMN bill_id`,
   ];

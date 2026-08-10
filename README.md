@@ -11,7 +11,7 @@ A local-first, offline-only Android app for food business owners to manage custo
 ## Features
 
 - **Customer Management** — Add, edit, bulk-import from phone contacts
-- **Order Tracking** — Single & bulk orders with quantity × rate, date & customer filters
+- **Order Tracking** — Single & bulk orders with quantity + amount, date & customer filters
 - **Payment Recording** — Multiple payment methods, bulk payments
 - **Transactions** — One ledger of orders, payments received & debts, filtered by date and customer
 - **Locking** — Orders and ledger entries close themselves once their day has passed, and can be unlocked
@@ -123,11 +123,12 @@ utils/
 | Table          | Purpose                                                 |
 | -------------- | ------------------------------------------------------- |
 | `customers`    | Customer profiles (name, place, phone)                  |
-| `orders`       | What was sold (description, quantity, rate, date)       |
+| `orders`       | What was sold (description, quantity, date)             |
 | `transactions` | Double-entry ledger (debit/credit) — where amounts live |
 
 Every order owns exactly one debit entry, created with the order and kept in step
-with it. An amount is never stored twice.
+with it. An amount is never stored twice — the order row has none, and the
+per-unit rate on screen is derived by dividing the amount by the quantity.
 
 ## Configuration
 

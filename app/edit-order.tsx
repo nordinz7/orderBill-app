@@ -4,9 +4,9 @@ import { useSettings } from '@/contexts/SettingsContext';
 import {
   getOrderWithCustomer,
   isLocked,
-  orderAmount,
   OrderWithCustomer,
   setOrderLock,
+  unitRate,
   updateOrder,
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -88,7 +88,7 @@ export default function EditOrderScreen() {
 
   const [order, setOrder] = useState<OrderWithCustomer | null>(null);
   const [quantity, setQuantity]       = useState('0');
-  const [rate, setRate]               = useState('0');
+  const [amount, setAmount]           = useState('0');
   const [description, setDescription] = useState('');
   const [orderDate, setOrderDate]     = useState<Date>(() => new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -100,7 +100,7 @@ export default function EditOrderScreen() {
     if (!found) { router.back(); return; }
     setOrder(found);
     setQuantity(String(found.quantity));
-    setRate(String(found.rate));
+    setAmount(String(found.amount));
     setDescription(found.description);
     setOrderDate(new Date(found.date));
   }, [db, orderId, router]);
@@ -128,14 +128,14 @@ export default function EditOrderScreen() {
   };
 
   const qty = parseInt(quantity, 10) || 0;
-  const unitRate = parseFloat(rate) || 0;
-  const total = orderAmount(qty, unitRate);
+  const total = parseFloat(amount) || 0;
+  const perUnit = unitRate(total, qty);
 
   const handleSave = async () => {
     if (!description.trim()) { Alert.alert(tr.required, tr.enterDesc); return; }
     setSaving(true);
     try {
-      await updateOrder(db, orderId, description, qty, unitRate, orderDate.toISOString());
+      await updateOrder(db, orderId, description, qty, total, orderDate.toISOString());
       router.back();
     } catch {
       Alert.alert(locked ? tr.locked : 'Error', locked ? tr.cannotEditLocked : tr.couldNotSave);
@@ -199,12 +199,12 @@ export default function EditOrderScreen() {
             />
           </View>
           <View style={S.halfField}>
-            <Text style={S.label}><MaterialIcons name="sell" size={16} color={colors.text} /> {tr.rate}</Text>
+            <Text style={S.label}><MaterialIcons name="payments" size={16} color={colors.text} /> {tr.amount}</Text>
             <TextInput
               style={S.input}
-              value={rate}
-              onChangeText={t => setRate(t.replace(/[^0-9.]/g, ''))}
-              placeholder={tr.ratePlaceholder}
+              value={amount}
+              onChangeText={t => setAmount(t.replace(/[^0-9.]/g, ''))}
+              placeholder={tr.amountPlaceholder}
               placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
               returnKeyType="next"
@@ -213,10 +213,14 @@ export default function EditOrderScreen() {
           </View>
         </View>
 
-        <View style={S.totalRow}>
-          <Text style={S.totalLabel}>{tr.orderValue}</Text>
-          <Text style={S.totalValue}>{currencySymbol}{total}</Text>
-        </View>
+        {/* What the agreed amount works out to per unit — a read-out, not an
+            input, so a price that was settled as a total stays exact. */}
+        {perUnit > 0 && (
+          <View style={S.totalRow}>
+            <Text style={S.totalLabel}>{tr.perUnitRate}</Text>
+            <Text style={S.totalValue}>{currencySymbol}{perUnit}</Text>
+          </View>
+        )}
 
         {/* Description */}
         <View style={S.field}>
