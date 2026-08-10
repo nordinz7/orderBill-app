@@ -47,10 +47,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="billing"
+        name="transactions"
         options={{
-          title: tr.billing,
-          tabBarIcon: ({ color }) => <TabIcon name="receipt" color={color} />,
+          title: tr.transactions,
+          tabBarIcon: ({ color }) => <TabIcon name="swap-horiz" color={color} />,
         }}
       />
       <Tabs.Screen
