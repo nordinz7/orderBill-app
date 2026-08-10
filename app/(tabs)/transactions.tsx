@@ -471,7 +471,6 @@ export default function TransactionsScreen() {
         >
           <MaterialIcons name="save-alt" size={14} color={colors.primary} />
           <Text style={S.exportChipText}>
-            {tr.exportStatementImages}
             {exportTargets.length > 0 ? ` (${exportTargets.length})` : ''}
           </Text>
         </TouchableOpacity>
