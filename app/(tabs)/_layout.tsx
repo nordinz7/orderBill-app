@@ -1,4 +1,5 @@
 import { FontSizes } from '@/constants/theme';
+import { ListFilterProvider } from '@/contexts/ListFilterContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
@@ -15,59 +16,63 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
-          // Fix: add system navigation bar height so tabs don't overlap
-          height: 56 + insets.bottom,
-          paddingBottom: insets.bottom + 4,
-          paddingTop: 4,
-        },
-        tabBarLabelStyle: {
-          fontSize: FontSizes.xs,
-          fontWeight: '600',
-        },
-        tabBarItemStyle: {
-          minHeight: 48,
-        },
-        tabBarHideOnKeyboard: true,
-        headerShown: false,
-        sceneStyle: { paddingTop: insets.top },
-      }}
-    >
-      <Tabs.Screen
-        name="orders"
-        options={{
-          title: tr.orders,
-          tabBarIcon: ({ color }) => <TabIcon name="receipt-long" color={color} />,
+    // Above the tabs, so the date and customer being looked through survive
+    // switching between Orders and Transactions.
+    <ListFilterProvider>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textMuted,
+          tabBarStyle: {
+            backgroundColor: colors.card,
+            borderTopColor: colors.border,
+            // Fix: add system navigation bar height so tabs don't overlap
+            height: 56 + insets.bottom,
+            paddingBottom: insets.bottom + 4,
+            paddingTop: 4,
+          },
+          tabBarLabelStyle: {
+            fontSize: FontSizes.xs,
+            fontWeight: '600',
+          },
+          tabBarItemStyle: {
+            minHeight: 48,
+          },
+          tabBarHideOnKeyboard: true,
+          headerShown: false,
+          sceneStyle: { paddingTop: insets.top },
         }}
-      />
-      <Tabs.Screen
-        name="transactions"
-        options={{
-          title: tr.transactions,
-          tabBarIcon: ({ color }) => <TabIcon name="swap-horiz" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: tr.customers,
-          tabBarIcon: ({ color }) => <TabIcon name="people" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: tr.settings,
-          tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
-        }}
-      />
-      <Tabs.Screen name="backup" options={{ href: null }} />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="orders"
+          options={{
+            title: tr.orders,
+            tabBarIcon: ({ color }) => <TabIcon name="receipt-long" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="transactions"
+          options={{
+            title: tr.transactions,
+            tabBarIcon: ({ color }) => <TabIcon name="swap-horiz" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: tr.customers,
+            tabBarIcon: ({ color }) => <TabIcon name="people" color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: tr.settings,
+            tabBarIcon: ({ color }) => <TabIcon name="settings" color={color} />,
+          }}
+        />
+        <Tabs.Screen name="backup" options={{ href: null }} />
+      </Tabs>
+    </ListFilterProvider>
   );
 }

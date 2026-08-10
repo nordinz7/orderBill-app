@@ -56,6 +56,7 @@ app/developer.tsx            → Modal: DB stats, raw SQL query tool
 
 ### State Management
 
+- **ListFilterContext** (`contexts/ListFilterContext.tsx`): the date and customer the Orders and Transactions tabs are both filtered by. Mounted in `app/(tabs)/_layout.tsx` so the filter survives switching tabs; in memory only, never persisted.
 - **SettingsContext** (`contexts/SettingsContext.tsx`): provides theme (`isDark`, `colors`), language (`lang`, `tr`), and company info. Persisted to AsyncStorage under `@mfc_*` keys.
 - **Database access**: screens call `useSQLiteContext()` directly and invoke functions from `services/database.ts`.
 

@@ -2,6 +2,7 @@ import { getBulkPaymentDraftCount } from '@/app/bulk-payments';
 import KeyboardModal from '@/components/KeyboardModal';
 import StatementExporter, { type StatementExporterHandle, type StatementTarget } from '@/components/StatementExporter';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
+import { useListFilter } from '@/contexts/ListFilterContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
     deleteTransaction,
@@ -194,9 +195,13 @@ export default function TransactionsScreen() {
   const S = makeStyles(colors, insets.bottom);
 
   const [transactions, setTransactions] = useState<TransactionWithCustomer[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+  // Date and customer are shared with the Orders tab, so switching between the
+  // two keeps looking at the same slice of the business.
+  const {
+    date: selectedDate, setDate: setSelectedDate,
+    customer: selectedCustomer, setCustomer: setSelectedCustomer,
+  } = useListFilter();
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [customerOptions, setCustomerOptions] = useState<DropdownItem[]>([]);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
@@ -212,13 +217,13 @@ export default function TransactionsScreen() {
     } else {
       results = await getAllTransactionsWithCustomer(db);
     }
-    if (selectedCustomerId) {
-      results = results.filter(t => String(t.customer_id) === selectedCustomerId);
+    if (selectedCustomer) {
+      results = results.filter(t => String(t.customer_id) === selectedCustomer.id);
     }
     setTransactions(results);
     const custs = await getCustomersWithTransactions(db);
     setCustomerOptions(custs.map(c => ({ id: String(c.id), label: c.name })));
-  }, [db, selectedDate, selectedCustomerId]);
+  }, [db, selectedDate, selectedCustomer]);
 
   useFocusEffect(useCallback(() => {
     void load();
@@ -423,9 +428,7 @@ export default function TransactionsScreen() {
   };
 
   const dateChipLabel = selectedDate ? format(selectedDate, 'dd MMM yyyy') : null;
-  const customerChipLabel = selectedCustomerId
-    ? customerOptions.find(c => c.id === selectedCustomerId)?.label ?? null
-    : null;
+  const customerChipLabel = selectedCustomer?.name ?? null;
 
   return (
     <View style={S.container}>
@@ -446,15 +449,15 @@ export default function TransactionsScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[S.filterChip, selectedCustomerId ? S.filterChipActive : undefined]}
-          onPress={() => { if (selectedCustomerId) setSelectedCustomerId(null); else setShowCustomerModal(true); }}
+          style={[S.filterChip, selectedCustomer ? S.filterChipActive : undefined]}
+          onPress={() => { if (selectedCustomer) setSelectedCustomer(null); else setShowCustomerModal(true); }}
         >
           <MaterialIcons
-            name={selectedCustomerId ? 'close' : 'person'}
+            name={selectedCustomer ? 'close' : 'person'}
             size={16}
-            color={selectedCustomerId ? '#FFFFFF' : colors.textSecondary}
+            color={selectedCustomer ? '#FFFFFF' : colors.textSecondary}
           />
-          <Text style={[S.filterChipText, selectedCustomerId && S.filterChipTextActive]} numberOfLines={1}>
+          <Text style={[S.filterChipText, selectedCustomer && S.filterChipTextActive]} numberOfLines={1}>
             {customerChipLabel ?? tr.selectCustomer}
           </Text>
         </TouchableOpacity>
@@ -558,14 +561,14 @@ export default function TransactionsScreen() {
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[S.modalItem, item.id === selectedCustomerId && S.modalItemActive]}
+                  style={[S.modalItem, item.id === selectedCustomer?.id && S.modalItemActive]}
                   onPress={() => {
-                    setSelectedCustomerId(item.id);
+                    setSelectedCustomer({ id: item.id, name: item.label });
                     setShowCustomerModal(false);
                     setCustomerSearch('');
                   }}
                 >
-                  <Text style={[S.modalItemText, item.id === selectedCustomerId && S.modalItemTextActive]}>
+                  <Text style={[S.modalItemText, item.id === selectedCustomer?.id && S.modalItemTextActive]}>
                     {item.label}
                   </Text>
                 </TouchableOpacity>

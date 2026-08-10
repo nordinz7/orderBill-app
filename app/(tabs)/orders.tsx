@@ -1,5 +1,6 @@
 import { getBulkDraftCount } from '@/app/bulk-orders';
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
+import { useListFilter } from '@/contexts/ListFilterContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
     deleteOrder,
@@ -195,19 +196,17 @@ export default function OrdersScreen() {
   const S = makeStyles(colors, insets.bottom);
 
   const [orders, setOrders] = useState<OrderWithCustomer[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
-    if (params.filterDate) {
-      const d = new Date(params.filterDate);
-      if (!isNaN(d.getTime())) return d;
-    }
-    return new Date();
-  });
+  // Date and customer are shared with the Transactions tab, so switching
+  // between the two keeps looking at the same slice of the business.
+  const {
+    date: selectedDate, setDate: setSelectedDate,
+    customer: selectedCustomer, setCustomer: setSelectedCustomer,
+  } = useListFilter();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   // Customer filter (AND — combined with date)
   const [customerOptions, setCustomerOptions] = useState<DropdownItem[]>([]);
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customerSearch, setCustomerSearch] = useState('');
   const [draftCount, setDraftCount] = useState(0);
@@ -218,7 +217,7 @@ export default function OrdersScreen() {
       const d = new Date(params.filterDate);
       if (!isNaN(d.getTime())) setSelectedDate(d);
     }
-  }, [params.filterDate]);
+  }, [params.filterDate, setSelectedDate]);
 
   const loadDropdownData = useCallback(async () => {
     const customers = await getCustomersWithOrders(db);
@@ -236,11 +235,11 @@ export default function OrdersScreen() {
     } else {
       results = await getAllOrdersWithCustomer(db);
     }
-    if (selectedCustomerId) {
-      results = results.filter(o => String(o.customer_id) === selectedCustomerId);
+    if (selectedCustomer) {
+      results = results.filter(o => String(o.customer_id) === selectedCustomer.id);
     }
     setOrders(results);
-  }, [db, selectedDate, selectedCustomerId]);
+  }, [db, selectedDate, selectedCustomer]);
 
   useFocusEffect(useCallback(() => {
     loadDropdownData();
@@ -263,8 +262,8 @@ export default function OrdersScreen() {
   const dateChipLabel = selectedDate ? format(selectedDate, 'dd MMM yyyy') : null;
 
   // Customer is an AND filter alongside date
-  const handleCustomerSelect = (custId: string) => {
-    setSelectedCustomerId(custId);
+  const handleCustomerSelect = (item: DropdownItem) => {
+    setSelectedCustomer({ id: item.id, name: item.label });
     setShowCustomerModal(false);
     setCustomerSearch('');
   };
@@ -356,9 +355,7 @@ export default function OrdersScreen() {
   const displayed = orders;
   const totalAmount = displayed.reduce((s, o) => s + o.amount, 0);
 
-  const customerChipLabel = selectedCustomerId
-    ? customerOptions.find(c => c.id === selectedCustomerId)?.label ?? null
-    : null;
+  const customerChipLabel = selectedCustomer?.name ?? null;
 
   const renderItem = ({ item }: { item: OrderWithCustomer }) => {
     const locked = isLocked(item.date, item.locked);
@@ -425,19 +422,19 @@ export default function OrdersScreen() {
 
         {/* Customer filter chip */}
         <TouchableOpacity
-          style={[S.filterChip, selectedCustomerId ? S.filterChipActive : undefined]}
+          style={[S.filterChip, selectedCustomer ? S.filterChipActive : undefined]}
           onPress={() => {
-            if (selectedCustomerId) {
-              setSelectedCustomerId(null);
+            if (selectedCustomer) {
+              setSelectedCustomer(null);
             } else {
               setShowCustomerModal(true);
             }
           }}
         >
           <MaterialIcons
-            name={selectedCustomerId ? 'close' : 'person'}
+            name={selectedCustomer ? 'close' : 'person'}
             size={16}
-            color={selectedCustomerId ? '#FFFFFF' : colors.textSecondary}
+            color={selectedCustomer ? '#FFFFFF' : colors.textSecondary}
           />
           {customerChipLabel ? (
             <Text style={[S.filterChipText, S.filterChipTextActive]} numberOfLines={1}>
@@ -528,12 +525,12 @@ export default function OrdersScreen() {
               keyboardShouldPersistTaps="handled"
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[S.modalItem, item.id === selectedCustomerId && S.modalItemActive]}
-                  onPress={() => handleCustomerSelect(item.id)}
+                  style={[S.modalItem, item.id === selectedCustomer?.id && S.modalItemActive]}
+                  onPress={() => handleCustomerSelect(item)}
                 >
                   <Text style={[
                     S.modalItemText,
-                    item.id === selectedCustomerId && S.modalItemTextActive,
+                    item.id === selectedCustomer?.id && S.modalItemTextActive,
                   ]}>
                     {item.label}
                   </Text>
