@@ -11,9 +11,10 @@ A local-first, offline-only Android app for food business owners to manage custo
 ## Features
 
 - **Customer Management** — Add, edit, bulk-import from phone contacts
-- **Order Tracking** — Single & bulk orders, date filters, billed/unbilled status
+- **Order Tracking** — Single & bulk orders with quantity × rate, date & customer filters
 - **Payment Recording** — Multiple payment methods, bulk payments
-- **Billing** — Generate bills with bill numbers, unbilled order management
+- **Transactions** — One ledger of orders, payments received & debts, filtered by date and customer
+- **Locking** — Orders and ledger entries close themselves once their day has passed, and can be unlocked
 - **Invoices & Statements** — Beautiful templates with ViewShot capture
 - **Payment Receipts** — Shareable receipt images
 - **WhatsApp Integration** — Send invoices, statements & receipts directly
@@ -75,23 +76,24 @@ app/
     _layout.tsx            Bottom tabs
     index.tsx              Customers list
     orders.tsx             Orders with date/customer filters
-    billing.tsx            Billing management (unbilled/billed/payments)
+    transactions.tsx       Ledger: orders, payments received, debts
     settings.tsx           App settings
   add-customer.tsx         Add customer modal
   add-order.tsx            Add single order modal
+  edit-order.tsx           Edit order (read-only while locked)
   bulk-orders.tsx          Bulk order entry
   add-payment.tsx          Record payment modal
   bulk-payments.tsx        Bulk payment entry
   customer-detail.tsx      Customer profile & transaction history
   view-invoice.tsx         Quick invoice sharing
-  view-bill.tsx            Multi-order bill
   view-statement.tsx       Account statement
   view-payment-receipt.tsx Payment receipt
   reports.tsx              Daily summaries & outstanding balances
 
 components/
-  InvoiceBill.tsx          Invoice/bill template
+  InvoiceBill.tsx          Invoice template
   StatementBill.tsx        Statement template
+  StatementExporter.tsx    Bulk statement image export
   PaymentReceipt.tsx       Payment receipt template
   DateStrip.tsx            Horizontal date picker
 
@@ -99,7 +101,11 @@ contexts/
   SettingsContext.tsx       Theme, language, company info, currency
 
 services/
-  database.ts              All SQLite CRUD operations & schema
+  database/                Schema, migrations & all SQLite CRUD
+    schema.ts              Table creation + migrations
+    orders.ts              Orders and the debit entries they own
+    payments.ts            Ledger entries & balances
+    helpers.ts             Shared SQL fragments, locking rules
 
 constants/
   theme.ts                 Color tokens, spacing, typography
@@ -107,19 +113,21 @@ constants/
 
 utils/
   whatsapp.ts              WhatsApp deep links & image sharing
+  imageExport.ts           Saving statement images to a chosen folder
+  filenames.ts             Filename sanitising (keeps non-Latin scripts intact)
   backup.ts                JSON export/import
 ```
 
 ## Database Schema
 
-| Table                    | Purpose                                     |
-| ------------------------ | ------------------------------------------- |
-| `customers`              | Customer profiles (name, place, phone)      |
-| `orders`                 | Order records (description, quantity, date) |
-| `transactions`           | Double-entry ledger (debit/credit)          |
-| `statements`             | Generated statement snapshots               |
-| `statement_transactions` | Statement-transaction junction              |
-| `bills`                  | Invoice grouping with bill numbers          |
+| Table          | Purpose                                                 |
+| -------------- | ------------------------------------------------------- |
+| `customers`    | Customer profiles (name, place, phone)                  |
+| `orders`       | What was sold (description, quantity, rate, date)       |
+| `transactions` | Double-entry ledger (debit/credit) — where amounts live |
+
+Every order owns exactly one debit entry, created with the order and kept in step
+with it. An amount is never stored twice.
 
 ## Configuration
 
