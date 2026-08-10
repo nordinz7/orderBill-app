@@ -271,6 +271,15 @@ const en = {
   ratePlaceholder: 'e.g. 50',
   perUnitRate: 'Works out to / unit',
   perUnit: 'per unit',
+  // Common
+  error: 'Error',
+  ok: 'OK',
+  deletePaymentMsg: (amount: string) => `Delete this payment of ${amount}?`,
+  contactsLoadFailed: 'Could not load contacts.',
+  contactsImportFailed: 'Could not import contacts.',
+  developerModeEnabled: 'Developer mode has been enabled!',
+  developerModeTapsLeft: (taps: number) => `${taps} taps to enable developer mode`,
+  areYouSure: 'Are you sure?',
   // Locking
   locked: 'Locked',
   lock: 'Lock',
@@ -580,6 +589,15 @@ const ta: typeof en = {
   ratePlaceholder: 'எ.கா. 50',
   perUnitRate: 'ஒன்றுக்கு வரும் விலை',
   perUnit: 'ஒன்றுக்கு',
+  // Common
+  error: 'பிழை',
+  ok: 'சரி',
+  deletePaymentMsg: (amount: string) => `${amount} பணப் பதிவை நீக்கவா?`,
+  contactsLoadFailed: 'தொடர்புகளை ஏற்ற முடியவில்லை.',
+  contactsImportFailed: 'தொடர்புகளை இறக்குமதி செய்ய முடியவில்லை.',
+  developerModeEnabled: 'டெவலப்பர் பயன்முறை இயக்கப்பட்டது!',
+  developerModeTapsLeft: (taps: number) => `டெவலப்பர் பயன்முறைக்கு இன்னும் ${taps} தட்டல்கள்`,
+  areYouSure: 'உறுதியாகவா?',
   // Locking
   locked: 'பூட்டப்பட்டது',
   lock: 'பூட்டு',

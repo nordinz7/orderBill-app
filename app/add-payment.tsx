@@ -194,7 +194,7 @@ export default function AddPaymentScreen() {
       }
       router.back();
     } catch {
-      Alert.alert(locked ? tr.locked : 'Error', locked ? tr.cannotEditLocked : tr.couldNotSave);
+      Alert.alert(locked ? tr.locked : tr.error, locked ? tr.cannotEditLocked : tr.couldNotSave);
     } finally { setSaving(false); }
   };
 

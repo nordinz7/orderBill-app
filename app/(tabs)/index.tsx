@@ -332,7 +332,7 @@ export default function CustomersScreen() {
     } catch {
       setLoadingContacts(false);
       setContactPickerVisible(false);
-      Alert.alert('Error', 'Could not load contacts.');
+      Alert.alert(tr.error, tr.contactsLoadFailed);
     }
   };
 
@@ -377,7 +377,7 @@ export default function CustomersScreen() {
       }
     } catch {
       setImportingContacts(false);
-      Alert.alert('Error', 'Could not import contacts.');
+      Alert.alert(tr.error, tr.contactsImportFailed);
     }
   };
 

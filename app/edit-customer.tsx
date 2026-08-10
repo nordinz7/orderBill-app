@@ -80,7 +80,7 @@ export default function EditCustomerScreen() {
       await updateCustomer(db, Number(params.id), name, place, fullPhone());
       router.back();
     } catch {
-      Alert.alert('Error', tr.couldNotSave);
+      Alert.alert(tr.error, tr.couldNotSave);
     } finally { setSaving(false); }
   };
 

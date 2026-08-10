@@ -380,10 +380,10 @@ export default function BulkOrdersScreen() {
             const count = await bulkAddOrders(db, entries, description, orderDate.toISOString());
             await clearBulkDraft();
             Alert.alert(tr.bulkOrdersSaved, tr.bulkOrdersSavedMsg(count), [
-              { text: 'OK', onPress: () => router.replace({ pathname: '/(tabs)/orders', params: { filterDate: orderDate.toISOString().slice(0, 10) } }) },
+              { text: tr.ok, onPress: () => router.replace({ pathname: '/(tabs)/orders', params: { filterDate: orderDate.toISOString().slice(0, 10) } }) },
             ]);
           } catch {
-            Alert.alert('Error', tr.couldNotSave);
+            Alert.alert(tr.error, tr.couldNotSave);
           } finally {
             setSaving(false);
           }

@@ -200,7 +200,7 @@ export default function CustomerDetailScreen() {
       Alert.alert(tr.locked, tr.cannotEditLocked);
       return;
     }
-    Alert.alert(tr.delete, `Delete this payment of ${currencySymbol}${txn.amount.toFixed(2)}?`, [
+    Alert.alert(tr.delete, tr.deletePaymentMsg(`${currencySymbol}${txn.amount.toFixed(2)}`), [
       { text: tr.cancel, style: 'cancel' },
       {
         text: tr.delete, style: 'destructive', onPress: async () => {

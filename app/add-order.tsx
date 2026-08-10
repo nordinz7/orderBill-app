@@ -141,7 +141,7 @@ export default function AddOrderScreen() {
               await addOrder(db, selectedCustomer.id, description, qty, total, orderDate.toISOString());
               router.back();
             } catch {
-              Alert.alert('Error', tr.couldNotSave);
+              Alert.alert(tr.error, tr.couldNotSave);
             } finally { setSaving(false); }
           },
         },
@@ -154,7 +154,7 @@ export default function AddOrderScreen() {
       await addOrder(db, selectedCustomer.id, description, qty, total, orderDate.toISOString());
       router.back();
     } catch {
-      Alert.alert('Error', tr.couldNotSave);
+      Alert.alert(tr.error, tr.couldNotSave);
     } finally { setSaving(false); }
   };
 

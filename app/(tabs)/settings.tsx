@@ -90,16 +90,16 @@ export default function SettingsScreen() {
       if (next >= 7) {
         setDevMode(true);
         AsyncStorage.setItem('@orderbill_dev_mode', 'true');
-        Alert.alert('🛠 Developer Mode', 'Developer mode has been enabled!');
+        Alert.alert(`🛠 ${tr.developerMode}`, tr.developerModeEnabled);
         return 0;
       }
-      if (next >= 4) Alert.alert('', `${7 - next} taps to enable developer mode`);
+      if (next >= 4) Alert.alert('', tr.developerModeTapsLeft(7 - next));
       return next;
     });
-  }, []);
+  }, [tr]);
 
   const disableDevMode = useCallback(() => {
-    Alert.alert('Disable Developer Mode', 'Are you sure?', [
+    Alert.alert(tr.disableDeveloperMode, tr.areYouSure, [
       { text: tr.cancel, style: 'cancel' },
       { text: tr.proceed, onPress: () => { setDevMode(false); AsyncStorage.setItem('@orderbill_dev_mode', 'false'); } },
     ]);

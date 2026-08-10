@@ -450,10 +450,10 @@ export default function BulkPaymentsScreen() {
             const count = await bulkInsertPayments(db, entries, paymentDate.toISOString());
             await clearBulkPaymentDraft();
             Alert.alert(tr.bulkPaymentsSaved, tr.bulkPaymentsSavedMsg(count), [
-              { text: 'OK', onPress: () => router.back() },
+              { text: tr.ok, onPress: () => router.back() },
             ]);
           } catch {
-            Alert.alert('Error', tr.couldNotSave);
+            Alert.alert(tr.error, tr.couldNotSave);
           } finally {
             setSaving(false);
           }
