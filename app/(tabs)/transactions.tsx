@@ -408,7 +408,11 @@ export default function TransactionsScreen() {
           <Text style={S.cardSub} numberOfLines={1}>
             {format(new Date(item.date), 'dd MMM')} · {kind}
             {!isCredit && item.quantity > 0 ? ` · x${Math.round(item.quantity)}` : ''}
-            {item.description && item.description !== defaultOrderDescription && item.description !== 'Payment received'
+            {/* The default descriptions say nothing the row does not already
+                say. Both languages are checked because entries keep whichever
+                wording was in force when they were recorded. */}
+            {item.description && item.description !== defaultOrderDescription
+              && item.description !== 'Payment received' && item.description !== tr.paymentReceived
               ? ` · ${item.description}` : ''}
           </Text>
         </View>
