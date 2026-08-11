@@ -317,6 +317,9 @@ const en = {
   moneyOwedHint: 'Customer owes you more — increases their balance',
   recordDebt: 'Record Debt',
   editDebt: 'Edit Debt',
+  // Bulk orders: enter a quantity priced by the shared rate, or the amount itself
+  byQuantity: 'By Qty',
+  byAmount: 'By Amount',
   // Share orders
   shareOrders: 'Share',
   // Export statement images
@@ -642,6 +645,8 @@ const ta: typeof en = {
   moneyOwedHint: 'வாடிக்கையாளர் மேலும் கடன்பட்டார் — கடன் கூடும்',
   recordDebt: 'கடன் பதிவு செய்',
   editDebt: 'கடன் திருத்து',
+  byQuantity: 'எண்ணிக்கை',
+  byAmount: 'தொகை',
   // Share orders
   shareOrders: 'பகிர்',
   // Export statement images

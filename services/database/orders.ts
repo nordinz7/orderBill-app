@@ -178,10 +178,11 @@ export async function addOrder(
 /**
  * Add one order per entry, each priced at its own amount.
  *
- * The batch screen works from a single rate because typing an amount per
- * customer would defeat the point of it, but what is stored is still the
- * amount — so any one of them can be corrected afterwards without the others
- * moving.
+ * The batch screen can work either from a single rate and a quantity per
+ * customer, or from the amount itself — so an entry counts as filled in if it
+ * carries either one, and a lump-sum order with no quantity is a real order.
+ * What is stored is always the amount, so any one of them can be corrected
+ * afterwards without the others moving.
  */
 export async function bulkAddOrders(
   db: SQLite.SQLiteDatabase,
@@ -193,7 +194,7 @@ export async function bulkAddOrders(
   let count = 0;
   await db.withTransactionAsync(async () => {
     for (const o of orders) {
-      if (o.quantity <= 0) continue;
+      if (o.quantity <= 0 && o.amount <= 0) continue;
       const result = await db.runAsync(
         `INSERT INTO orders (customer_id, description, quantity, date, updated_at)
          VALUES (?, ?, ?, ?, ?)`,
