@@ -330,7 +330,7 @@ const en = {
   exportStatementImages: 'Export',
   exportConfirm: 'Export Statements?',
   exportConfirmMsg: (count: number, date: string) =>
-    `Save ${count} statement image${count === 1 ? '' : 's'} as of ${date} into a folder on this phone?`,
+    `Save ${count} statement image${count === 1 ? '' : 's'} for ${date} into a folder on this phone?`,
   exportProgress: (done: number, total: number) => `Saving ${done + 1} of ${total}…`,
   exportDone: 'Statements Saved',
   exportDoneMsg: (count: number, folder: string) => `${count} image${count === 1 ? '' : 's'} saved to ${folder}.`,
@@ -660,7 +660,7 @@ const ta: typeof en = {
   exportStatementImages: 'ஏற்றுமதி',
   exportConfirm: 'கணக்கு அறிக்கைகளை ஏற்றுமதி செய்யவா?',
   exportConfirmMsg: (count: number, date: string) =>
-    `${date} தேதி வரையிலான ${count} கணக்கு அறிக்கை படங்களை இந்த ஃபோனில் ஒரு கோப்புறையில் சேமிக்கவா?`,
+    `${date} தேதிக்கான ${count} கணக்கு அறிக்கை படங்களை இந்த ஃபோனில் ஒரு கோப்புறையில் சேமிக்கவா?`,
   exportProgress: (done: number, total: number) => `${total}-ல் ${done + 1} சேமிக்கிறது…`,
   exportDone: 'கணக்கு அறிக்கைகள் சேமிக்கப்பட்டன',
   exportDoneMsg: (count: number, folder: string) => `${count} படம் ${folder} கோப்புறையில் சேமிக்கப்பட்டது.`,

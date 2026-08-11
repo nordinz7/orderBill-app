@@ -11,6 +11,7 @@ import {
     getTransactionsByDateRange,
     isLocked,
     localDayKey,
+    parseLocalDay,
     setTransactionLock,
     TransactionWithCustomer,
 } from '@/services/database';
@@ -258,25 +259,41 @@ export default function TransactionsScreen() {
   // ── Statement export (driven by whatever filter is applied) ──
   const exporterRef = useRef<StatementExporterHandle>(null);
 
-  /** Distinct customers in the list as currently filtered, in display order. */
+  /**
+   * One statement per customer per day in the list as currently filtered, in
+   * display order.
+   *
+   * A bill belongs to a day as much as to a customer, so a customer showing
+   * several days' entries — which is what clearing the date filter gives —
+   * exports a bill for each of those days rather than one covering the lot.
+   */
   const exportTargets = useMemo<StatementTarget[]>(() => {
-    const byId = new Map<number, StatementTarget>();
+    const byCustomerDay = new Map<string, StatementTarget>();
     for (const t of transactions) {
-      if (!byId.has(t.customer_id)) {
-        byId.set(t.customer_id, { id: t.customer_id, name: t.customer_name, place: t.customer_place });
+      const day = localDayKey(new Date(t.date));
+      const key = `${t.customer_id} ${day}`;
+      if (!byCustomerDay.has(key)) {
+        byCustomerDay.set(key, {
+          id: t.customer_id, name: t.customer_name, place: t.customer_place, day,
+        });
       }
     }
-    return Array.from(byId.values());
+    return Array.from(byCustomerDay.values());
   }, [transactions]);
 
   const handleExportStatements = () => {
-    const asOf = selectedDate ?? new Date();
+    const days = Array.from(new Set(exportTargets.map(t => t.day))).sort();
+    const dayLabel = (key: string) => format(parseLocalDay(key) ?? new Date(), 'dd MMM yyyy');
+    // One day names itself; several are described by the span they cover.
+    const when = days.length > 1
+      ? `${dayLabel(days[0])} – ${dayLabel(days[days.length - 1])}`
+      : dayLabel(days[0] ?? localDayKey(new Date()));
     Alert.alert(
       tr.exportConfirm,
-      tr.exportConfirmMsg(exportTargets.length, format(asOf, 'dd MMM yyyy')),
+      tr.exportConfirmMsg(exportTargets.length, when),
       [
         { text: tr.cancel, style: 'cancel' },
-        { text: tr.exportStatementImages, onPress: () => { void exporterRef.current?.run(exportTargets, asOf); } },
+        { text: tr.exportStatementImages, onPress: () => { void exporterRef.current?.run(exportTargets); } },
       ],
     );
   };
@@ -478,8 +495,8 @@ export default function TransactionsScreen() {
 
         <View style={S.filterSpacer} />
 
-        {/* Exports statements for exactly the customers listed below,
-            as of the applied date filter. */}
+        {/* Exports a statement for every customer and day the list below
+            covers — the count is how many images that comes to. */}
         <TouchableOpacity
           style={[S.exportChip, exportTargets.length === 0 && S.exportChipDisabled]}
           onPress={handleExportStatements}
