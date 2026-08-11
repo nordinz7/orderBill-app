@@ -27,9 +27,13 @@ const DRAFT_KEY = '@orderbill_bulk_draft';
  * Which column the rows are filled in with. A batch is usually priced by the
  * unit, but not always — some days the figure that is actually agreed is the
  * amount, and working back to a rate to type it in is a step no one should
- * have to do in their head.
+ * have to do in their head. Amount mode still asks for the quantity, so the
+ * count is in front of the user while the figure is being decided.
  */
 export type BulkMode = 'qty' | 'amount';
+
+/** Which of a row's two boxes a keystroke belongs to. */
+type BulkField = 'qty' | 'amount';
 
 interface BulkDraft {
   quantities: Record<string, string>;
@@ -152,6 +156,11 @@ function makeStyles(c: AppColors) {
     },
     /** Amounts need room for cents, so the column is wider than the qty one. */
     amountInput: { width: 100, fontSize: FontSizes.lg },
+    /** The quantity standing next to an amount is context, not the figure. */
+    sideQtyInput: { width: 62, fontSize: FontSizes.lg, color: c.text },
+    inputGroup:   { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.sm },
+    inputColumn:  { alignItems: 'center', gap: 2 },
+    inputCaption: { fontSize: FontSizes.xs, fontWeight: '700', color: c.textSecondary },
     // Mode toggle — two segments, only one of which is live at a time.
     modeRow: {
       flexDirection: 'row',
@@ -236,44 +245,74 @@ function makeStyles(c: AppColors) {
 
 interface CustomerRowProps {
   item: Customer;
-  value: string;
+  quantity: string;
+  amount: string;
   mode: BulkMode;
-  onValueChange: (id: number, value: string) => void;
+  onValueChange: (id: number, field: BulkField, value: string) => void;
   onSubmitEditing: () => void;
   inputRef: (ref: TextInput | null) => void;
   styles: ReturnType<typeof makeStyles>;
   textMutedColor: string;
+  qtyLabel: string;
+  amountLabel: string;
 }
 
 const CustomerRow = React.memo(function CustomerRow({
   item,
-  value,
+  quantity,
+  amount,
   mode,
   onValueChange,
   onSubmitEditing,
   inputRef,
   styles: S,
   textMutedColor,
+  qtyLabel,
+  amountLabel,
 }: CustomerRowProps) {
   const isAmount = mode === 'amount';
+  // Whichever column decides the order is the one that fills the row in: the
+  // quantity beside an amount is only there to be read while typing it.
+  const value = isAmount ? amount : quantity;
   const hasFill = isFilled(value);
+  const mainRef = useRef<TextInput | null>(null);
   return (
     <View style={[S.row, hasFill && S.rowFilled]}>
       <View style={S.customerInfo}>
         <Text style={S.customerName}>{item.name}</Text>
         {item.place ? <Text style={S.customerPlace}>{item.place}</Text> : null}
       </View>
-      <TextInput
-        ref={inputRef}
-        style={[S.qtyInput, isAmount && S.amountInput, hasFill && S.qtyInputFilled]}
-        value={value}
-        onChangeText={v => onValueChange(item.id, v.replace(isAmount ? /[^0-9.]/g : /[^0-9]/g, ''))}
-        placeholder="0"
-        placeholderTextColor={textMutedColor}
-        keyboardType={isAmount ? 'decimal-pad' : 'number-pad'}
-        returnKeyType="next"
-        onSubmitEditing={onSubmitEditing}
-      />
+      <View style={S.inputGroup}>
+        {isAmount && (
+          <View style={S.inputColumn}>
+            <Text style={S.inputCaption}>{qtyLabel}</Text>
+            <TextInput
+              style={[S.qtyInput, S.sideQtyInput, isFilled(quantity) && S.qtyInputFilled]}
+              value={quantity}
+              onChangeText={v => onValueChange(item.id, 'qty', v.replace(/[^0-9]/g, ''))}
+              placeholder="0"
+              placeholderTextColor={textMutedColor}
+              keyboardType="number-pad"
+              returnKeyType="next"
+              onSubmitEditing={() => mainRef.current?.focus()}
+            />
+          </View>
+        )}
+        <View style={S.inputColumn}>
+          {isAmount && <Text style={S.inputCaption}>{amountLabel}</Text>}
+          <TextInput
+            ref={ref => { mainRef.current = ref; inputRef(ref); }}
+            style={[S.qtyInput, isAmount && S.amountInput, hasFill && S.qtyInputFilled]}
+            value={value}
+            onChangeText={v => onValueChange(item.id, isAmount ? 'amount' : 'qty', v.replace(isAmount ? /[^0-9.]/g : /[^0-9]/g, ''))}
+            placeholder="0"
+            placeholderTextColor={textMutedColor}
+            keyboardType={isAmount ? 'decimal-pad' : 'number-pad'}
+            returnKeyType="next"
+            onSubmitEditing={onSubmitEditing}
+          />
+        </View>
+      </View>
     </View>
   );
 });
@@ -286,7 +325,8 @@ export default function BulkOrdersScreen() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   // The two columns are kept apart rather than reinterpreted, so flipping the
-  // toggle to check the other way round never silently rewrites what was typed.
+  // toggle to check the other way round never silently rewrites what was typed;
+  // the quantities carry across both modes, only the amount is recomputed.
   const [quantities, setQuantities] = useState<Record<number, string>>({});
   const [amounts, setAmounts] = useState<Record<number, string>>({});
   const [mode, setMode] = useState<BulkMode>('qty');
@@ -347,10 +387,10 @@ export default function BulkOrdersScreen() {
 
   const isAmountMode = mode === 'amount';
 
-  const handleValueChange = useCallback((customerId: number, value: string) => {
-    const setter = isAmountMode ? setAmounts : setQuantities;
+  const handleValueChange = useCallback((customerId: number, field: BulkField, value: string) => {
+    const setter = field === 'amount' ? setAmounts : setQuantities;
     setter(prev => ({ ...prev, [customerId]: value }));
-  }, [isAmountMode]);
+  }, []);
 
   const filteredCustomers = useMemo(() => {
     if (!search.trim()) return customers;
@@ -368,15 +408,17 @@ export default function BulkOrdersScreen() {
     [values]
   );
 
+  /** Both columns can change a row now, so the list watches both. */
+  const listExtraData = useMemo(() => ({ quantities, amounts }), [quantities, amounts]);
+
   const perUnit = parseFloat(rate) || 0;
 
   // In qty mode the batch is priced by the unit and the amounts follow; in
-  // amount mode the amount is what was agreed and there is no quantity to show.
+  // amount mode the amount is what was agreed and the quantity rides along
+  // with it. Either way the counts are worth totalling.
   const totalQty = useMemo(
-    () => isAmountMode
-      ? 0
-      : Object.values(quantities).reduce((sum, v) => sum + (parseInt(v, 10) || 0), 0),
-    [isAmountMode, quantities]
+    () => Object.values(quantities).reduce((sum, v) => sum + (parseInt(v, 10) || 0), 0),
+    [quantities]
   );
 
   const totalValue = useMemo(
@@ -409,12 +451,17 @@ export default function BulkOrdersScreen() {
 
   const handleFinalize = () => {
     // Whichever way the batch was typed, an order is stored as an amount — in
-    // amount mode there is simply no quantity to go with it.
+    // amount mode it keeps whatever quantity was typed beside it, and none if
+    // that box was left empty.
     const entries = Object.entries(values)
       .map(([id, raw]) => {
         const customer_id = parseInt(id, 10);
         if (isAmountMode) {
-          return { customer_id, quantity: 0, amount: round2(parseFloat(raw) || 0) };
+          return {
+            customer_id,
+            quantity: parseInt(quantities[customer_id] ?? '', 10) || 0,
+            amount: round2(parseFloat(raw) || 0),
+          };
         }
         const quantity = parseInt(raw, 10) || 0;
         return { customer_id, quantity, amount: round2(quantity * perUnit) };
@@ -422,7 +469,7 @@ export default function BulkOrdersScreen() {
       .filter(e => (isAmountMode ? e.amount > 0 : e.quantity > 0));
 
     if (entries.length === 0) {
-      Alert.alert(tr.required, tr.noBulkOrders);
+      Alert.alert(tr.required, isAmountMode ? tr.noBulkAmounts : tr.noBulkOrders);
       return;
     }
     if (!description.trim()) {
@@ -455,7 +502,8 @@ export default function BulkOrdersScreen() {
     return (
       <CustomerRow
         item={item}
-        value={values[item.id] || ''}
+        quantity={quantities[item.id] || ''}
+        amount={amounts[item.id] || ''}
         mode={mode}
         onValueChange={handleValueChange}
         onSubmitEditing={() => {
@@ -467,9 +515,11 @@ export default function BulkOrdersScreen() {
         inputRef={ref => { inputRefs.current[item.id] = ref; }}
         styles={S}
         textMutedColor={colors.textMuted}
+        qtyLabel={tr.quantity}
+        amountLabel={tr.amount}
       />
     );
-  }, [values, mode, filteredCustomers, handleValueChange, S, colors.textMuted]);
+  }, [quantities, amounts, mode, filteredCustomers, handleValueChange, S, colors.textMuted, tr]);
 
   if (hasNoCustomers) return null;
 
@@ -548,7 +598,7 @@ export default function BulkOrdersScreen() {
             {filledCount} {filledCount === 1 ? tr.order : tr.orders_plural}
           </Text>
           <Text style={S.summaryText}>
-            {tr.total}: {isAmountMode ? '' : `${totalQty}${totalValue > 0 ? ' · ' : ''}`}
+            {tr.total}: {totalQty > 0 ? `${totalQty}${totalValue > 0 ? ' · ' : ''}` : ''}
             {totalValue > 0 ? `${currencySymbol}${totalValue}` : ''}
           </Text>
         </View>
@@ -559,7 +609,7 @@ export default function BulkOrdersScreen() {
         data={filteredCustomers}
         keyExtractor={item => String(item.id)}
         renderItem={renderItem}
-        extraData={quantities}
+        extraData={listExtraData}
         contentContainerStyle={filteredCustomers.length === 0 ? { flexGrow: 1 } : S.listContent}
         ListEmptyComponent={
           <View style={S.emptyWrap}>
