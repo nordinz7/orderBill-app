@@ -320,6 +320,9 @@ const en = {
   // Bulk orders: enter a quantity priced by the shared rate, or the amount itself
   byQuantity: 'By Qty',
   byAmount: 'By Amount',
+  // Opening the export folder
+  openFolder: 'Open Folder',
+  openFolderFailed: 'Could not open the folder. You can find the images in your file manager.',
   // Share orders
   shareOrders: 'Share',
   // Export statement images
@@ -647,6 +650,8 @@ const ta: typeof en = {
   editDebt: 'கடன் திருத்து',
   byQuantity: 'எண்ணிக்கை',
   byAmount: 'தொகை',
+  openFolder: 'கோப்புறையைத் திற',
+  openFolderFailed: 'கோப்புறையைத் திறக்க முடியவில்லை. கோப்பு நிர்வாகியில் படங்களைக் காணலாம்.',
   // Share orders
   shareOrders: 'பகிர்',
   // Export statement images

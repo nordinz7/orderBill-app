@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StorageAccessFramework } from 'expo-file-system/legacy';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { Platform } from 'react-native';
 import { sanitizeSegment } from './filenames';
 
@@ -45,6 +46,32 @@ export function describeExportDirectory(uri: string): string {
     return afterVolume || decoded;
   } catch {
     return uri;
+  }
+}
+
+/**
+ * Show a just-written folder in whatever app handles files on this phone.
+ *
+ * The images are the point of the export, and until now the only thing pointing
+ * at them was a path in an alert the user had to go and find by hand. The URI
+ * SAF hands back is already a document URI the picker granted read access to,
+ * so ACTION_VIEW on it with the directory MIME type lands straight inside.
+ *
+ * Returns false rather than throwing when nothing on the device will take the
+ * intent — an export that saved every file has not failed just because the
+ * phone has no file manager.
+ */
+export async function openFolderInFileManager(folderUri: string): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  try {
+    await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+      data: folderUri,
+      type: 'vnd.android.document/directory',
+      flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 

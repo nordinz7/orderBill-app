@@ -15,6 +15,7 @@ import {
     isFolderExportSupported,
     openChildFolder,
     openExportFolder,
+    openFolderInFileManager,
     pickExportDirectory,
     removeExportFile,
     removeLegacyExports,
@@ -192,10 +193,13 @@ const StatementExporter = forwardRef<StatementExporterHandle>(function Statement
 
       let written = 0;
       let failed = 0;
+      // Kept beyond the loop so the finished export can offer to open it.
+      let dateFolderUri: string | null = null;
 
       try {
         const byDate = await openExportFolder(root, BY_DATE_FOLDER);
         const dateFolder = await openChildFolder(byDate, stamp);
+        dateFolderUri = dateFolder.uri;
         const byCustomer = await openExportFolder(root, BY_CUSTOMER_FOLDER);
         // Whatever this day left behind under the old naming, before any of it
         // is written again under the new one.
@@ -246,12 +250,32 @@ const StatementExporter = forwardRef<StatementExporterHandle>(function Statement
 
       const saved = written;
       const where = `${describeExportDirectory(root)}/${BY_DATE_FOLDER}/${stamp}`;
+
+      /**
+       * Dismiss, and — when there is something in the folder to look at — a way
+       * straight to it, so the images do not have to be hunted down by the path
+       * in the message.
+       */
+      const buttons = saved > 0 && dateFolderUri
+        ? [
+            { text: tr.ok, style: 'cancel' as const },
+            {
+              text: tr.openFolder,
+              onPress: async () => {
+                if (!(await openFolderInFileManager(dateFolderUri!))) {
+                  Alert.alert(tr.exportDone, tr.openFolderFailed);
+                }
+              },
+            },
+          ]
+        : undefined;
+
       if (failed > 0) {
-        Alert.alert(tr.exportDone, tr.exportPartialMsg(saved, failed, where));
+        Alert.alert(tr.exportDone, tr.exportPartialMsg(saved, failed, where), buttons);
       } else if (saved === 0) {
         Alert.alert(tr.exportNothing, tr.exportNothingMsg);
       } else {
-        Alert.alert(tr.exportDone, tr.exportDoneMsg(saved, where));
+        Alert.alert(tr.exportDone, tr.exportDoneMsg(saved, where), buttons);
       }
     } finally {
       busy.current = false;
