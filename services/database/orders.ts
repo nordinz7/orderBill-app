@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import { isLocked, LockedRecordError, LockFlag, nowISO, SQLParams } from './helpers';
+import { isLocked, localDayBounds, LockedRecordError, LockFlag, nowISO, SQLParams } from './helpers';
 
 export interface Order {
   id: number;
@@ -66,12 +66,14 @@ export async function getAllOrdersWithCustomer(
   return queryOrders(db);
 }
 
+/** Orders falling on the local calendar days `fromDate`..`toDate` (`YYYY-MM-DD`, inclusive). */
 export async function getOrdersByDateRange(
   db: SQLite.SQLiteDatabase,
   fromDate: string,
   toDate: string,
 ): Promise<OrderWithCustomer[]> {
-  return queryOrders(db, `WHERE date(o.date) >= date(?) AND date(o.date) <= date(?)`, [fromDate, toDate]);
+  const [start, end] = localDayBounds(fromDate, toDate);
+  return queryOrders(db, `WHERE o.date >= ? AND o.date < ?`, [start, end]);
 }
 
 export async function getOrderWithCustomer(
@@ -82,16 +84,18 @@ export async function getOrderWithCustomer(
   return rows[0] ?? null;
 }
 
+/** `day` is a local calendar day, `YYYY-MM-DD`. */
 export async function findDuplicateOrder(
   db: SQLite.SQLiteDatabase,
   customerId: number,
-  date: string,
+  day: string,
   description: string,
 ): Promise<OrderWithCustomer | null> {
+  const [start, end] = localDayBounds(day, day);
   const rows = await queryOrders(
     db,
-    `WHERE o.customer_id = ? AND date(o.date) = date(?) AND LOWER(TRIM(o.description)) = LOWER(?)`,
-    [customerId, date, description.trim()]
+    `WHERE o.customer_id = ? AND o.date >= ? AND o.date < ? AND LOWER(TRIM(o.description)) = LOWER(?)`,
+    [customerId, start, end, description.trim()]
   );
   return rows[0] ?? null;
 }

@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import { LEDGER_BALANCE } from './helpers';
+import { LEDGER_BALANCE, localDayBounds } from './helpers';
 
 export interface CustomerOutstanding {
   id: number;
@@ -33,10 +33,13 @@ export interface DailySummary {
   total_collected: number;
 }
 
+/** `dateStr` is a local calendar day, `YYYY-MM-DD`. */
 export async function getDailySummary(
   db: SQLite.SQLiteDatabase,
   dateStr: string,
 ): Promise<DailySummary> {
+  const [start, end] = localDayBounds(dateStr, dateStr);
+
   const orderStats = await db.getFirstAsync<{ total_sales: number; order_count: number; total_qty: number }>(`
     SELECT
       COALESCE(SUM(t.amount), 0) as total_sales,
@@ -44,16 +47,16 @@ export async function getDailySummary(
       COALESCE(SUM(o.quantity), 0) as total_qty
     FROM orders o
     LEFT JOIN transactions t ON t.order_id = o.id AND t.type = 'debit'
-    WHERE date(o.date) = date(?)
-  `, [dateStr]);
+    WHERE o.date >= ? AND o.date < ?
+  `, [start, end]);
 
   const paymentStats = await db.getFirstAsync<{ payment_count: number; total_collected: number }>(`
     SELECT
       COUNT(*) as payment_count,
       COALESCE(SUM(amount), 0) as total_collected
     FROM transactions
-    WHERE type = 'credit' AND date(date) = date(?)
-  `, [dateStr]);
+    WHERE type = 'credit' AND date >= ? AND date < ?
+  `, [start, end]);
 
   return {
     total_sales: orderStats?.total_sales ?? 0,

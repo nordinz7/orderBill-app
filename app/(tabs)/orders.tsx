@@ -8,7 +8,9 @@ import {
     getCustomersWithOrders,
     getOrdersByDateRange,
     isLocked,
+    localDayKey,
     OrderWithCustomer,
+    parseLocalDay,
     setOrderLock,
     unitRate,
 } from '@/services/database';
@@ -214,8 +216,8 @@ export default function OrdersScreen() {
   // Update date when navigating with filterDate param
   useEffect(() => {
     if (params.filterDate) {
-      const d = new Date(params.filterDate);
-      if (!isNaN(d.getTime())) setSelectedDate(d);
+      const d = parseLocalDay(params.filterDate);
+      if (d) setSelectedDate(d);
     }
   }, [params.filterDate, setSelectedDate]);
 
@@ -230,7 +232,7 @@ export default function OrdersScreen() {
   const load = useCallback(async () => {
     let results: OrderWithCustomer[];
     if (selectedDate) {
-      const dateStr = selectedDate.toISOString().slice(0, 10);
+      const dateStr = localDayKey(selectedDate);
       results = await getOrdersByDateRange(db, dateStr, dateStr);
     } else {
       results = await getAllOrdersWithCustomer(db);
@@ -485,7 +487,7 @@ export default function OrdersScreen() {
         }
       />
 
-      <TouchableOpacity style={S.fab} onPress={() => router.push({ pathname: '/add-order', params: { defaultDate: (selectedDate ?? new Date()).toISOString().slice(0, 10) } })} accessibilityLabel={tr.addOrder}>
+      <TouchableOpacity style={S.fab} onPress={() => router.push({ pathname: '/add-order', params: { defaultDate: localDayKey(selectedDate ?? new Date()) } })} accessibilityLabel={tr.addOrder}>
         <MaterialIcons name="add" size={34} color="#FFFFFF" />
       </TouchableOpacity>
 

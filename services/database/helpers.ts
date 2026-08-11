@@ -14,6 +14,33 @@ export function localDayKey(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+/**
+ * The half-open instant range `[start, end)` covering the local calendar days
+ * `from`..`to` inclusive, both given as `YYYY-MM-DD`.
+ *
+ * Every filter in the app is a local day, but dates are stored as UTC instants,
+ * so the two have to be reconciled somewhere. Asking SQLite for `date(t.date)`
+ * asks the question in UTC, which east of Greenwich drops everything recorded
+ * after local afternoon; turning the day into its true local start and end
+ * does not.
+ */
+export function localDayBounds(from: string, to: string): [string, string] {
+  const [fy, fm, fd] = from.split('-').map(Number);
+  const [ty, tm, td] = to.split('-').map(Number);
+  return [
+    new Date(fy, fm - 1, fd).toISOString(),
+    new Date(ty, tm - 1, td + 1).toISOString(),
+  ];
+}
+
+/** Parse a `YYYY-MM-DD` day key as local midnight — `new Date(key)` reads it as UTC. */
+export function parseLocalDay(key: string): Date | null {
+  const [y, m, d] = key.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const date = new Date(y, m - 1, d);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 /** Ledger balance (debits minus credits) for a transactions table aliased as `t`. */
 export const LEDGER_BALANCE = `SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE -t.amount END)`;
 

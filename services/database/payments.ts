@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import { isLocked, LockedRecordError, LockFlag, nowISO, SQLParams } from './helpers';
+import { isLocked, localDayBounds, LockedRecordError, LockFlag, nowISO, SQLParams } from './helpers';
 
 export interface Transaction {
   id: number;
@@ -256,12 +256,14 @@ export async function getTransactionById(
   return db.getFirstAsync<Transaction>(`SELECT * FROM transactions WHERE id = ?`, [id]);
 }
 
+/** Entries falling on the local calendar days `from`..`to` (`YYYY-MM-DD`, inclusive). */
 export async function getTransactionsByDateRange(
   db: SQLite.SQLiteDatabase, from: string, to: string,
 ): Promise<TransactionWithCustomer[]> {
+  const [start, end] = localDayBounds(from, to);
   return db.getAllAsync<TransactionWithCustomer>(
-    `${TXN_CUSTOMER_SELECT} WHERE t.date >= ? AND t.date < date(?, '+1 day') ORDER BY t.date DESC, t.id DESC`,
-    [from, to]
+    `${TXN_CUSTOMER_SELECT} WHERE t.date >= ? AND t.date < ? ORDER BY t.date DESC, t.id DESC`,
+    [start, end]
   );
 }
 

@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { addOrder, Customer, findDuplicateOrder, getActiveCustomers, unitRate } from '@/services/database';
+import { addOrder, Customer, findDuplicateOrder, getActiveCustomers, localDayKey, parseLocalDay, unitRate } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { format } from 'date-fns';
@@ -101,8 +101,8 @@ export default function AddOrderScreen() {
 
   const [orderDate, setOrderDate]           = useState<Date>(() => {
     if (params.defaultDate) {
-      const d = new Date(params.defaultDate);
-      if (!isNaN(d.getTime())) return d;
+      const d = parseLocalDay(params.defaultDate);
+      if (d) return d;
     }
     return new Date();
   });
@@ -124,7 +124,7 @@ export default function AddOrderScreen() {
     if (!description.trim()) { Alert.alert(tr.required, tr.enterDesc); return; }
 
     // Check for duplicate order (same customer + date + description)
-    const dateStr = orderDate.toISOString().slice(0, 10);
+    const dateStr = localDayKey(orderDate);
     const existing = await findDuplicateOrder(db, selectedCustomer.id, dateStr, description);
     if (existing) {
       Alert.alert(tr.duplicateOrderTitle, tr.duplicateOrderMsg(selectedCustomer.name, existing.quantity), [

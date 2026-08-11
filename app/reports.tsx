@@ -6,6 +6,7 @@ import {
     getCustomersWithOutstandingBalance,
     getDailySummary,
     getTotalOutstanding,
+    localDayKey,
 } from '@/services/database';
 import { MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -207,7 +208,7 @@ export default function ReportsScreen() {
     const [cust, total, dailySummary] = await Promise.all([
       getCustomersWithOutstandingBalance(db),
       getTotalOutstanding(db),
-      getDailySummary(db, summaryDate.toISOString().slice(0, 10)),
+      getDailySummary(db, localDayKey(summaryDate)),
     ]);
     setOutstanding(cust);
     setTotalOutstanding(total);

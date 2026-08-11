@@ -1,6 +1,6 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
-import { bulkAddOrders, Customer, getActiveCustomers } from '@/services/database';
+import { bulkAddOrders, Customer, getActiveCustomers, localDayKey } from '@/services/database';
 import { promptAddFirstCustomer } from '@/utils/customers';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -380,7 +380,7 @@ export default function BulkOrdersScreen() {
             const count = await bulkAddOrders(db, entries, description, orderDate.toISOString());
             await clearBulkDraft();
             Alert.alert(tr.bulkOrdersSaved, tr.bulkOrdersSavedMsg(count), [
-              { text: tr.ok, onPress: () => router.replace({ pathname: '/(tabs)/orders', params: { filterDate: orderDate.toISOString().slice(0, 10) } }) },
+              { text: tr.ok, onPress: () => router.replace({ pathname: '/(tabs)/orders', params: { filterDate: localDayKey(orderDate) } }) },
             ]);
           } catch {
             Alert.alert(tr.error, tr.couldNotSave);

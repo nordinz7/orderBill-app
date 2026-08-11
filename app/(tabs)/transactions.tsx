@@ -10,6 +10,7 @@ import {
     getCustomersWithTransactions,
     getTransactionsByDateRange,
     isLocked,
+    localDayKey,
     setTransactionLock,
     TransactionWithCustomer,
 } from '@/services/database';
@@ -212,7 +213,7 @@ export default function TransactionsScreen() {
   const load = useCallback(async () => {
     let results: TransactionWithCustomer[];
     if (selectedDate) {
-      const dateStr = selectedDate.toISOString().slice(0, 10);
+      const dateStr = localDayKey(selectedDate);
       results = await getTransactionsByDateRange(db, dateStr, dateStr);
     } else {
       results = await getAllTransactionsWithCustomer(db);
