@@ -27,6 +27,9 @@ const PAYMENT_METHODS = [
   { key: 'cheque', label: 'Cheque', icon: 'checkbook' as const },
 ];
 
+/** Whether a description is just the label a method chip wrote, and so safe to drop. */
+const isMethodLabel = (text: string) => PAYMENT_METHODS.some(m => m.label === text);
+
 function makeStyles(c: AppColors, bottomInset: number) {
   return StyleSheet.create({
     container:          { flex: 1, backgroundColor: c.background },
@@ -87,6 +90,21 @@ function makeStyles(c: AppColors, bottomInset: number) {
       alignItems: 'center', justifyContent: 'space-between',
     },
     dateButtonText:     { fontSize: FontSizes.lg, color: c.text },
+    // Direction toggle — the two ways money can move, as one choice up front.
+    directionRow:       { flexDirection: 'row', gap: Spacing.md },
+    directionButton: {
+      flex: 1, alignItems: 'center', gap: 4,
+      paddingVertical: Spacing.lg, paddingHorizontal: Spacing.sm,
+      borderRadius: Radius.md, borderWidth: 2,
+      borderColor: c.border, backgroundColor: c.inputBg,
+    },
+    directionButtonCredit: { borderColor: c.success, backgroundColor: c.success + '22' },
+    directionButtonDebit:  { borderColor: c.danger,  backgroundColor: c.danger + '22' },
+    directionText:      { fontSize: FontSizes.md, fontWeight: '700', color: c.textSecondary, textAlign: 'center' },
+    directionTextCredit: { color: c.success },
+    directionTextDebit:  { color: c.danger },
+    directionHint:      { fontSize: FontSizes.sm, color: c.textSecondary, marginTop: Spacing.xs },
+    saveButtonDebit:    { backgroundColor: c.danger },
   });
 }
 
@@ -111,9 +129,27 @@ export default function AddPaymentScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [saving, setSaving]                 = useState(false);
   const [locked, setLocked]                 = useState(false);
+  // Which way the money went. Asked as a question with two answers rather than
+  // inferred from a minus sign in the amount, which read as arithmetic to the
+  // user and was easy to get backwards.
+  const [isDebt, setIsDebt]                 = useState(false);
 
-  // A leading minus means "money owed" — the type is inferred from the amount's sign.
-  const isDebt = amount.trim().startsWith('-');
+  /**
+   * Switch direction, resetting the fields that only make sense one way round.
+   * A debt has no payment method, so the method chip and the 'Cash' it wrote
+   * into the description go with it — and come back on the way over.
+   */
+  const selectDirection = (debt: boolean) => {
+    if (debt === isDebt) return;
+    setIsDebt(debt);
+    if (debt) {
+      setSelectedMethod(null);
+      if (isMethodLabel(description)) setDescription('');
+    } else if (!description.trim()) {
+      setSelectedMethod('cash');
+      setDescription('Cash');
+    }
+  };
 
   const onDateChange = (_event: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
@@ -121,8 +157,8 @@ export default function AddPaymentScreen() {
   };
 
   useEffect(() => {
-    if (isEdit) navigation.setOptions({ title: tr.editPayment });
-  }, [isEdit, navigation, tr]);
+    if (isEdit) navigation.setOptions({ title: isDebt ? tr.editDebt : tr.editPayment });
+  }, [isDebt, isEdit, navigation, tr]);
 
   useEffect(() => {
     (async () => {
@@ -134,7 +170,8 @@ export default function AddPaymentScreen() {
         if (txn) {
           const found = list.find(c => c.id === txn.customer_id);
           if (found) setSelected(found);
-          setAmount(txn.type === 'debit' ? `-${txn.amount}` : String(txn.amount));
+          setIsDebt(txn.type === 'debit');
+          setAmount(String(txn.amount));
           setDescription(txn.description);
           setPaymentDate(new Date(txn.date));
           const method = PAYMENT_METHODS.find(m => m.label === txn.description);
@@ -173,9 +210,9 @@ export default function AddPaymentScreen() {
   const handleSave = async () => {
     if (!selectedCustomer) { Alert.alert(tr.required, tr.pleaseSelectCustomer); return; }
     const num = parseFloat(amount);
-    if (!amount || isNaN(num) || num === 0) { Alert.alert(tr.required, tr.enterAmount); return; }
+    if (!amount || isNaN(num) || num <= 0) { Alert.alert(tr.required, tr.enterAmount); return; }
     const txnType = isDebt ? 'debit' : 'credit';
-    const transactionAmount = Math.abs(num);
+    const transactionAmount = num;
     const desc = description || (isDebt ? tr.debtTransaction : tr.paymentReceived);
     setSaving(true);
     try {
@@ -201,6 +238,29 @@ export default function AddPaymentScreen() {
   return (
     <View style={S.container}>
       <KeyboardScrollView contentContainerStyle={S.scrollContent}>
+        <View style={S.field}>
+          <Text style={S.label}><MaterialIcons name="swap-vert" size={16} color={colors.text} /> {tr.entryDirection}</Text>
+          <View style={S.directionRow}>
+            <TouchableOpacity
+              style={[S.directionButton, !isDebt && S.directionButtonCredit]}
+              onPress={() => selectDirection(false)}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="south-west" size={26} color={!isDebt ? colors.success : colors.textSecondary} />
+              <Text style={[S.directionText, !isDebt && S.directionTextCredit]}>{tr.moneyReceived}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.directionButton, isDebt && S.directionButtonDebit]}
+              onPress={() => selectDirection(true)}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="north-east" size={26} color={isDebt ? colors.danger : colors.textSecondary} />
+              <Text style={[S.directionText, isDebt && S.directionTextDebit]}>{tr.moneyOwed}</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={S.directionHint}>{isDebt ? tr.moneyOwedHint : tr.moneyReceivedHint}</Text>
+        </View>
+
         <View style={S.field}>
           <Text style={S.label}><MaterialIcons name="person" size={16} color={colors.text} /> {tr.customers} *</Text>
           <TouchableOpacity style={S.pickerButton} onPress={() => setShowPicker(true)}>
@@ -232,7 +292,7 @@ export default function AddPaymentScreen() {
           <TextInput
             style={S.input}
             value={amount}
-            onChangeText={(value) => { if (/^-?\d*\.?\d*$/.test(value)) setAmount(value); }}
+            onChangeText={(value) => { if (/^\d*\.?\d*$/.test(value)) setAmount(value); }}
             placeholder={tr.amountPlaceholder}
             placeholderTextColor={colors.textMuted}
             keyboardType="numeric"
@@ -268,9 +328,15 @@ export default function AddPaymentScreen() {
           <Text style={S.label}><MaterialIcons name="notes" size={16} color={colors.text} /> {tr.description}</Text>
           <TextInput style={S.input} value={description} onChangeText={(text) => { setDescription(text); if (selectedMethod && text !== PAYMENT_METHODS.find(m => m.key === selectedMethod)?.label) setSelectedMethod(null); }} placeholder={isDebt ? tr.debtDescPlaceholder : tr.paymentPlaceholder} placeholderTextColor={colors.textMuted} />
         </View>
-        <TouchableOpacity style={[S.saveButton, (saving || locked) && S.saveButtonDisabled]} onPress={handleSave} disabled={saving || locked}>
-          <MaterialIcons name="payments" size={24} color="#FFFFFF" />
-          <Text style={S.saveButtonText}>{saving ? tr.saving : isEdit ? tr.saveChanges : tr.recordPayment}</Text>
+        <TouchableOpacity
+          style={[S.saveButton, isDebt && S.saveButtonDebit, (saving || locked) && S.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={saving || locked}
+        >
+          <MaterialIcons name={isDebt ? 'trending-up' : 'payments'} size={24} color="#FFFFFF" />
+          <Text style={S.saveButtonText}>
+            {saving ? tr.saving : isEdit ? tr.saveChanges : isDebt ? tr.recordDebt : tr.recordPayment}
+          </Text>
         </TouchableOpacity>
       </KeyboardScrollView>
 

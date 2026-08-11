@@ -309,6 +309,14 @@ const en = {
   // Debt transaction (add-payment)
   debtTransaction: 'Debt',
   debtDescPlaceholder: 'e.g. Goods on credit',
+  // Which way the money went — chosen with a toggle, never a minus sign
+  entryDirection: 'What is this?',
+  moneyReceived: 'Money received',
+  moneyOwed: 'Money owed',
+  moneyReceivedHint: 'Customer paid you — reduces what they owe',
+  moneyOwedHint: 'Customer owes you more — increases their balance',
+  recordDebt: 'Record Debt',
+  editDebt: 'Edit Debt',
   // Share orders
   shareOrders: 'Share',
   // Export statement images
@@ -627,6 +635,13 @@ const ta: typeof en = {
   // Debt transaction (add-payment)
   debtTransaction: 'கடன்',
   debtDescPlaceholder: 'எ.கா. கடனில் பொருட்கள்',
+  entryDirection: 'இது என்ன?',
+  moneyReceived: 'பணம் வந்தது',
+  moneyOwed: 'கடன் ஏற்றம்',
+  moneyReceivedHint: 'வாடிக்கையாளர் பணம் கொடுத்தார் — கடன் குறையும்',
+  moneyOwedHint: 'வாடிக்கையாளர் மேலும் கடன்பட்டார் — கடன் கூடும்',
+  recordDebt: 'கடன் பதிவு செய்',
+  editDebt: 'கடன் திருத்து',
   // Share orders
   shareOrders: 'பகிர்',
   // Export statement images
