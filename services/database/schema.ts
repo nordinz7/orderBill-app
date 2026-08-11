@@ -121,6 +121,27 @@ export async function initDatabase(db: SQLite.SQLiteDatabase): Promise<void> {
     try { await db.execAsync(sql); } catch { /* already dropped */ }
   }
 
+  // Indexes. Created after the column drops above, since SQLite refuses to drop
+  // an indexed column, and unconditionally — CREATE INDEX IF NOT EXISTS costs
+  // nothing on a launch where they already exist.
+  //
+  // Without these, picking a date scans every order and every transaction, and
+  // the debit join makes SQLite build a throwaway index over the whole ledger
+  // on each query — so the wait grows with the history, not with the day being
+  // looked at. The composite pairs are ordered customer-then-date so the same
+  // index serves a lookup by customer alone.
+  const indexes = [
+    `CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(date)`,
+    `CREATE INDEX IF NOT EXISTS idx_orders_customer_date ON orders(customer_id, date)`,
+    `CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date)`,
+    `CREATE INDEX IF NOT EXISTS idx_transactions_customer_date ON transactions(customer_id, date)`,
+    // The order → its debit entry lookup, which every order list does per row.
+    `CREATE INDEX IF NOT EXISTS idx_transactions_order ON transactions(order_id, type)`,
+  ];
+  for (const sql of indexes) {
+    try { await db.execAsync(sql); } catch { /* index already present */ }
+  }
+
   // Clean up previously soft-deleted rows (migration from status-based to hard-delete)
   try {
     await db.execAsync(`DELETE FROM transactions WHERE status = 'deleted'`);

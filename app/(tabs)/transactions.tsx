@@ -222,18 +222,27 @@ export default function TransactionsScreen() {
       results = results.filter(t => String(t.customer_id) === selectedCustomer.id);
     }
     setTransactions(results);
-    const custs = await getCustomersWithTransactions(db);
-    setCustomerOptions(custs.map(c => ({ id: String(c.id), label: c.name })));
   }, [db, selectedDate, selectedCustomer]);
 
+  /** Who the ledger can be narrowed to — the same whichever day is showing. */
+  const loadDropdownData = useCallback(async () => {
+    const custs = await getCustomersWithTransactions(db);
+    setCustomerOptions(custs.map(c => ({ id: String(c.id), label: c.name })));
+  }, [db]);
+
+  // Only the list follows the filters; the dropdown and the draft badge are
+  // refreshed on arrival, so changing the date does not re-scan the ledger for
+  // a list of names that has not changed.
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
+
   useFocusEffect(useCallback(() => {
-    void load();
+    void loadDropdownData();
     getBulkPaymentDraftCount().then(setPaymentDraftCount);
-  }, [load]));
+  }, [loadDropdownData]));
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await Promise.all([load(), loadDropdownData()]);
     setRefreshing(false);
   };
 

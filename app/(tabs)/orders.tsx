@@ -243,11 +243,15 @@ export default function OrdersScreen() {
     setOrders(results);
   }, [db, selectedDate, selectedCustomer]);
 
+  // The list reloads whenever the filters move. The customer dropdown and the
+  // draft badge do not depend on them, so they are left out of it — otherwise
+  // every tap on a date pays for a scan of every order and a read of the draft.
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
   useFocusEffect(useCallback(() => {
     loadDropdownData();
-    load();
     getBulkDraftCount().then(setDraftCount);
-  }, [load, loadDropdownData]));
+  }, [loadDropdownData]));
 
   const onRefresh = async () => {
     setRefreshing(true);
