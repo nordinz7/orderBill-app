@@ -3,6 +3,14 @@ import { useSettings } from '@/contexts/SettingsContext';
 import type { ScrollViewProps } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
+/**
+ * Gap kept between the focused input and the top of the keyboard. Sized to
+ * absorb the transliteration/suggestion bar that third-party IMEs (Desh Tamil,
+ * Google Indic) grow above the keys after the first keypress — taller than the
+ * inset reported when the keyboard first opened.
+ */
+export const KEYBOARD_BOTTOM_OFFSET = Spacing.xxl * 2;
+
 interface KeyboardScrollViewProps extends ScrollViewProps {
   /** Gap kept between the focused input and the top of the keyboard. */
   bottomOffset?: number;
@@ -20,7 +28,7 @@ interface KeyboardScrollViewProps extends ScrollViewProps {
  * FlatList/SectionList the same behaviour.
  */
 export default function KeyboardScrollView({
-  bottomOffset = Spacing.xxl,
+  bottomOffset = KEYBOARD_BOTTOM_OFFSET,
   style,
   ...props
 }: KeyboardScrollViewProps) {

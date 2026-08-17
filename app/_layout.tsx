@@ -5,8 +5,8 @@ import { Stack } from 'expo-router';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import { Suspense, useEffect, useRef } from 'react';
-import { ActivityIndicator, AppState, AppStateStatus, View } from 'react-native';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { ActivityIndicator, AppState, AppStateStatus, Platform, View } from 'react-native';
+import { AndroidSoftInputModes, KeyboardController, KeyboardProvider } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function InnerLayout() {
@@ -15,6 +15,17 @@ function InnerLayout() {
   const insets = useSafeAreaInsets();
   const appState = useRef(AppState.currentState);
 
+  // keyboard-controller must be the only thing compensating for the keyboard.
+  // In `pan` mode the OS pans the window on top of the library's own scrolling,
+  // and with tall third-party IMEs (e.g. Desh Tamil) the focused input ends up
+  // hidden with no scroll range to reach it. `resize` is inert under
+  // edge-to-edge, which hands full control to the library. Set at runtime too
+  // so OTA-updated builds are fixed without waiting for a new APK.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    KeyboardController.setInputMode(AndroidSoftInputModes.SOFT_INPUT_ADJUST_RESIZE);
+    return () => KeyboardController.setDefaultMode();
+  }, []);
 
   // Auto-save local backup when app goes to background
   useEffect(() => {

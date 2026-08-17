@@ -1,10 +1,10 @@
-import { Spacing } from '@/constants/theme';
+import { KEYBOARD_BOTTOM_OFFSET } from '@/components/KeyboardScrollView';
 import type { FlatListProps, ScrollViewProps, SectionListProps } from 'react-native';
 import { FlatList, SectionList } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 /** Gap kept between the focused input and the top of the keyboard. */
-const DEFAULT_BOTTOM_OFFSET = Spacing.xxl;
+const DEFAULT_BOTTOM_OFFSET = KEYBOARD_BOTTOM_OFFSET;
 
 /**
  * Lists whose rows contain text inputs.
