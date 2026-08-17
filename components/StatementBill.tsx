@@ -78,15 +78,27 @@ const StatementBill = forwardRef<View, StatementBillProps>(
   ) => {
     const { currencySymbol } = useSettings();
     const L = LABELS[lang];
-    const sorted = [...transactions].sort(
+    let sorted = [...transactions].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
 
+    // The bill only needs what's still owed: everything up to the last point the
+    // running balance hit zero is settled, so drop it. When settlement is the
+    // final entry, keep the last stretch so an all-settled bill isn't empty.
+    {
+      let running = 0, settledAt = -1;
+      for (const [index, txn] of sorted.entries()) {
+        running += txn.type === 'credit' ? -txn.amount : txn.amount;
+        if (Math.round(running) === 0 && index < sorted.length - 1) settledAt = index;
+      }
+      if (settledAt >= 0) sorted = sorted.slice(settledAt + 1);
+    }
+
     // Build display rows: each payment closes the preceding group of orders.
-    const displayRows: Array<
+    const displayRows: (
       | { kind: 'subtotal'; count: number; total: number; key: string }
       | { kind: 'txn'; txn: TransactionWithQuantity; rowIdx: number }
-    > = [];
+    )[] = [];
     {
       let pOrders = 0, runningTotal = 0, rowIdx = 0;
       for (const [index, txn] of sorted.entries()) {
