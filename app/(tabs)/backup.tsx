@@ -1,14 +1,15 @@
 import { AppColors, FontSizes, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/contexts/SettingsContext';
+import { BACKUP_TABLES, type BackupTable } from '@/services/database';
 import {
-  confirmAndRestore,
-  createAndShareBackup,
-  getBackupDirectoryPath,
-  getLastBackupDate,
-  getLocalBackupFiles,
-  isBackupOverdue,
-  pickAndRestoreBackup,
-  restoreFromLocalBackup,
+    confirmAndRestore,
+    createAndShareBackup,
+    getBackupDirectoryPath,
+    getLastBackupDate,
+    getLocalBackupFiles,
+    isBackupOverdue,
+    pickAndRestoreBackup,
+    restoreFromLocalBackup,
 } from '@/utils/backup';
 import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
@@ -85,8 +86,23 @@ function makeStyles(c: AppColors) {
     locationPath: { fontSize: FontSizes.xs, color: c.textMuted, flex: 1, fontFamily: 'monospace' },
     warningCard: { backgroundColor: c.card, borderRadius: Radius.lg, padding: Spacing.xl, elevation: 2, marginTop: Spacing.xl },
     divider: { height: 1, backgroundColor: c.border, marginVertical: Spacing.xl },
+    tableSelector: { width: '100%', marginBottom: Spacing.lg },
+    tableSelectorTitle: { fontSize: FontSizes.md, color: c.text, fontWeight: '700', marginBottom: Spacing.sm },
+    tableOption: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      borderWidth: 1, borderColor: c.border, borderRadius: Radius.sm,
+      paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, marginBottom: Spacing.sm,
+    },
+    tableOptionSelected: { borderColor: c.primary, backgroundColor: c.primaryLight },
+    tableOptionText: { fontSize: FontSizes.md, color: c.text },
   });
 }
+
+const TABLE_LABELS = {
+  customers: 'customersTable',
+  orders: 'ordersTable',
+  transactions: 'transactionsTable',
+} as const;
 
 export default function BackupScreen() {
   const db = useSQLiteContext();
@@ -98,6 +114,7 @@ export default function BackupScreen() {
   const [overdue, setOverdue] = useState(false);
   const [backupFiles, setBackupFiles] = useState<{ uri: string; filename: string; date: string }[]>([]);
   const [backupDir, setBackupDir] = useState('');
+  const [selectedTables, setSelectedTables] = useState<BackupTable[]>([...BACKUP_TABLES]);
 
   useEffect(() => {
     (async () => {
@@ -117,9 +134,13 @@ export default function BackupScreen() {
   };
 
   const handleSaveBackup = async () => {
+    if (selectedTables.length === 0) {
+      Alert.alert(tr.backupTables, tr.noTablesSelected);
+      return;
+    }
     setLoading(true);
     try {
-      await createAndShareBackup(db);
+      await createAndShareBackup(db, selectedTables);
       await refreshBackupState();
     } catch {
       Alert.alert(tr.backupFailed, tr.backupFailedMsg);
@@ -129,11 +150,30 @@ export default function BackupScreen() {
   };
 
   const handleRestoreFromFile = () => {
-    confirmAndRestore(tr, setRestoring, () => pickAndRestoreBackup(db));
+    if (selectedTables.length === 0) {
+      Alert.alert(tr.backupTables, tr.noTablesSelected);
+      return;
+    }
+    confirmAndRestore(tr, setRestoring, () => pickAndRestoreBackup(db, selectedTables), {
+      confirmMessage: selectedTables.length === BACKUP_TABLES.length ? tr.restoreConfirmMsg : tr.restoreSelectedConfirmMsg,
+    });
   };
 
   const handleRestoreFromAutoBackup = (uri: string) => {
-    confirmAndRestore(tr, setRestoring, () => restoreFromLocalBackup(db, uri), { alertWhenEmpty: true });
+    if (selectedTables.length === 0) {
+      Alert.alert(tr.backupTables, tr.noTablesSelected);
+      return;
+    }
+    confirmAndRestore(tr, setRestoring, () => restoreFromLocalBackup(db, uri, selectedTables), {
+      alertWhenEmpty: true,
+      confirmMessage: selectedTables.length === BACKUP_TABLES.length ? tr.restoreConfirmMsg : tr.restoreSelectedConfirmMsg,
+    });
+  };
+
+  const toggleTable = (table: BackupTable) => {
+    setSelectedTables((current) => current.includes(table)
+      ? current.filter((item) => item !== table)
+      : [...current, table]);
   };
 
   const busy = loading || restoring;
@@ -155,6 +195,23 @@ export default function BackupScreen() {
         <MaterialIcons name="save" size={72} color={colors.primary} style={{ marginBottom: Spacing.lg }} />
         <Text style={S.title}>{tr.saveBackup}</Text>
         <Text style={S.hintText}>{tr.saveBackupHint}</Text>
+        <View style={S.tableSelector}>
+          <Text style={S.tableSelectorTitle}>{tr.backupTables}</Text>
+          {BACKUP_TABLES.map((table) => (
+            <TouchableOpacity
+              key={table}
+              style={[S.tableOption, selectedTables.includes(table) && S.tableOptionSelected]}
+              onPress={() => toggleTable(table)}
+            >
+              <Text style={S.tableOptionText}>{tr[TABLE_LABELS[table]]}</Text>
+              <MaterialIcons
+                name={selectedTables.includes(table) ? 'check-box' : 'check-box-outline-blank'}
+                size={24}
+                color={selectedTables.includes(table) ? colors.primary : colors.textMuted}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
         {lastBackup && (
           <Text style={S.lastBackup}>{tr.lastBackup}: {format(lastBackup, 'dd MMM yyyy, hh:mm a')}</Text>
         )}

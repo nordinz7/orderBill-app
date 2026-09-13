@@ -1,5 +1,5 @@
 import type { Translations } from '@/constants/translations';
-import { getAllDataForBackup, isValidBackup, restoreFromBackupData } from '@/services/database';
+import { BACKUP_TABLES, getAllDataForBackup, isValidBackup, restoreFromBackupData, type BackupTable } from '@/services/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { differenceInDays, format } from 'date-fns';
 import * as DocumentPicker from 'expo-document-picker';
@@ -25,11 +25,11 @@ const MAX_ROLLING_BACKUPS = 5;
  * Builds the versioned backup payload. Table keys come straight from
  * getAllDataForBackup, so a new table only has to be added there.
  */
-async function buildBackupPayload(db: SQLiteDatabase) {
+async function buildBackupPayload(db: SQLiteDatabase, tables: readonly BackupTable[] = BACKUP_TABLES) {
   return {
     exportedAt: new Date().toISOString(),
     version: 3,
-    ...(await getAllDataForBackup(db)),
+    ...(await getAllDataForBackup(db, tables)),
   };
 }
 
@@ -134,13 +134,14 @@ export function getLocalBackupUri(): string | null {
 export async function restoreFromLocalBackup(
   db: SQLiteDatabase,
   uri: string,
+  selectedTables?: readonly BackupTable[],
 ): Promise<{ customers: number; orders: number } | null> {
   const file = new File(uri);
   const contents = await file.text();
   const parsed = JSON.parse(contents);
 
   if (!isValidBackup(parsed)) return null;
-  return restoreFromBackupData(db, parsed);
+  return restoreFromBackupData(db, parsed, selectedTables);
 }
 
 // ─── Backup file creation ─────────────────────────────────────────────────────
@@ -151,8 +152,9 @@ export async function restoreFromLocalBackup(
  */
 export async function createBackupFile(
   db: SQLiteDatabase,
+  tables: readonly BackupTable[] = BACKUP_TABLES,
 ): Promise<{ uri: string; fileName: string }> {
-  const json = JSON.stringify(await buildBackupPayload(db), null, 2);
+  const json = JSON.stringify(await buildBackupPayload(db, tables), null, 2);
   const dateStamp = format(new Date(), 'yyyy-MM-dd_HHmm');
   const fileName = `backup-${dateStamp}.json`;
 
@@ -175,9 +177,9 @@ async function ensureSharingAvailable(): Promise<boolean> {
 /**
  * Creates a JSON backup and opens the general Android share sheet.
  */
-export async function createAndShareBackup(db: SQLiteDatabase): Promise<void> {
+export async function createAndShareBackup(db: SQLiteDatabase, tables: readonly BackupTable[] = BACKUP_TABLES): Promise<void> {
   try {
-    const { uri } = await createBackupFile(db);
+    const { uri } = await createBackupFile(db, tables);
     if (!(await ensureSharingAvailable())) return;
 
     await Sharing.shareAsync(uri, {
@@ -201,6 +203,7 @@ export async function createAndShareBackup(db: SQLiteDatabase): Promise<void> {
  */
 export async function pickAndRestoreBackup(
   db: SQLiteDatabase,
+  selectedTables?: readonly BackupTable[],
 ): Promise<{ customers: number; orders: number } | null> {
   const result = await DocumentPicker.getDocumentAsync({
     type: 'application/json',
@@ -220,7 +223,7 @@ export async function pickAndRestoreBackup(
     return null;
   }
 
-  return restoreFromBackupData(db, parsed);
+  return restoreFromBackupData(db, parsed, selectedTables);
 }
 
 /**
@@ -232,9 +235,9 @@ export function confirmAndRestore(
   tr: Translations,
   setBusy: (busy: boolean) => void,
   restore: () => Promise<{ customers: number; orders: number } | null>,
-  options?: { alertWhenEmpty?: boolean },
+  options?: { alertWhenEmpty?: boolean; confirmMessage?: string },
 ): void {
-  Alert.alert(tr.restoreConfirm, tr.restoreConfirmMsg, [
+  Alert.alert(tr.restoreConfirm, options?.confirmMessage ?? tr.restoreConfirmMsg, [
     { text: tr.cancel, style: 'cancel' },
     {
       text: tr.proceed,
