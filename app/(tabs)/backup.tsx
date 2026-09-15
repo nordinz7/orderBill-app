@@ -15,7 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 function makeStyles(c: AppColors) {
   return StyleSheet.create({
@@ -95,6 +95,12 @@ function makeStyles(c: AppColors) {
     },
     tableOptionSelected: { borderColor: c.primary, backgroundColor: c.primaryLight },
     tableOptionText: { fontSize: FontSizes.md, color: c.text },
+    modalBackdrop: { flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)', padding: Spacing.xl },
+    modalCard: { backgroundColor: c.card, borderRadius: Radius.xl, padding: Spacing.xl },
+    modalTitle: { fontSize: FontSizes.xl, fontWeight: '800', color: c.text, marginBottom: Spacing.lg },
+    modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: Spacing.md, marginTop: Spacing.md },
+    modalAction: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg },
+    modalActionText: { fontSize: FontSizes.md, fontWeight: '700', color: c.primary },
   });
 }
 
@@ -115,6 +121,8 @@ export default function BackupScreen() {
   const [backupFiles, setBackupFiles] = useState<{ uri: string; filename: string; date: string }[]>([]);
   const [backupDir, setBackupDir] = useState('');
   const [selectedTables, setSelectedTables] = useState<BackupTable[]>([...BACKUP_TABLES]);
+  const [tablePicker, setTablePicker] = useState<'export' | 'import' | null>(null);
+  const [pendingRestoreUri, setPendingRestoreUri] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -149,7 +157,14 @@ export default function BackupScreen() {
     }
   };
 
+  const openExportPicker = () => setTablePicker('export');
+
   const handleRestoreFromFile = () => {
+    setPendingRestoreUri(null);
+    setTablePicker('import');
+  };
+
+  const handleRestoreFromSelectedFile = () => {
     if (selectedTables.length === 0) {
       Alert.alert(tr.backupTables, tr.noTablesSelected);
       return;
@@ -160,6 +175,11 @@ export default function BackupScreen() {
   };
 
   const handleRestoreFromAutoBackup = (uri: string) => {
+    setPendingRestoreUri(uri);
+    setTablePicker('import');
+  };
+
+  const handleRestoreFromSelectedAutoBackup = (uri: string) => {
     if (selectedTables.length === 0) {
       Alert.alert(tr.backupTables, tr.noTablesSelected);
       return;
@@ -177,6 +197,18 @@ export default function BackupScreen() {
   };
 
   const busy = loading || restoring;
+  const confirmTableSelection = () => {
+    const action = tablePicker;
+    const restoreUri = pendingRestoreUri;
+    setTablePicker(null);
+    if (action === 'export') {
+      void handleSaveBackup();
+    } else if (restoreUri) {
+      handleRestoreFromSelectedAutoBackup(restoreUri);
+    } else if (action === 'import') {
+      handleRestoreFromSelectedFile();
+    }
+  };
 
   return (
     <ScrollView style={S.container} contentContainerStyle={{ paddingBottom: Spacing.xxl * 2 }}>
@@ -198,7 +230,7 @@ export default function BackupScreen() {
         {lastBackup && (
           <Text style={S.lastBackup}>{tr.lastBackup}: {format(lastBackup, 'dd MMM yyyy, hh:mm a')}</Text>
         )}
-        <TouchableOpacity style={[S.button, busy && S.buttonDisabled]} onPress={handleSaveBackup} disabled={busy}>
+        <TouchableOpacity style={[S.button, busy && S.buttonDisabled]} onPress={openExportPicker} disabled={busy}>
           {loading ? <ActivityIndicator color="#FFFFFF" size="small" /> : (
             <>
               <MaterialIcons name="file-download" size={24} color="#FFFFFF" />
@@ -280,6 +312,39 @@ export default function BackupScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      <Modal visible={tablePicker !== null} transparent animationType="fade" onRequestClose={() => setTablePicker(null)}>
+        <View style={S.modalBackdrop}>
+          <View style={S.modalCard}>
+            <Text style={S.modalTitle}>
+              {tablePicker === 'export' ? tr.chooseTablesForExport : tr.chooseTablesForImport}
+            </Text>
+            <Text style={[S.infoText, { marginBottom: Spacing.md }]}>{tr.backupTablesHint}</Text>
+            {BACKUP_TABLES.map((table) => (
+              <TouchableOpacity
+                key={table}
+                style={[S.tableOption, selectedTables.includes(table) && S.tableOptionSelected]}
+                onPress={() => toggleTable(table)}
+              >
+                <Text style={S.tableOptionText}>{tr[TABLE_LABELS[table]]}</Text>
+                <MaterialIcons
+                  name={selectedTables.includes(table) ? 'check-box' : 'check-box-outline-blank'}
+                  size={24}
+                  color={selectedTables.includes(table) ? colors.primary : colors.textMuted}
+                />
+              </TouchableOpacity>
+            ))}
+            <View style={S.modalActions}>
+              <TouchableOpacity style={S.modalAction} onPress={() => setTablePicker(null)}>
+                <Text style={S.modalActionText}>{tr.cancel}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={S.modalAction} onPress={confirmTableSelection}>
+                <Text style={S.modalActionText}>{tr.proceed}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* What's Backed Up */}
       <View style={S.infoCard}>
