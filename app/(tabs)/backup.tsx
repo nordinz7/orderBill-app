@@ -195,23 +195,6 @@ export default function BackupScreen() {
         <MaterialIcons name="save" size={72} color={colors.primary} style={{ marginBottom: Spacing.lg }} />
         <Text style={S.title}>{tr.saveBackup}</Text>
         <Text style={S.hintText}>{tr.saveBackupHint}</Text>
-        <View style={S.tableSelector}>
-          <Text style={S.tableSelectorTitle}>{tr.backupTables}</Text>
-          {BACKUP_TABLES.map((table) => (
-            <TouchableOpacity
-              key={table}
-              style={[S.tableOption, selectedTables.includes(table) && S.tableOptionSelected]}
-              onPress={() => toggleTable(table)}
-            >
-              <Text style={S.tableOptionText}>{tr[TABLE_LABELS[table]]}</Text>
-              <MaterialIcons
-                name={selectedTables.includes(table) ? 'check-box' : 'check-box-outline-blank'}
-                size={24}
-                color={selectedTables.includes(table) ? colors.primary : colors.textMuted}
-              />
-            </TouchableOpacity>
-          ))}
-        </View>
         {lastBackup && (
           <Text style={S.lastBackup}>{tr.lastBackup}: {format(lastBackup, 'dd MMM yyyy, hh:mm a')}</Text>
         )}
@@ -223,6 +206,29 @@ export default function BackupScreen() {
             </>
           )}
         </TouchableOpacity>
+      </View>
+
+      {/* Tables for export and import */}
+      <View style={S.infoCard}>
+        <Text style={S.infoTitle}>{tr.backupTables}</Text>
+        <Text style={[S.infoText, { marginBottom: Spacing.md }]}>{tr.backupTablesHint}</Text>
+        <View style={S.tableSelector}>
+          {BACKUP_TABLES.map((table) => (
+            <TouchableOpacity
+              key={table}
+              style={[S.tableOption, selectedTables.includes(table) && S.tableOptionSelected]}
+              onPress={() => toggleTable(table)}
+              disabled={busy}
+            >
+              <Text style={S.tableOptionText}>{tr[TABLE_LABELS[table]]}</Text>
+              <MaterialIcons
+                name={selectedTables.includes(table) ? 'check-box' : 'check-box-outline-blank'}
+                size={24}
+                color={selectedTables.includes(table) ? colors.primary : colors.textMuted}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Auto-backups List */}
